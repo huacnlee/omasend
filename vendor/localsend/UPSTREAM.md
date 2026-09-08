@@ -10,3 +10,6 @@ record any future local patches here.
 Local patch: discovery emits `ProbeFailed` for failed announcement verification,
 so the app can display a scoped diagnostic. Certificate verification and device
 acceptance rules are unchanged.
+
+Local patch: WebRTC-only imports, private fields and helpers are feature-gated
+to avoid unused-code warnings in LocalSend-only builds.

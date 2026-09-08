@@ -824,7 +824,10 @@ impl Render for Home {
                             ),
                     ),
             )
-            .when(!self.state.sending(), |root| root.child(self.transfers(cx)))
+            .when(
+                !self.state.sending() && !self.state.transfers.is_empty(),
+                |root| root.child(self.transfers(cx)),
+            )
             .child(self.status_bar(cx));
         if self.logs.is_some() && self.state.incoming.is_none() {
             root = root.child(self.logs_overlay(window, cx));
