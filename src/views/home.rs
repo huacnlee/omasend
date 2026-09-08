@@ -26,6 +26,8 @@ pub struct Home {
     pub history_expanded: bool,
     pub history_scroll: gpui::ScrollHandle,
     pub logs: Option<super::logs::LogsPanel>,
+    pub about_open: bool,
+    pub update_state: omasend::updates::UpdateState,
     pub restore_focus: Option<FocusHandle>,
     pub preview: Option<String>,
     pub loading_input: bool,
@@ -53,6 +55,8 @@ impl Home {
             history_expanded: false,
             history_scroll: gpui::ScrollHandle::new(),
             logs: None,
+            about_open: false,
+            update_state: Default::default(),
             restore_focus: None,
             preview: None,
             loading_input: false,
@@ -60,13 +64,14 @@ impl Home {
         };
         view.watch_theme(window, cx);
         view.connect(window, cx);
+        view.start_update_checks(cx);
         view
     }
 
     pub fn attach_window(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.window_handle = Some(window.window_handle());
         self.watch_theme(window, cx);
-        if self.state.incoming.is_some() {
+        if self.state.incoming.is_some() || self.about_open {
             self.modal_focus.focus(window, cx);
         } else {
             self.focus.focus(window, cx);
@@ -88,6 +93,7 @@ impl Home {
     pub fn close_window(&mut self, window: &mut Window, _: &mut Context<Self>) {
         self.window_handle = None;
         self.logs = None;
+        self.about_open = false;
         self.restore_focus = None;
         self.history_expanded = false;
         self.preview = None;
@@ -146,9 +152,11 @@ impl Home {
                                     matches!(&event, TransferEvent::IncomingRequest { .. });
                                 let preserve_focus = view.history_expanded
                                     || view.preview.is_some()
-                                    || view.logs.is_some();
+                                    || view.logs.is_some()
+                                    || view.about_open;
                                 if incoming {
                                     view.logs = None;
+                                    view.about_open = false;
                                     view.history_expanded = false;
                                     view.preview = None;
                                 }
@@ -197,6 +205,7 @@ impl Home {
         if self.loading_input
             || self.history_expanded
             || self.logs.is_some()
+            || self.about_open
             || self.preview.is_some()
             || self.state.incoming.is_some()
         {
@@ -229,6 +238,7 @@ impl Home {
                 }
                 view.with_window(cx, |view, window, cx| {
                     if view.logs.is_none()
+                        && !view.about_open
                         && !view.history_expanded
                         && view.preview.is_none()
                         && view.state.incoming.is_none()
@@ -246,6 +256,7 @@ impl Home {
         if self.loading_input
             || self.history_expanded
             || self.logs.is_some()
+            || self.about_open
             || self.preview.is_some()
             || self.state.incoming.is_some()
         {
@@ -347,6 +358,7 @@ impl Home {
         if self.loading_input
             || self.history_expanded
             || self.logs.is_some()
+            || self.about_open
             || self.preview.is_some()
             || self.state.incoming.is_some()
         {
@@ -408,7 +420,9 @@ impl Home {
     }
 
     fn back(&mut self, _: &Back, window: &mut Window, cx: &mut Context<Self>) {
-        if self.logs.is_some() {
+        if self.about_open {
+            self.close_about(window, cx);
+        } else if self.logs.is_some() {
             self.close_logs(window, cx);
         } else if self.history_expanded {
             self.close_history(window, cx);
@@ -437,8 +451,8 @@ impl Home {
 }
 
 impl Home {
-    fn status_bar(&self, cx: &Context<Self>) -> AnyElement {
-        let theme = cx.omarchy();
+    fn status_bar(&self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.omarchy().clone();
         let name = self
             .node
             .as_ref()
@@ -472,6 +486,27 @@ impl Home {
                     .overflow_hidden()
                     .text_ellipsis()
                     .child(name),
+            )
+            .when(
+                matches!(
+                    self.update_state,
+                    omasend::updates::UpdateState::Available { .. }
+                ),
+                |bar| {
+                    bar.child(
+                        button(
+                            "available-update",
+                            self.update_menu_label(),
+                            ButtonVariant::Secondary,
+                            cx,
+                        )
+                        .py_0()
+                        .text_color(theme.accent)
+                        .on_click(
+                            cx.listener(|view, _, window, cx| view.activate_update(window, cx)),
+                        ),
+                    )
+                },
             )
             .child(
                 div()
@@ -542,6 +577,7 @@ impl Render for Home {
             }))
             .on_action(cx.listener(|view, _: &PreviousDevice, window, cx| {
                 if view.logs.is_some()
+                    || view.about_open
                     || view.preview.is_some()
                     || view.state.incoming.is_some()
                     || view.history_expanded
@@ -559,6 +595,7 @@ impl Render for Home {
             }))
             .on_action(cx.listener(|view, _: &NextDevice, window, cx| {
                 if view.logs.is_some()
+                    || view.about_open
                     || view.preview.is_some()
                     || view.state.incoming.is_some()
                     || view.history_expanded
@@ -638,9 +675,9 @@ impl Render for Home {
                                 ]),
                             MenuItem::new(self.language.text("Theme")).submenu(
                                 [
-                                    (9, "System", super::theme::ThemeMode::System),
-                                    (10, "Light", super::theme::ThemeMode::Light),
-                                    (11, "Dark", super::theme::ThemeMode::Dark),
+                                    (20, "System", super::theme::ThemeMode::System),
+                                    (21, "Light", super::theme::ThemeMode::Light),
+                                    (22, "Dark", super::theme::ThemeMode::Dark),
                                 ]
                                 .into_iter()
                                 .map(|(id, label, mode)| {
@@ -653,7 +690,13 @@ impl Render for Home {
                                 })
                                 .collect(),
                             ),
-                            MenuItem::new("OmaSend…").separator_before(),
+                            MenuItem::new(self.update_menu_label())
+                                .separator_before()
+                                .disabled(
+                                    self.update_state == omasend::updates::UpdateState::Checking,
+                                ),
+                            MenuItem::new(self.language.text("About OmaSend…")).separator_before(),
+                            MenuItem::new("OmaSend…"),
                             MenuItem::new("GitHub…"),
                             MenuItem::new(self.language.text("Logs…")).separator_before(),
                             MenuItem::new(self.language.text("Exit")).separator_before(),
@@ -672,14 +715,16 @@ impl Render for Home {
                                         };
                                         cx.notify();
                                     }
-                                    4 => cx.open_url("https://huacnlee.github.io/omasend/"),
-                                    5 => cx.open_url("https://github.com/huacnlee/omasend"),
-                                    6 => view.open_logs(window, cx),
-                                    7 => cx.quit(),
-                                    9..=11 => {
+                                    6 => cx.open_url("https://huacnlee.github.io/omasend/"),
+                                    7 => cx.open_url("https://github.com/huacnlee/omasend"),
+                                    8 => view.open_logs(window, cx),
+                                    9 => cx.quit(),
+                                    5 => view.open_about(window, cx),
+                                    4 => view.activate_update(window, cx),
+                                    20..=22 => {
                                         let mode = match index {
-                                            10 => super::theme::ThemeMode::Light,
-                                            11 => super::theme::ThemeMode::Dark,
+                                            21 => super::theme::ThemeMode::Light,
+                                            22 => super::theme::ThemeMode::Dark,
                                             _ => super::theme::ThemeMode::System,
                                         };
                                         mode.select(window, cx);
@@ -853,14 +898,6 @@ impl Render for Home {
                             )
                             .child(
                                 div()
-                                    .flex_1()
-                                    .text_center()
-                                    .text_size(rems(0.625))
-                                    .text_color(theme.foreground.opacity(0.55))
-                                    .child(concat!("v", env!("CARGO_PKG_VERSION"))),
-                            )
-                            .child(
-                                div()
                                     .flex()
                                     .items_center()
                                     .gap_2()
@@ -886,6 +923,8 @@ impl Render for Home {
         }
         if self.state.incoming.is_some() {
             root = root.child(self.receive_dialog(cx));
+        } else if self.about_open {
+            root = root.child(self.about_dialog(cx));
         } else if self.preview.is_some() {
             root = root.child(self.preview_dialog(cx));
         }
@@ -939,6 +978,8 @@ mod keyboard_tests {
                 history_expanded: false,
                 history_scroll: gpui::ScrollHandle::new(),
                 logs: None,
+                about_open: false,
+                update_state: Default::default(),
                 restore_focus: None,
                 preview: None,
                 loading_input: false,
@@ -1027,6 +1068,29 @@ mod keyboard_tests {
         cx.update(|window, cx| window.draw(cx).clear(cx));
         assert_eq!(view.read_with(cx, |view, _| view.selected), Some(10));
         assert!(cx.debug_bounds("omarchy-menu-content").is_none());
+    }
+
+    #[gpui::test]
+    fn about_dialog_traps_keys_and_restores_focus(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            cx.simulate_keystrokes("tab");
+            let trigger = cx.update(|window, cx| window.focused(cx).unwrap());
+            view.update_in(cx, |view, window, cx| view.open_about(window, cx));
+            for key in ["tab", "right", "left", "ctrl-v", "ctrl-o"] {
+                cx.simulate_keystrokes(key);
+                cx.update(|window, cx| {
+                    let view = view.read(cx);
+                    assert!(view.about_open);
+                    assert!(view.modal_focus.contains_focused(window, cx));
+                    assert_eq!(view.state.composer.len(), 1);
+                });
+            }
+            cx.simulate_keystrokes("escape");
+            cx.update(|window, cx| {
+                assert!(!view.read(cx).about_open);
+                assert_eq!(window.focused(cx), Some(trigger));
+            });
+        });
     }
 
     fn remove_with_key(cx: &mut TestAppContext, activation: &str) {

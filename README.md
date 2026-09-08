@@ -130,3 +130,9 @@ with a rounded, transparent-margin ICNS for older releases.
 The header logo is static; the empty send area animates its outer pixel segments.
 Both render a transparent vector emblem in the current theme's accent color.
 GPUI's reduced-motion setting renders a static logo.
+
+The menu includes About OmaSend with the current version and Check for updates.
+OmaSend checks GitHub's latest stable release at startup and every six hours.
+New versions appear in the status bar and link to the release download page;
+checks do not download or replace the running application. Network failures stay
+in Logs and can be retried from the menu.

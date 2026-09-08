@@ -128,6 +128,8 @@ mod lifecycle_tests {
                 history_expanded: false,
                 history_scroll: gpui::ScrollHandle::new(),
                 logs: None,
+                about_open: false,
+                update_state: Default::default(),
                 restore_focus: None,
                 preview: None,
                 loading_input: false,

@@ -1,3 +1,4 @@
+mod about;
 mod history;
 mod home;
 mod logs;
@@ -5,6 +6,7 @@ mod motion;
 mod nearby;
 mod panels;
 pub mod theme;
+mod updates;
 
 use gpui_omarchy::gpui::{App, KeyBinding, actions};
 pub use home::Home;

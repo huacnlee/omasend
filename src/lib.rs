@@ -5,3 +5,5 @@ pub mod localsend;
 pub mod model;
 
 pub mod i18n;
+
+pub mod updates;
