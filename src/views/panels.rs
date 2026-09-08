@@ -5,7 +5,7 @@ use gpui_omarchy::gpui::{
 use gpui_omarchy::{
     ActiveTheme, ButtonVariant, alert_dialog, button, dialog, dialog_popup, dialog_title, keycap,
 };
-use omasend::model::SendItem;
+use omasend::model::{SendItem, TransferStatus};
 
 impl Home {
     pub fn composer(&self, cx: &mut Context<Self>) -> AnyElement {
@@ -63,6 +63,14 @@ impl Home {
         }
         for item in &self.state.composer {
             let id = item.id.clone();
+            let transfer = self
+                .state
+                .transfers
+                .iter()
+                .rev()
+                .find(|transfer| transfer.composer_ids.contains(&item.id));
+            let active = transfer.is_some_and(|transfer| transfer.status == TransferStatus::Active);
+
             let mut row = div()
                 .flex()
                 .flex_col()
@@ -135,22 +143,62 @@ impl Home {
                             )),
                         )
                     })
-                    .child(
-                        button(
-                            gpui_omarchy::gpui::SharedString::from(format!("remove-{id}")),
-                            self.language.text("Remove"),
-                            ButtonVariant::Secondary,
-                            cx,
+                    .when(!active, |row| {
+                        row.child(
+                            button(
+                                gpui_omarchy::gpui::SharedString::from(format!("remove-{id}")),
+                                self.language.text("Remove"),
+                                ButtonVariant::Secondary,
+                                cx,
+                            )
+                            .on_click(cx.listener(
+                                move |view, _, window, cx| {
+                                    view.state.composer.retain(|item| item.id != id);
+                                    view.focus.focus(window, cx);
+                                    cx.notify();
+                                },
+                            )),
                         )
-                        .on_click(cx.listener(
-                            move |view, _, window, cx| {
-                                view.state.composer.retain(|item| item.id != id);
-                                view.focus.focus(window, cx);
-                                cx.notify();
-                            },
-                        )),
-                    ),
+                    })
+                    .when(active, |row| {
+                        let transfer_id = transfer.unwrap().id.clone();
+                        row.child(
+                            button(
+                                SharedString::from(format!("cancel-item-{}", item.id)),
+                                self.language.text("Cancel"),
+                                ButtonVariant::Secondary,
+                                cx,
+                            )
+                            .on_click(cx.listener(
+                                move |view, _, _, cx| {
+                                    if let Some(node) = &view.node
+                                        && let Err(error) = node.handle.cancel(&transfer_id)
+                                    {
+                                        view.state.error = Some(error.to_string());
+                                    }
+                                    cx.notify();
+                                },
+                            )),
+                        )
+                    }),
             );
+            if let Some(transfer) = transfer {
+                let offset = self
+                    .state
+                    .composer
+                    .iter()
+                    .take_while(|previous| previous.id != item.id)
+                    .filter(|previous| transfer.composer_ids.contains(&previous.id))
+                    .map(|previous| previous.size())
+                    .sum();
+                row = row.child(self.transfer_progress(
+                    transfer,
+                    &item.id,
+                    Some((offset, item.size())),
+                    cx,
+                ));
+            }
+
             list = list.child(row.with_animation(
                 SharedString::from(format!("content-enter-{}", item.id)),
                 super::motion::content_enter(),

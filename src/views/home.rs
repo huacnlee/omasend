@@ -761,11 +761,7 @@ impl Render for Home {
                                 },
                             )),
                     )
-                    .child(if self.state.sending() {
-                        self.active_sends(cx)
-                    } else {
-                        self.composer(cx)
-                    })
+                    .child(self.composer(cx))
                     .child(
                         div()
                             .flex()
@@ -823,10 +819,6 @@ impl Render for Home {
                                     ),
                             ),
                     ),
-            )
-            .when(
-                !self.state.sending() && !self.state.transfers.is_empty(),
-                |root| root.child(self.transfers(cx)),
             )
             .child(self.status_bar(cx));
         if self.logs.is_some() && self.state.incoming.is_none() {

@@ -7,3 +7,5 @@ Local patches:
   (https://github.com/lucide-icons/lucide), licensed in assets/icons/LICENSE-lucide.
 All other library source is unchanged. Kept here so the application builds reproducibly
 until these fixes can be released upstream.
+
+Local patch: embed a theme-colored History icon for the transfer history entry.
