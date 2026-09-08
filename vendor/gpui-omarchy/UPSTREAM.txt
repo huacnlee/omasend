@@ -1,0 +1,4 @@
+gpui-omarchy 0.1.0 from crates.io, https://github.com/huacnlee/gpui-omarchy
+Local patch: src/menu.rs renders shortcut hints with the existing keycap component.
+All other library source is unchanged. Kept here so the application builds reproducibly
+until this small presentation fix can be released upstream.
