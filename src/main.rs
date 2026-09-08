@@ -131,6 +131,7 @@ mod lifecycle_tests {
                 about_open: false,
                 update_state: Default::default(),
                 show_update_status: false,
+                update_status_dismiss: None,
                 restore_focus: None,
                 preview: None,
                 loading_input: false,

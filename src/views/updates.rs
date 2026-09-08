@@ -26,6 +26,8 @@ impl Home {
         if self.update_state == UpdateState::Checking {
             return;
         }
+        // Cancel the previous dismissal so it cannot hide a newer check's result.
+        self.update_status_dismiss = None;
         self.update_state = UpdateState::Checking;
         let task = self.runtime.spawn(omasend::updates::check());
         cx.spawn(async move |this, cx| {
@@ -38,6 +40,22 @@ impl Home {
             };
             let _ = this.update(cx, |view, cx| {
                 view.update_state = state;
+                if view.show_update_status
+                    && matches!(
+                        view.update_state,
+                        UpdateState::Current | UpdateState::NoRelease | UpdateState::Failed
+                    )
+                {
+                    view.update_status_dismiss = Some(cx.spawn(async move |this, cx| {
+                        cx.background_executor()
+                            .timer(std::time::Duration::from_secs(5))
+                            .await;
+                        let _ = this.update(cx, |view, cx| {
+                            view.show_update_status = false;
+                            cx.notify();
+                        });
+                    }));
+                }
                 cx.notify();
             });
         })

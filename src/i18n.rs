@@ -84,7 +84,7 @@ const CATALOG: &[(&str, &str)] = &[
     ("Up to date", "已是最新版本"),
     ("No releases yet", "暂无发布版本"),
     ("Update check failed", "检查更新失败"),
-    ("About OmaSend…", "关于 OmaSend…"),
+    ("About…", "关于…"),
     ("Theme", "主题"),
     ("Language", "语言"),
     ("System", "跟随系统"),

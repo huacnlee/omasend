@@ -22,7 +22,6 @@ impl Home {
         let row_height = card_height + if rows > 1 { super::CONTROL_GAP } else { 0. };
         let list = if rows == 0 {
             div()
-                .py_3()
                 .text_color(theme.secondary)
                 .child(
                     self.language
@@ -58,11 +57,11 @@ impl Home {
         div()
             .flex()
             .flex_col()
-            .gap(rems(super::PANEL_GAP))
+            .gap(rems(super::CONTROL_GAP))
             .px(rems(super::PANEL_PADDING))
-            .pt(rems(super::PANEL_PADDING))
+            .pt(rems(super::PANEL_GAP))
             // Multi-row lists already reserve the control gap after the last card.
-            .pb(rems(super::PANEL_PADDING - (row_height - card_height)))
+            .pb(rems(super::PANEL_GAP - (row_height - card_height)))
             .border_b_1()
             .border_color(theme.divider())
             .child(
