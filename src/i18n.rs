@@ -108,6 +108,8 @@ impl Language {
 }
 
 const CATALOG: &[(&str, &str)] = &[
+    ("Ok", "确定"),
+    ("Average speed", "平均速度"),
     (
         "Cannot connect to the receiver. Make sure it is online and try again",
         "无法连接接收方，请确认对方在线后重试",

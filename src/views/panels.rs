@@ -46,32 +46,6 @@ impl Home {
                         .p_4()
                         .child(
                             div()
-                                .absolute()
-                                .top_2()
-                                .right_2()
-                                .id("dismiss-transfer-success")
-                                .debug_selector(|| "dismiss-transfer-success".into())
-                                .child(
-                                    button(
-                                        "close-transfer-success",
-                                        "",
-                                        ButtonVariant::Secondary,
-                                        cx,
-                                    )
-                                    .accessibility_label(self.language.text("Close"))
-                                    .p_1()
-                                    .child(icon(IconName::Close).size(rems(0.875)))
-                                    .on_click(cx.listener(
-                                        move |view, _, window, cx| {
-                                            view.dismissed_success = Some(transfer_id.clone());
-                                            view.focus.focus(window, cx);
-                                            cx.notify();
-                                        },
-                                    )),
-                                ),
-                        )
-                        .child(
-                            div()
                                 .w(rems(28.))
                                 .max_w_full()
                                 .flex()
@@ -84,7 +58,33 @@ impl Home {
                                         .text_color(theme.success)
                                         .child(icon(IconName::Check).size(rems(2.))),
                                 )
-                                .child(self.transfer_row(transfer, false, cx)),
+                                .child(self.transfer_summary(transfer, cx))
+                                .child(
+                                    div()
+                                        .flex()
+                                        .justify_center()
+                                        .items_center()
+                                        .gap_2()
+                                        .child(
+                                            div()
+                                                .id("dismiss-transfer-success")
+                                                .debug_selector(|| "dismiss-transfer-success".into())
+                                                .child(
+                                                    button("confirm-transfer-success", self.language.text("Ok"), ButtonVariant::Outline, cx)
+                                                        .on_click(cx.listener(move |view, _, window, cx| {
+                                                            view.dismissed_success = Some(transfer_id.clone());
+                                                            view.focus.focus(window, cx);
+                                                            cx.notify();
+                                                        })),
+                                                ),
+                                        )
+                                        .when_some(transfer.paths.first().cloned(), |actions, path| {
+                                            actions.child(
+                                                button("reveal-completed-transfer", self.language.text("Show in Files"), ButtonVariant::Outline, cx)
+                                                    .on_click(move |_, _, cx| cx.reveal_path(&path)),
+                                            )
+                                        }),
+                                ),
                         ),
                 )
                 .into_any_element();

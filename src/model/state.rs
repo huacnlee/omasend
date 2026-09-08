@@ -60,11 +60,21 @@ pub enum TransferStatus {
 #[derive(Default)]
 struct TransferRate {
     sample: Option<(Instant, u64)>,
+    started: Option<Instant>,
+    average: Option<u64>,
     bytes_per_second: u64,
 }
 
 impl TransferRate {
+    fn finish(&mut self, bytes: u64, now: Instant) {
+        self.average = self.started.and_then(|started| {
+            let elapsed = now.saturating_duration_since(started).as_secs_f64();
+            (elapsed > 0.).then(|| (bytes as f64 / elapsed) as u64)
+        });
+    }
+
     fn update(&mut self, bytes: u64, now: Instant) {
+        self.started.get_or_insert(now);
         let Some((start, previous)) = self.sample else {
             self.sample = Some((now, bytes));
             return;
@@ -95,6 +105,10 @@ pub struct Transfer {
 }
 
 impl Transfer {
+    pub fn average_bytes_per_second(&self) -> Option<u64> {
+        self.rate.average
+    }
+
     pub fn bytes_per_second(&self) -> u64 {
         self.rate.bytes_per_second
     }
@@ -236,7 +250,10 @@ impl AppState {
                         files,
                         total,
                         transferred: 0,
-                        rate: TransferRate::default(),
+                        rate: TransferRate {
+                            started: (!sending).then(Instant::now),
+                            ..Default::default()
+                        },
                         paths: Vec::new(),
                         status: TransferStatus::Active,
                         when: SystemTime::now(),
@@ -326,6 +343,7 @@ impl AppState {
         if let Some(transfer) = self.transfers.iter_mut().find(|transfer| transfer.id == id) {
             if status == TransferStatus::Completed {
                 transfer.transferred = transfer.total;
+                transfer.rate.finish(transfer.total, Instant::now());
                 self.composer
                     .retain(|item| !transfer.composer_ids.contains(&item.id));
             }
@@ -340,6 +358,23 @@ impl AppState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn completed_rate_averages_the_whole_transfer_and_stays_fixed() {
+        let start = Instant::now();
+        let mut rate = TransferRate::default();
+        assert_eq!(rate.average, None);
+        rate.update(0, start);
+        rate.update(1024, start + Duration::from_secs(1));
+        rate.update(3072, start + Duration::from_secs(2));
+        rate.finish(4096, start + Duration::from_secs(4));
+        assert_eq!(rate.average, Some(1024));
+        rate.update(4096, start + Duration::from_secs(10));
+        assert_eq!(rate.average, Some(1024));
+        let mut unmeasured = TransferRate::default();
+        unmeasured.finish(4096, start);
+        assert_eq!(unmeasured.average, None);
+    }
 
     #[test]
     fn transfer_rate_uses_recent_bytes_and_handles_stalls() {

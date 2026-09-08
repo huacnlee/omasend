@@ -251,6 +251,48 @@ impl Home {
             .into_any_element()
     }
 
+    pub(super) fn transfer_summary(&self, transfer: &Transfer, cx: &Context<Self>) -> AnyElement {
+        let theme = cx.omarchy();
+        let average = transfer
+            .average_bytes_per_second()
+            .map(|speed| format!("{}/s", size_label(speed)))
+            .unwrap_or_else(|| "—".into());
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .text_center()
+            .gap_3()
+            .child(
+                div().w_full().text_color(theme.bright).child(
+                    transfer
+                        .files
+                        .iter()
+                        .map(|file| file.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                ),
+            )
+            .child(div().w_full().text_color(theme.secondary).child(format!(
+                "{} · {}",
+                self.language.named(
+                    if transfer.sending {
+                        "To {name}"
+                    } else {
+                        "From {name}"
+                    },
+                    &transfer.peer
+                ),
+                size_label(transfer.total),
+            )))
+            .child(self.transfer_status(transfer, cx))
+            .child(div().text_color(theme.secondary).child(format!(
+                "{} · {average}",
+                self.language.text("Average speed"),
+            )))
+            .into_any_element()
+    }
+
     pub(super) fn transfer_row(
         &self,
         transfer: &Transfer,
