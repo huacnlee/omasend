@@ -6,6 +6,8 @@ Omasend is a desktop file-sharing app built for [Omarchy](https://omarchy.org).
 Send files, folders, screenshots, recordings, and text over your local network,
 with no account or cloud upload. Available for Linux, macOS, and Windows.
 
+<img width="2546" height="1402" alt="image" src="https://github.com/user-attachments/assets/d3d942e9-c8b1-4c45-aaf4-1b1508384adf" />
+
 [Website](https://huacnlee.github.io/omasend/) · [Download](https://github.com/huacnlee/omasend/releases) · [Installation guide](docs/install.md)
 
 ## Features
