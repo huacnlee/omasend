@@ -1,6 +1,7 @@
 use super::Home;
 use gpui_kit::{Context, Window};
 use omasend::updates::UpdateState;
+use rust_i18n::t;
 
 impl Home {
     pub fn start_update_checks(&mut self, cx: &mut Context<Self>) {
@@ -67,28 +68,26 @@ impl Home {
     }
     pub fn update_status_label(&self) -> String {
         match &self.update_state {
-            UpdateState::Available { version, .. } => {
-                self.language.named("Install {name}…", version)
-            }
-            UpdateState::Checking => self.language.text("Checking for updates…").into(),
-            UpdateState::Current => self.language.text("Up to date").into(),
-            UpdateState::NoRelease => self.language.text("No releases yet").into(),
-            UpdateState::Failed => self.language.text("Update check failed").into(),
+            UpdateState::Available { version, .. } => t!("update.install", name = version).into(),
+            UpdateState::Checking => t!("update.checking").into(),
+            UpdateState::Current => t!("update.current").into(),
+            UpdateState::NoRelease => t!("update.none").into(),
+            UpdateState::Failed => t!("update.check_failed").into(),
             UpdateState::Installing { downloaded, total } => {
                 if total.is_some_and(|total| total > 0 && *downloaded >= total) {
-                    self.language.text("Installing update…").into()
+                    t!("update.installing").into()
                 } else if let Some(total) = total.filter(|total| *total > 0) {
                     format!(
                         "{} {}%",
-                        self.language.text("Downloading update…"),
+                        t!("update.downloading"),
                         downloaded.saturating_mul(100) / total
                     )
                 } else {
-                    self.language.text("Downloading update…").into()
+                    t!("update.downloading").into()
                 }
             }
-            UpdateState::Ready { .. } => self.language.text("Restart to update").into(),
-            UpdateState::InstallFailed { .. } => self.language.text("Update failed · Retry").into(),
+            UpdateState::Ready { .. } => t!("update.restart").into(),
+            UpdateState::InstallFailed { .. } => t!("update.failed_retry").into(),
             UpdateState::Idle => String::new(),
         }
     }
@@ -113,11 +112,7 @@ impl Home {
                         .any(|transfer| transfer.status == omasend::model::TransferStatus::Active)
                     || !self.state.composer.is_empty()
                 {
-                    self.state.error = Some(
-                        self.language
-                            .text("Finish transfers and clear Outbox before restarting")
-                            .into(),
-                    );
+                    self.state.error = Some(self.language.text("update.finish_first"));
                     cx.notify();
                     return;
                 }

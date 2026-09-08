@@ -105,6 +105,36 @@ pub struct Transfer {
 }
 
 impl Transfer {
+    /// Rebuilds a finished transfer read back from the stored history. It has
+    /// no live counterpart, so it carries no peer id, rate or composer link.
+    #[allow(clippy::too_many_arguments)]
+    pub fn restored(
+        id: String,
+        peer: String,
+        sending: bool,
+        files: Vec<OfferedFile>,
+        total: u64,
+        paths: Vec<PathBuf>,
+        status: TransferStatus,
+        when: SystemTime,
+    ) -> Self {
+        Self {
+            id,
+            peer,
+            peer_id: None,
+            sending,
+            awaiting_acceptance: false,
+            files,
+            transferred: total,
+            total,
+            paths,
+            status,
+            when,
+            composer_ids: HashSet::new(),
+            rate: TransferRate::default(),
+        }
+    }
+
     pub fn average_bytes_per_second(&self) -> Option<u64> {
         self.rate.average
     }

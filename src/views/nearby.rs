@@ -1,6 +1,7 @@
 use super::Home;
 use gpui_kit::{self, AnyElement, Context, Pixels, SharedString, Window, div, prelude::*, rems};
 use gpui_omarchy::{ActiveTheme, ButtonVariant, IconName, avatar, button, icon};
+use rust_i18n::t;
 
 impl Home {
     pub fn nearby(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
@@ -21,10 +22,7 @@ impl Home {
         let list = if rows == 0 {
             div()
                 .text_color(theme.secondary)
-                .child(
-                    self.language
-                        .text("Looking for devices… Open LocalSend on the same Wi-Fi."),
-                )
+                .child(self.language.text("nearby.looking"))
                 .into_any_element()
         } else {
             gpui_kit::uniform_list(
@@ -77,7 +75,7 @@ impl Home {
                             .child(
                                 div()
                                     .font_weight(gpui_kit::FontWeight::BOLD)
-                                    .child(self.language.text("Nearby")),
+                                    .child(t!("nearby.title")),
                             )
                             .child(
                                 div()
@@ -90,9 +88,9 @@ impl Home {
                             button(
                                 "toggle-nearby",
                                 self.language.text(if self.nearby_expanded {
-                                    "Collapse"
+                                    "action.collapse"
                                 } else {
-                                    "Expand"
+                                    "action.expand"
                                 }),
                                 ButtonVariant::Secondary,
                                 cx,
@@ -162,7 +160,7 @@ impl Home {
                 theme.focus_border()
             })
         })
-        .accessibility_label(self.language.named("Select {name}", &device.alias))
+        .accessibility_label(t!("action.select_device", name = device.alias).to_string())
         .child(
             avatar(initials, cx)
                 .size(rems(2.))

@@ -1,0 +1,469 @@
+# Omasend interface text. Keys are symbolic; the English entry is the source of truth.
+_version: 2
+
+status.done:
+  en: "Done"
+  zh-CN: "完成"
+status.average_speed:
+  en: "Average speed"
+  zh-CN: "平均速度"
+status.connecting:
+  en: "Connecting…"
+  zh-CN: "正在连接…"
+status.disconnected:
+  en: "Disconnected"
+  zh-CN: "未连接"
+status.searching:
+  en: "Searching for devices…"
+  zh-CN: "正在搜索设备…"
+status.connected:
+  en: "Connected"
+  zh-CN: "已连接"
+status.preparing:
+  en: "Preparing…"
+  zh-CN: "正在准备…"
+status.starting:
+  en: "Starting…"
+  zh-CN: "正在启动…"
+status.waiting:
+  en: "Waiting for receiver"
+  zh-CN: "等待对方接受"
+status.sending:
+  en: "Sending"
+  zh-CN: "正在发送"
+status.receiving:
+  en: "Receiving"
+  zh-CN: "正在接收"
+status.sent:
+  en: "Sent"
+  zh-CN: "已发送"
+status.received:
+  en: "Received"
+  zh-CN: "已接收"
+status.cancelled:
+  en: "Cancelled"
+  zh-CN: "已取消"
+status.failed:
+  en: "Failed"
+  zh-CN: "失败"
+
+error.peer_unreachable:
+  en: "Cannot connect to the receiver. Make sure it is online and try again"
+  zh-CN: "无法连接接收方，请确认对方在线后重试"
+error.peer_timeout:
+  en: "The receiver did not respond. Try again"
+  zh-CN: "接收方响应超时，请重试"
+error.peer_identity:
+  en: "Could not verify the receiver. Check its identity and try again"
+  zh-CN: "无法验证接收方身份，请确认对方身份后重试"
+error.peer_pin:
+  en: "The receiver requires a PIN"
+  zh-CN: "接收方需要 PIN 码"
+error.peer_declined:
+  en: "The receiver declined the transfer"
+  zh-CN: "接收方拒绝了传输"
+error.peer_busy:
+  en: "The receiver is busy. Try again shortly"
+  zh-CN: "接收方正忙，请稍后重试"
+error.checksum_retry:
+  en: "File verification failed. Try sending again"
+  zh-CN: "文件校验失败，请重新发送"
+error.transfer_generic:
+  en: "Transfer failed. View logs for details"
+  zh-CN: "传输失败，可查看日志了解详情"
+error.clipboard_empty:
+  en: "Clipboard is empty"
+  zh-CN: "剪贴板为空"
+error.clipboard_image_format:
+  en: "Copy the image as PNG or JPEG"
+  zh-CN: "请将图片复制为 PNG 或 JPEG"
+error.network_task:
+  en: "Network task stopped"
+  zh-CN: "网络任务已停止"
+error.file_task:
+  en: "File preparation stopped"
+  zh-CN: "文件准备任务已停止"
+error.clipboard_task:
+  en: "Clipboard task stopped"
+  zh-CN: "剪贴板任务已停止"
+error.no_runtime_dir:
+  en: "XDG_RUNTIME_DIR is not set; start Omasend in your Wayland session"
+  zh-CN: "未设置 XDG_RUNTIME_DIR；请在 Wayland 会话中启动 Omasend"
+error.clipboard_tmp_kind:
+  en: "Clipboard temporary directory is not a directory"
+  zh-CN: "剪贴板临时路径不是目录"
+error.clipboard_tmp_mode:
+  en: "Clipboard temporary directory must be private (mode 700)"
+  zh-CN: "剪贴板临时目录必须为私有目录（权限 700）"
+error.clipboard_timeout:
+  en: "Clipboard did not respond"
+  zh-CN: "剪贴板未响应"
+error.wl_clipboard_missing:
+  en: "Install wl-clipboard to paste from Wayland"
+  zh-CN: "请安装 wl-clipboard 以读取 Wayland 剪贴板"
+error.clipboard_unreadable:
+  en: "Cannot read clipboard; copy something first"
+  zh-CN: "无法读取剪贴板，请先复制内容"
+error.clipboard_media_timeout:
+  en: "Clipboard media read timed out"
+  zh-CN: "读取剪贴板媒体超时"
+error.clipboard_media_changed:
+  en: "Clipboard media is empty or changed; copy it again"
+  zh-CN: "剪贴板媒体为空或已变化，请重新复制"
+error.clipboard_output:
+  en: "Cannot read clipboard output"
+  zh-CN: "无法读取剪贴板输出"
+error.clipboard_text_timeout:
+  en: "Clipboard text read timed out"
+  zh-CN: "读取剪贴板文本超时"
+error.clipboard_text_large:
+  en: "Clipboard text exceeds 16 MB; send it as a file"
+  zh-CN: "剪贴板文本超过 16 MB，请作为文件发送"
+error.clipboard_changed:
+  en: "Clipboard changed; copy the content again"
+  zh-CN: "剪贴板已变化，请重新复制内容"
+error.clipboard_text_empty:
+  en: "Clipboard text is empty"
+  zh-CN: "剪贴板文本为空"
+error.symlink:
+  en: "Choose the original file instead of a symbolic link"
+  zh-CN: "请选择原始文件，而非符号链接"
+error.empty_folder:
+  en: "This folder contains no files; LocalSend cannot transfer empty folders"
+  zh-CN: "该文件夹没有文件；LocalSend 无法传输空文件夹"
+error.too_many_files:
+  en: "Select at most 10,000 files per transfer"
+  zh-CN: "每次传输最多选择 10,000 个文件"
+error.deep_folder:
+  en: "Folder nesting exceeds 128 levels"
+  zh-CN: "文件夹嵌套超过 128 层"
+error.name_utf8:
+  en: "File name is not valid UTF-8"
+  zh-CN: "文件名不是有效的 UTF-8"
+error.name_missing:
+  en: "Missing file name"
+  zh-CN: "缺少文件名"
+error.name_invalid:
+  en: "Invalid file name"
+  zh-CN: "文件名无效"
+error.path_unsafe:
+  en: "Unsafe relative file path"
+  zh-CN: "相对文件路径不安全"
+error.path_absolute:
+  en: "Absolute file paths are not accepted"
+  zh-CN: "不接受绝对文件路径"
+error.sender_stopped:
+  en: "Sender stopped responding"
+  zh-CN: "发送方停止响应"
+error.cancelled:
+  en: "Transfer cancelled"
+  zh-CN: "传输已取消"
+error.checksum:
+  en: "File checksum did not match"
+  zh-CN: "文件校验失败"
+error.overlong:
+  en: "Received more data than offered"
+  zh-CN: "接收的数据超出了声明大小"
+error.clipboard_unsupported:
+  en: "Clipboard has no supported files, images, videos or text"
+  zh-CN: "剪贴板中没有支持的文件、图片、视频或文本"
+error.clipboard_empty_retry:
+  en: "Clipboard is empty; copy the content again"
+  zh-CN: "剪贴板为空，请重新复制内容"
+error.clipboard_list_utf8:
+  en: "File clipboard is not UTF-8"
+  zh-CN: "剪贴板文件列表不是 UTF-8"
+error.clipboard_uri:
+  en: "Invalid clipboard file URI"
+  zh-CN: "剪贴板文件 URI 无效"
+error.clipboard_uri_remote:
+  en: "Clipboard URI is not a local file"
+  zh-CN: "剪贴板 URI 不是本地文件"
+error.clipboard_uri_extra:
+  en: "File URI has a query or fragment"
+  zh-CN: "文件 URI 包含查询或片段"
+error.clipboard_path:
+  en: "Invalid clipboard file path"
+  zh-CN: "剪贴板文件路径无效"
+error.clipboard_no_files:
+  en: "Clipboard contains no local files"
+  zh-CN: "剪贴板中没有本地文件"
+error.clipboard_text_utf8:
+  en: "Clipboard text is not UTF-8"
+  zh-CN: "剪贴板文本不是 UTF-8"
+error.clipboard_media_type:
+  en: "Unsupported clipboard media type"
+  zh-CN: "不支持该剪贴板媒体类型"
+error.no_response:
+  en: "The receiver did not respond"
+  zh-CN: "接收方未响应"
+error.no_files_accepted:
+  en: "The receiver accepted no files"
+  zh-CN: "接收方未接受任何文件"
+error.unknown_file_id:
+  en: "Receiver returned an unknown file ID"
+  zh-CN: "接收方返回了未知的文件 ID"
+error.too_large:
+  en: "Transfer is too large"
+  zh-CN: "传输内容过大"
+error.network_service:
+  en: "Network service stopped"
+  zh-CN: "网络服务已停止"
+error.downloads_create:
+  en: "Cannot create Downloads folder"
+  zh-CN: "无法创建下载文件夹"
+error.downloads_missing:
+  en: "Cannot locate your Downloads folder"
+  zh-CN: "无法找到下载文件夹"
+error.port_in_use:
+  en: "Cannot listen for LocalSend transfers; another app may be using port 53317"
+  zh-CN: "无法监听 LocalSend 传输；其他应用可能正在使用端口 53317"
+error.multicast:
+  en: "Multicast unavailable; trying local network discovery"
+  zh-CN: "组播不可用，正在尝试局域网发现"
+error.transfer_task:
+  en: "Transfer task stopped"
+  zh-CN: "传输任务已停止"
+error.encryption_required:
+  en: "An encrypted connection is required"
+  zh-CN: "需要加密连接"
+error.offer_range:
+  en: "Offer must contain between 1 and 10,000 files"
+  zh-CN: "传输请求必须包含 1 至 10,000 个文件"
+error.file_id_mismatch:
+  en: "File ID does not match its metadata"
+  zh-CN: "文件 ID 与元数据不匹配"
+error.folder_symlink:
+  en: "Folder contains a symbolic link"
+  zh-CN: "文件夹包含符号链接"
+error.folder_special:
+  en: "Folder contains a special file"
+  zh-CN: "文件夹包含特殊文件"
+error.clipboard_file_gone:
+  en: "Clipboard file no longer exists"
+  zh-CN: "剪贴板中的文件已不存在"
+
+update.install:
+  en: "Install %{name}…"
+  zh-CN: "安装 %{name}…"
+update.downloading:
+  en: "Downloading update…"
+  zh-CN: "正在下载更新…"
+update.installing:
+  en: "Installing update…"
+  zh-CN: "正在安装更新…"
+update.restart:
+  en: "Restart to update"
+  zh-CN: "重启以完成更新"
+update.failed_retry:
+  en: "Update failed · Retry"
+  zh-CN: "更新失败 · 重试"
+update.finish_first:
+  en: "Finish transfers and clear Outbox before restarting"
+  zh-CN: "请先完成传输并清空待发送内容，再重启"
+update.checking:
+  en: "Checking for updates…"
+  zh-CN: "正在检查更新…"
+update.current:
+  en: "Up to date"
+  zh-CN: "已是最新版本"
+update.none:
+  en: "No releases yet"
+  zh-CN: "暂无发布版本"
+update.check_failed:
+  en: "Update check failed"
+  zh-CN: "检查更新失败"
+
+action.check_update:
+  en: "Check for update"
+  zh-CN: "检查更新"
+action.about:
+  en: "About…"
+  zh-CN: "关于…"
+action.theme:
+  en: "Theme"
+  zh-CN: "主题"
+action.language:
+  en: "Language"
+  zh-CN: "语言"
+action.logs:
+  en: "Logs…"
+  zh-CN: "日志…"
+action.copy:
+  en: "Copy"
+  zh-CN: "复制"
+action.clear:
+  en: "Clear"
+  zh-CN: "清空"
+action.clear_history:
+  en: "Clear transfer history"
+  zh-CN: "清空传输记录"
+action.menu:
+  en: "Menu"
+  zh-CN: "菜单"
+action.paste:
+  en: "Paste"
+  zh-CN: "粘贴"
+action.add_files_ellipsis:
+  en: "Add files…"
+  zh-CN: "添加文件…"
+action.add_files:
+  en: "Add files"
+  zh-CN: "添加文件"
+action.exit:
+  en: "Exit"
+  zh-CN: "退出"
+action.retry:
+  en: "Retry"
+  zh-CN: "重试"
+action.dismiss:
+  en: "Dismiss"
+  zh-CN: "关闭提示"
+action.send:
+  en: "Send"
+  zh-CN: "发送"
+action.preview_ellipsis:
+  en: "Preview…"
+  zh-CN: "预览…"
+action.preview:
+  en: "Preview"
+  zh-CN: "预览"
+action.remove:
+  en: "Remove"
+  zh-CN: "移除"
+action.cancel:
+  en: "Cancel"
+  zh-CN: "取消"
+action.open:
+  en: "Open"
+  zh-CN: "打开"
+action.show_in_files:
+  en: "Show in Files"
+  zh-CN: "显示位置"
+action.decline:
+  en: "Decline"
+  zh-CN: "拒绝"
+action.accept:
+  en: "Accept"
+  zh-CN: "接受"
+action.close:
+  en: "Close"
+  zh-CN: "关闭"
+action.expand:
+  en: "Expand"
+  zh-CN: "展开"
+action.collapse:
+  en: "Collapse"
+  zh-CN: "收起"
+action.show_earlier:
+  en: "Show earlier"
+  zh-CN: "展开更早记录"
+action.select_device:
+  en: "Select %{name}"
+  zh-CN: "选择 %{name}"
+action.send_to:
+  en: "Send to %{name}"
+  zh-CN: "发送到 %{name}"
+
+about.protocol:
+  en: "Native client for the LocalSend protocol %{name}"
+  zh-CN: "LocalSend 协议 %{name} 的原生客户端"
+about.credit:
+  en: "Discovery, encryption and transfers come from LocalSend"
+  zh-CN: "设备发现、加密与传输均来自 LocalSend"
+
+theme.system:
+  en: "System"
+  zh-CN: "跟随系统"
+theme.light:
+  en: "Light"
+  zh-CN: "浅色"
+theme.dark:
+  en: "Dark"
+  zh-CN: "深色"
+
+logs.title:
+  en: "Logs"
+  zh-CN: "日志"
+logs.empty:
+  en: "No logs yet"
+  zh-CN: "暂无日志"
+logs.copied:
+  en: "Copied"
+  zh-CN: "已复制"
+
+history.to_lower:
+  en: "to %{name}"
+  zh-CN: "至 %{name}"
+history.to:
+  en: "To %{name}"
+  zh-CN: "发送至 %{name}"
+history.from:
+  en: "From %{name}"
+  zh-CN: "来自 %{name}"
+history.title:
+  en: "Transfer history"
+  zh-CN: "传输记录"
+history.session:
+  en: "This session"
+  zh-CN: "本次会话"
+history.empty:
+  en: "No transfers yet"
+  zh-CN: "暂无传输记录"
+history.item_one:
+  en: "%{count} item"
+  zh-CN: "%{count} 项"
+history.item_other:
+  en: "%{count} items"
+  zh-CN: "%{count} 项"
+history.file_one:
+  en: "%{count} file"
+  zh-CN: "%{count} 个文件"
+history.file_other:
+  en: "%{count} files"
+  zh-CN: "%{count} 个文件"
+
+composer.choose_device:
+  en: "Choose a nearby device"
+  zh-CN: "请选择附近的设备"
+composer.empty:
+  en: "Nothing added yet"
+  zh-CN: "尚未添加内容"
+composer.outbox:
+  en: "Outbox"
+  zh-CN: "待发送"
+composer.drop_hint:
+  en: "Drop something here"
+  zh-CN: "将内容拖到这里"
+composer.drop_kinds:
+  en: "Files, folders, images or a few words."
+  zh-CN: "文件、文件夹、图片或文字。"
+composer.add_to_omasend:
+  en: "Add to Omasend"
+  zh-CN: "添加到 Omasend"
+composer.add_first:
+  en: "Add something to send first"
+  zh-CN: "请先添加要发送的内容"
+
+nearby.identity_unverified:
+  en: "Nearby device identity could not be verified"
+  zh-CN: "无法验证附近设备的身份，请检查对方是否重启或更换了应用"
+nearby.unreachable:
+  en: "Could not connect to nearby device"
+  zh-CN: "无法连接附近设备，请检查对方应用和网络连接"
+nearby.title:
+  en: "Nearby"
+  zh-CN: "附近设备"
+nearby.you:
+  en: "You"
+  zh-CN: "本机"
+nearby.looking:
+  en: "Looking for devices… Open LocalSend on the same Wi-Fi."
+  zh-CN: "正在查找设备… 请在同一 Wi-Fi 下打开 LocalSend。"
+
+receive.destination:
+  en: "Save to your Downloads folder"
+  zh-CN: "保存到下载文件夹"
+receive.title:
+  en: "%{name} wants to send"
+  zh-CN: "%{name} 想要发送文件"

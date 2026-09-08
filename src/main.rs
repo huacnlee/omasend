@@ -3,6 +3,10 @@
     windows_subsystem = "windows"
 )]
 
+// The interface lives in this binary, so it carries its own catalog handle;
+// `omasend::i18n` decides which locale both halves resolve against.
+rust_i18n::i18n!("locales", fallback = "en");
+
 mod views;
 
 use gpui_kit::{App, AppContext, Bounds, Entity, Global, WindowBounds, WindowOptions, px, size};
@@ -56,7 +60,7 @@ fn main() -> anyhow::Result<()> {
         .thread_name("omasend-network")
         .build()?;
     let handle = runtime.handle().clone();
-    let application = gpui_omarchy::application();
+    let application = gpui_kit::application();
     #[cfg(target_os = "macos")]
     {
         let handle = handle.clone();

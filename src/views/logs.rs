@@ -3,6 +3,7 @@ use gpui_kit::{
     AnyElement, ClipboardItem, Context, ScrollHandle, Task, Window, div, prelude::*, rems,
 };
 use gpui_omarchy::{ActiveTheme, ButtonVariant, IconName, button, icon, sheet};
+use rust_i18n::t;
 
 pub struct LogsPanel {
     pub(super) text: String,
@@ -83,11 +84,7 @@ impl Home {
             .flex_col()
             .text_size(rems(0.6875));
         if logs.text.is_empty() {
-            lines = lines.child(
-                div()
-                    .text_color(theme.secondary)
-                    .child(self.language.text("No logs yet")),
-            );
+            lines = lines.child(div().text_color(theme.secondary).child(t!("logs.empty")));
         } else {
             for line in logs.text.lines() {
                 lines = lines.child(
@@ -121,7 +118,7 @@ impl Home {
                     .py_2()
                     .border_b_1()
                     .border_color(theme.divider())
-                    .child(self.language.text("Logs"))
+                    .child(t!("logs.title"))
                     .child(
                         div()
                             .flex()
@@ -151,7 +148,7 @@ impl Home {
                             .child(
                                 button(
                                     "clear-logs",
-                                    self.language.text("Clear"),
+                                    t!("action.clear"),
                                     ButtonVariant::Outline,
                                     cx,
                                 )
@@ -182,12 +179,9 @@ impl Home {
                             )
                             .child(
                                 button("close-logs", "", ButtonVariant::Secondary, cx)
-                                    .accessibility_label(self.language.text("Close"))
+                                    .accessibility_label(t!("action.close"))
                                     .map(|button| {
-                                        gpui_omarchy::with_tooltip(
-                                            button,
-                                            self.language.text("Close"),
-                                        )
+                                        gpui_omarchy::with_tooltip(button, t!("action.close"))
                                     })
                                     .p_1()
                                     .child(icon(IconName::Close).size(rems(0.875)))
