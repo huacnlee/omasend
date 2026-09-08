@@ -78,6 +78,10 @@ impl Language {
 }
 
 const CATALOG: &[(&str, &str)] = &[
+    ("Theme", "主题"),
+    ("System", "跟随系统"),
+    ("Light", "浅色"),
+    ("Dark", "深色"),
     ("Connecting…", "正在连接…"),
     ("Disconnected", "未连接"),
     ("Searching for devices…", "正在搜索设备…"),

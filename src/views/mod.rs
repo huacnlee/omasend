@@ -4,6 +4,7 @@ mod logs;
 mod motion;
 mod nearby;
 mod panels;
+pub mod theme;
 
 use gpui_omarchy::gpui::{App, KeyBinding, actions};
 pub use home::Home;
@@ -23,6 +24,7 @@ actions!(
 );
 
 pub fn init(cx: &mut App) {
+    cx.set_global(theme::ThemeMode::default());
     cx.bind_keys([
         KeyBinding::new("ctrl-v", Paste, Some("OmaSend")),
         KeyBinding::new("ctrl-o", OpenFiles, Some("OmaSend")),

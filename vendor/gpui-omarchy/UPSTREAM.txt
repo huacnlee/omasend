@@ -9,3 +9,5 @@ All other library source is unchanged. Kept here so the application builds repro
 until these fixes can be released upstream.
 
 Local patch: embed a theme-colored History icon for the transfer history entry.
+
+Local patch: menus support nested choice pages with keyboard right/left navigation.

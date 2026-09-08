@@ -71,6 +71,7 @@ fn main() -> anyhow::Result<()> {
         gpui_omarchy::init(cx);
         cx.set_app_identity("omasend", "OmaSend");
         views::init(cx);
+        views::theme::load(cx);
         cx.set_global(DesktopSession { home: None });
         cx.on_action(|_: &views::Quit, cx| cx.quit());
         #[cfg(target_os = "macos")]

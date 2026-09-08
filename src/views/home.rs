@@ -58,17 +58,31 @@ impl Home {
             loading_input: false,
             starting: false,
         };
+        view.watch_theme(window, cx);
         view.connect(window, cx);
         view
     }
 
     pub fn attach_window(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.window_handle = Some(window.window_handle());
+        self.watch_theme(window, cx);
         if self.state.incoming.is_some() {
             self.modal_focus.focus(window, cx);
         } else {
             self.focus.focus(window, cx);
         }
+    }
+
+    fn watch_theme(&self, window: &mut Window, cx: &mut Context<Self>) {
+        use super::theme::ThemeMode;
+        cx.global::<ThemeMode>().to_owned().apply(window, cx);
+        cx.observe_window_appearance(window, |_, window, cx| {
+            if *cx.global::<ThemeMode>() == ThemeMode::System && !cfg!(target_os = "linux") {
+                ThemeMode::System.apply(window, cx);
+                cx.notify();
+            }
+        })
+        .detach();
     }
 
     pub fn close_window(&mut self, window: &mut Window, _: &mut Context<Self>) {
@@ -612,6 +626,25 @@ impl Render for Home {
                                 .separator_before(),
                             MenuItem::new("简体中文")
                                 .checked(self.language == omasend::i18n::Language::ZhCn),
+                            MenuItem::new(self.language.text("Theme"))
+                                .separator_before()
+                                .submenu(
+                                    [
+                                        (9, "System", super::theme::ThemeMode::System),
+                                        (10, "Light", super::theme::ThemeMode::Light),
+                                        (11, "Dark", super::theme::ThemeMode::Dark),
+                                    ]
+                                    .into_iter()
+                                    .map(|(id, label, mode)| {
+                                        (
+                                            id,
+                                            MenuItem::new(self.language.text(label)).checked(
+                                                *cx.global::<super::theme::ThemeMode>() == mode,
+                                            ),
+                                        )
+                                    })
+                                    .collect(),
+                                ),
                             MenuItem::new("OmaSend…").separator_before(),
                             MenuItem::new("GitHub…"),
                             MenuItem::new(self.language.text("Logs…")).separator_before(),
@@ -631,10 +664,19 @@ impl Render for Home {
                                         };
                                         cx.notify();
                                     }
-                                    4 => cx.open_url("https://huacnlee.github.io/omasend/"),
-                                    5 => cx.open_url("https://github.com/huacnlee/omasend"),
-                                    6 => view.open_logs(window, cx),
-                                    7 => cx.quit(),
+                                    5 => cx.open_url("https://huacnlee.github.io/omasend/"),
+                                    6 => cx.open_url("https://github.com/huacnlee/omasend"),
+                                    7 => view.open_logs(window, cx),
+                                    8 => cx.quit(),
+                                    9..=11 => {
+                                        let mode = match index {
+                                            10 => super::theme::ThemeMode::Light,
+                                            11 => super::theme::ThemeMode::Dark,
+                                            _ => super::theme::ThemeMode::System,
+                                        };
+                                        mode.select(window, cx);
+                                        cx.notify();
+                                    }
                                     _ => {}
                                 });
                             }
@@ -891,6 +933,31 @@ mod keyboard_tests {
         test(view, cx);
     }
 
+    #[gpui::test]
+    fn explicit_theme_and_system_appearance_switch_immediately(cx: &mut TestAppContext) {
+        with_home(cx, |_, cx| {
+            use super::super::theme::ThemeMode;
+            cx.update(|window, cx| {
+                assert!(*cx.global::<ThemeMode>() == ThemeMode::System);
+                ThemeMode::Light.apply(window, cx);
+                assert_eq!(cx.omarchy().appearance, gpui_base::ThemeAppearance::Light);
+                ThemeMode::Dark.apply(window, cx);
+                assert_eq!(cx.omarchy().appearance, gpui_base::ThemeAppearance::Dark);
+                ThemeMode::System.apply(window, cx);
+                if !cfg!(target_os = "linux") {
+                    let light = matches!(
+                        window.appearance(),
+                        gpui::WindowAppearance::Light | gpui::WindowAppearance::VibrantLight
+                    );
+                    assert_eq!(
+                        cx.omarchy().appearance == gpui_base::ThemeAppearance::Light,
+                        light
+                    );
+                }
+            });
+        });
+    }
+
     fn remove_with_key(cx: &mut TestAppContext, activation: &str) {
         with_home(cx, |view, cx| {
             // Tab walks to the menu and then the item's Remove button.
@@ -984,6 +1051,28 @@ mod keyboard_tests {
     fn menu_language_can_be_changed_with_keyboard(cx: &mut TestAppContext) {
         with_home(cx, |view, cx| {
             for key in ["tab", "enter", "down", "down", "down", "enter"] {
+                let keystroke = Keystroke::parse(key).unwrap();
+                cx.simulate_event(KeyDownEvent {
+                    keystroke: keystroke.clone(),
+                    is_held: false,
+                    prefer_character_input: false,
+                });
+                cx.simulate_event(KeyUpEvent { keystroke });
+                cx.update(|window, cx| window.draw(cx).clear(cx));
+            }
+            view.read_with(cx, |view, _| {
+                assert_eq!(view.language, omasend::i18n::Language::ZhCn);
+                assert_eq!(view.state.composer.len(), 1);
+            });
+        });
+    }
+    #[gpui::test]
+    fn theme_submenu_returns_to_parent_without_activating_a_choice(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            for key in [
+                "tab", "enter", "down", "down", "down", "down", "right", "left", "home", "down",
+                "down", "down", "enter",
+            ] {
                 let keystroke = Keystroke::parse(key).unwrap();
                 cx.simulate_event(KeyDownEvent {
                     keystroke: keystroke.clone(),

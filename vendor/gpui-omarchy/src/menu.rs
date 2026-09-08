@@ -15,6 +15,7 @@ pub struct MenuItem {
     pub disabled: bool,
     pub checked: Option<bool>,
     pub separator_before: bool,
+    pub children: Vec<(usize, MenuItem)>,
 }
 impl MenuItem {
     pub fn new(label: impl Into<SharedString>) -> Self {
@@ -25,7 +26,12 @@ impl MenuItem {
             disabled: false,
             checked: None,
             separator_before: false,
+            children: Vec::new(),
         }
+    }
+    pub fn submenu(mut self, children: Vec<(usize, MenuItem)>) -> Self {
+        self.children = children;
+        self
     }
     /// Display an exclusive choice with its check on the trailing edge.
     pub fn checked(mut self, checked: bool) -> Self {
@@ -70,17 +76,47 @@ pub fn menu(
                 .use_keyed_state("menu-focus", cx, |_, cx| cx.focus_handle())
                 .read(cx)
                 .clone();
-            if popover.focus_handle(cx).is_focused(window) {
+            let opening = popover.focus_handle(cx).is_focused(window);
+            if opening {
                 focus.focus(window, cx);
             }
+            let page = window.use_keyed_state("menu-page", cx, |_, _| None::<usize>);
+            if opening {
+                page.update(cx, |page, _| *page = None);
+                cursor.update(cx, |cursor, _| *cursor = items.iter().position(|item| !item.disabled));
+            }
+            let displayed = if let Some(index) = *page.read(cx) {
+                let mut entries = vec![(usize::MAX, MenuItem::new(items[index].label.clone()).icon(IconName::ChevronLeft))];
+                entries.extend(items[index].children.clone());
+                entries
+            } else {
+                items.into_iter().enumerate().collect::<Vec<_>>()
+            };
+            let items: Vec<_> = displayed.iter().map(|(_, item)| item.clone()).collect();
+            let leaf_select = on_select.clone();
+            let select_page = page.clone();
+            let select_cursor = cursor.clone();
+            let select_close = cx.entity();
+            let on_select: Rc<dyn Fn(usize, &mut Window, &mut App)> = Rc::new(move |index, window, cx| {
+                let Some((action, item)) = displayed.get(index) else { return; };
+                if *action == usize::MAX || !item.children.is_empty() {
+                    select_page.update(cx, |page, cx| {
+                        *page = (*action != usize::MAX).then_some(*action);
+                        cx.notify();
+                    });
+                    select_cursor.update(cx, |cursor, cx| { *cursor = Some(0); cx.notify(); });
+                    window.refresh();
+                } else {
+                    select_close.update(cx, |state, cx| state.dismiss(window, cx));
+                    leaf_select(*action, window, cx);
+                }
+            });
             let has_icons = items.iter().any(|item| item.icon.is_some());
-            let close = cx.entity();
             let keyboard_items = items.clone();
+            let keyboard_page = page.clone();
             let keyboard_cursor = cursor.clone();
             let keyboard_select = on_select.clone();
-            let keyboard_close = close.clone();
             let confirm_cursor = cursor.clone();
-            let confirm_close = close.clone();
             let confirm_select = on_select.clone();
             div()
                 .id("menu-items")
@@ -100,7 +136,6 @@ pub fn menu(
                 .text_size(px(12.))
                 .on_action(move |_: &gpui_base::actions::Confirm, window, cx| {
                     if let Some(index) = *confirm_cursor.read(cx) {
-                        confirm_close.update(cx, |state, cx| state.dismiss(window, cx));
                         confirm_select(index, window, cx);
                         window.refresh();
                     }
@@ -111,9 +146,14 @@ pub fn menu(
                     }
                     let key = event.keystroke.key.as_str();
                     let current = *keyboard_cursor.read(cx);
-                    if matches!(key, "enter" | "space") {
+                    if key == "left" && keyboard_page.read(cx).is_some() {
+                        keyboard_select(0, window, cx);
+                    } else if key == "right" {
+                        if let Some(index) = current.filter(|&i| !keyboard_items[i].children.is_empty()) {
+                            keyboard_select(index, window, cx);
+                        }
+                    } else if matches!(key, "enter" | "space") {
                         if let Some(index) = current.filter(|&i| !keyboard_items[i].disabled) {
-                            keyboard_close.update(cx, |state, cx| state.dismiss(window, cx));
                             keyboard_select(index, window, cx);
                             window.refresh();
                         }
@@ -137,7 +177,6 @@ pub fn menu(
                 .children(items.into_iter().enumerate().map(|(index, item)| {
                     let hover_cursor = cursor.clone();
                     let current = *cursor.read(cx) == Some(index);
-                    let close = close.clone();
                     let select = on_select.clone();
                     let row = button(("menu-item", index), "", ButtonVariant::Secondary, cx)
                         .accessibility_label(item.label.clone())
@@ -174,6 +213,7 @@ pub fn menu(
                             )
                         })
                         .child(div().flex_1().min_w_0().child(item.label))
+                        .when(!item.children.is_empty(), |row| row.child(icon(IconName::ChevronRight).size(px(14.))))
                         .when_some(item.checked, |row, checked| {
                             row.child(div().w(px(14.)).when(checked, |slot| {
                                 slot.child(icon(IconName::Check).size(px(14.)))
@@ -194,7 +234,6 @@ pub fn menu(
                             }
                         })
                         .on_click(move |_, window, cx| {
-                            close.update(cx, |state, cx| state.dismiss(window, cx));
                             select(index, window, cx);
                             window.refresh();
                         });
