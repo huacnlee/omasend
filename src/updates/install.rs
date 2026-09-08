@@ -183,18 +183,36 @@ mod tests {
                 stop_rx.try_recv(),
                 Err(std::sync::mpsc::TryRecvError::Empty)
             ) {
-                let Ok((mut socket, _)) = listener.accept() else {
-                    std::thread::sleep(Duration::from_millis(5));
-                    continue;
+                let (mut socket, _) = match listener.accept() {
+                    Ok(connection) => connection,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        // Wake promptly on shutdown; this is idle polling, not a
+                        // startup delay that assumes the client is ready.
+                        let _ = stop_rx.recv_timeout(Duration::from_millis(5));
+                        continue;
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+                    Err(error) => panic!("Fixture failed to accept a connection: {error}"),
                 };
+                // Windows inherits the listener's nonblocking mode. Request reads
+                // must wait for incoming bytes, bounded by the timeout below.
+                socket.set_nonblocking(false).unwrap();
                 socket
                     .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                socket
+                    .set_write_timeout(Some(Duration::from_secs(2)))
                     .unwrap();
                 let mut request = Vec::new();
                 let mut chunk = [0; 2048];
                 while !request.windows(4).any(|part| part == b"\r\n\r\n") {
-                    let count = socket.read(&mut chunk).unwrap();
-                    assert!(count > 0 && request.len() < 16384);
+                    let count = match socket.read(&mut chunk) {
+                        Ok(count) => count,
+                        Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+                        Err(error) => panic!("Fixture failed to read request headers: {error}"),
+                    };
+                    assert!(count > 0, "Client closed before sending complete headers");
+                    assert!(request.len() + count <= 16384, "Request headers too large");
                     request.extend_from_slice(&chunk[..count]);
                 }
                 let path = std::str::from_utf8(&request)
@@ -256,7 +274,18 @@ mod tests {
         drop(stop_tx);
         server.join().unwrap();
         if bad_checksum || reject_binary {
-            assert!(result.is_err());
+            let error = result.unwrap_err();
+            if bad_checksum {
+                assert!(
+                    matches!(error, self_update::Error::ChecksumMismatch { .. }),
+                    "Expected checksum rejection, got {error:?}"
+                );
+            } else {
+                assert!(
+                    matches!(error, self_update::Error::VerificationRejected { .. }),
+                    "Expected executable rejection, got {error:?}"
+                );
+            }
             assert_eq!(
                 std::fs::read_to_string(installed_binary).unwrap(),
                 "old binary"
