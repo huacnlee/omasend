@@ -1,10 +1,10 @@
-use gpui::{
+use gpui_kit::base::CheckboxState;
+use gpui_kit::{
     App, ClickEvent, Context, Entity, FocusHandle, FontWeight, KeyDownEvent, Window, WindowOptions,
     div, prelude::*, px, size,
 };
 #[cfg(not(target_family = "wasm"))]
-use gpui::{Bounds, WindowBounds};
-use gpui_base::CheckboxState;
+use gpui_kit::{Bounds, WindowBounds};
 use gpui_omarchy::*;
 #[cfg(not(target_family = "wasm"))]
 use std::time::Instant as GalleryInstant;
@@ -146,8 +146,8 @@ fn description(page: &str) -> &'static str {
 }
 
 struct Gallery {
-    workspace_name: Entity<gpui_base::input::InputState>,
-    workspace_draft: Entity<gpui_base::input::InputState>,
+    workspace_name: Entity<gpui_kit::base::input::InputState>,
+    workspace_draft: Entity<gpui_kit::base::input::InputState>,
     saved_workspace: String,
     theme_mode: usize,
     toolbar_position: usize,
@@ -159,25 +159,25 @@ struct Gallery {
     modal_trigger: FocusHandle,
     modal_result: String,
     menu_result: String,
-    slider_value: Entity<gpui_base::slider::SliderState>,
-    slider_range: Entity<gpui_base::slider::SliderState>,
-    slider_disabled: Entity<gpui_base::slider::SliderState>,
+    slider_value: Entity<gpui_kit::base::slider::SliderState>,
+    slider_range: Entity<gpui_kit::base::slider::SliderState>,
+    slider_disabled: Entity<gpui_kit::base::slider::SliderState>,
     navigation_focus: FocusHandle,
-    navigation_list: gpui::ListState,
+    navigation_list: gpui_kit::ListState,
     navigation_rows: Vec<(bool, &'static str)>,
     expanded: [bool; 3],
     collapse_open: bool,
     toast_message: Option<&'static str>,
     toast_saved: bool,
-    toast_lifecycle: gpui_base::ToastManager<u8, &'static str>,
-    toast_timer: Option<gpui::Task<()>>,
+    toast_lifecycle: gpui_kit::base::ToastManager<u8, &'static str>,
+    toast_timer: Option<gpui_kit::Task<()>>,
     toast_hovered: bool,
     toast_focused: bool,
     toast_focus: FocusHandle,
     current_page: usize,
-    number: Entity<gpui_base::input::InputState>,
-    input: Entity<gpui_base::input::InputState>,
-    textarea: Entity<gpui_base::input::TextareaState>,
+    number: Entity<gpui_kit::base::input::InputState>,
+    input: Entity<gpui_kit::base::input::InputState>,
+    textarea: Entity<gpui_kit::base::input::TextareaState>,
     page: &'static str,
     count: usize,
     checked: bool,
@@ -188,53 +188,56 @@ struct Gallery {
     sheet_open: bool,
     sheet_focus: FocusHandle,
     sheet_trigger: FocusHandle,
-    activity_scroll: gpui_base::VirtualListScrollHandle,
-    timeline_scroll: gpui::ScrollHandle,
-    activity_sizes: std::rc::Rc<Vec<gpui::Size<gpui::Pixels>>>,
+    activity_scroll: gpui_kit::base::VirtualListScrollHandle,
+    timeline_scroll: gpui_kit::ScrollHandle,
+    activity_sizes: std::rc::Rc<Vec<gpui_kit::Size<gpui_kit::Pixels>>>,
     activity_rendered: usize,
     pressed: bool,
     article_filters: [bool; 3],
     tab: usize,
     progress: f32,
-    calendar_state: Entity<gpui_base::CalendarState>,
-    tree_state: Entity<gpui_base::TreeState>,
-    otp_state: Entity<gpui_base::OtpState>,
+    calendar_state: Entity<gpui_kit::base::CalendarState>,
+    tree_state: Entity<gpui_kit::base::TreeState>,
+    otp_state: Entity<gpui_kit::base::OtpState>,
     otp_disabled: bool,
-    color_state: Entity<gpui_base::ColorPickerState>,
-    nav_state: Entity<gpui_base::NavStackState>,
+    color_state: Entity<gpui_kit::base::ColorPickerState>,
+    nav_state: Entity<gpui_kit::base::NavStackState>,
     date_picker_state: Entity<DatePickerState>,
-    dock_state: Entity<gpui_base::dock::DockArea>,
+    dock_state: Entity<gpui_kit::base::dock::DockArea>,
 }
 
 impl Gallery {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let number = cx.new(|cx| gpui_base::input::InputState::new(window, cx).default_value("1"));
-        let input =
-            cx.new(|cx| gpui_base::input::InputState::new(window, cx).placeholder("Project name"));
+        let number =
+            cx.new(|cx| gpui_kit::base::input::InputState::new(window, cx).default_value("1"));
+        let input = cx.new(|cx| {
+            gpui_kit::base::input::InputState::new(window, cx).placeholder("Project name")
+        });
         let textarea = cx.new(|cx| {
-            gpui_base::input::TextareaState::new(window, cx)
+            gpui_kit::base::input::TextareaState::new(window, cx)
                 .rows(4)
                 .placeholder("Add notes")
         });
         let slider_value = cx.new(|_| {
-            gpui_base::slider::SliderState::new()
+            gpui_kit::base::slider::SliderState::new()
                 .step(5.)
                 .default_value(40.)
         });
         let slider_range = cx.new(|_| {
-            gpui_base::slider::SliderState::new()
+            gpui_kit::base::slider::SliderState::new()
                 .step(5.)
                 .default_value((20., 80.))
         });
-        let slider_disabled = cx.new(|_| gpui_base::slider::SliderState::new().default_value(60.));
+        let slider_disabled =
+            cx.new(|_| gpui_kit::base::slider::SliderState::new().default_value(60.));
         for state in [&slider_value, &slider_range] {
             cx.observe(state, |_, _, cx| cx.notify()).detach();
         }
         let workspace_name = cx.new(|cx| {
-            gpui_base::input::InputState::new(window, cx).default_value("Personal workspace")
+            gpui_kit::base::input::InputState::new(window, cx).default_value("Personal workspace")
         });
         let workspace_draft = cx.new(|cx| {
-            gpui_base::input::InputState::new(window, cx).default_value("Personal workspace")
+            gpui_kit::base::input::InputState::new(window, cx).default_value("Personal workspace")
         });
         for state in [&workspace_name, &workspace_draft] {
             cx.observe(state, |_, _, cx| cx.notify()).detach();
@@ -266,39 +269,39 @@ impl Gallery {
         for state in [&select_choice, &combo_choice] {
             cx.observe(state, |_, _, cx| cx.notify()).detach();
         }
-        let calendar_state =
-            cx.new(|cx| gpui_base::CalendarState::new(window, cx).disabled_matcher(vec![0, 6]));
+        let calendar_state = cx
+            .new(|cx| gpui_kit::base::CalendarState::new(window, cx).disabled_matcher(vec![0, 6]));
         cx.observe(&calendar_state, |_, _, cx| cx.notify()).detach();
         let tree_state = cx.new(|cx| {
-            gpui_base::TreeState::new(cx).items(vec![
-                gpui_base::TreeItem::new("documents", "Documents")
+            gpui_kit::base::TreeState::new(cx).items(vec![
+                gpui_kit::base::TreeItem::new("documents", "Documents")
                     .expanded(true)
-                    .child(gpui_base::TreeItem::new("brief", "Project brief.md"))
-                    .child(gpui_base::TreeItem::new("notes", "Meeting notes.md")),
-                gpui_base::TreeItem::new("projects", "Projects")
+                    .child(gpui_kit::base::TreeItem::new("brief", "Project brief.md"))
+                    .child(gpui_kit::base::TreeItem::new("notes", "Meeting notes.md")),
+                gpui_kit::base::TreeItem::new("projects", "Projects")
                     .expanded(true)
                     .child(
-                        gpui_base::TreeItem::new("website", "Website")
-                            .child(gpui_base::TreeItem::new("homepage", "Homepage.md"))
-                            .child(gpui_base::TreeItem::new("assets", "Assets.md")),
+                        gpui_kit::base::TreeItem::new("website", "Website")
+                            .child(gpui_kit::base::TreeItem::new("homepage", "Homepage.md"))
+                            .child(gpui_kit::base::TreeItem::new("assets", "Assets.md")),
                     ),
-                gpui_base::TreeItem::new("archive", "Archive (unavailable)").disabled(true),
+                gpui_kit::base::TreeItem::new("archive", "Archive (unavailable)").disabled(true),
             ])
         });
         cx.observe(&tree_state, |_, _, cx| cx.notify()).detach();
-        let otp_state = cx.new(|cx| gpui_base::OtpState::new(6, window, cx));
+        let otp_state = cx.new(|cx| gpui_kit::base::OtpState::new(6, window, cx));
         cx.observe(&otp_state, |_, _, cx| cx.notify()).detach();
         let accent = cx.omarchy().accent;
         let color_state =
-            cx.new(|cx| gpui_base::ColorPickerState::new(window, cx).default_value(accent));
+            cx.new(|cx| gpui_kit::base::ColorPickerState::new(window, cx).default_value(accent));
         cx.observe(&color_state, |_, _, cx| cx.notify()).detach();
-        let nav_state = cx.new(|_| gpui_base::NavStackState::new());
+        let nav_state = cx.new(|_| gpui_kit::base::NavStackState::new());
         let task_page = cx.new(|cx| NavigationPage {
             level: 2,
             next: None,
             navigation: nav_state.downgrade(),
             notes: cx.new(|cx| {
-                gpui_base::input::InputState::new(window, cx)
+                gpui_kit::base::input::InputState::new(window, cx)
                     .default_value("Check the narrow window layout before Friday.")
             }),
         });
@@ -306,16 +309,16 @@ impl Gallery {
             level: 1,
             next: Some(task_page),
             navigation: nav_state.downgrade(),
-            notes: cx.new(|cx| gpui_base::input::InputState::new(window, cx)),
+            notes: cx.new(|cx| gpui_kit::base::input::InputState::new(window, cx)),
         });
         let root_page = cx.new(|cx| NavigationPage {
             level: 0,
             next: Some(project_page),
             navigation: nav_state.downgrade(),
-            notes: cx.new(|cx| gpui_base::input::InputState::new(window, cx)),
+            notes: cx.new(|cx| gpui_kit::base::input::InputState::new(window, cx)),
         });
         nav_state.update(cx, |state, cx| {
-            state.push(root_page, gpui_base::NavMotion::Immediate, cx)
+            state.push(root_page, gpui_kit::base::NavMotion::Immediate, cx)
         });
         cx.observe(&nav_state, |_, _, cx| cx.notify()).detach();
         let date_picker_state = cx.new(|cx| DatePickerState::new(window, cx));
@@ -350,9 +353,9 @@ impl Gallery {
             slider_range,
             slider_disabled,
             navigation_focus: cx.focus_handle(),
-            navigation_list: gpui::ListState::new(
+            navigation_list: gpui_kit::ListState::new(
                 GROUPS.len() + components().count(),
-                gpui::ListAlignment::Top,
+                gpui_kit::ListAlignment::Top,
                 px(100.),
             ),
             navigation_rows: GROUPS
@@ -365,7 +368,7 @@ impl Gallery {
             collapse_open: false,
             toast_message: None,
             toast_saved: false,
-            toast_lifecycle: gpui_base::ToastManager::new(gpui_base::ToastMotion {
+            toast_lifecycle: gpui_kit::base::ToastManager::new(gpui_kit::base::ToastMotion {
                 duration: std::time::Duration::ZERO,
                 exit_duration: std::time::Duration::ZERO,
                 ..Default::default()
@@ -388,8 +391,8 @@ impl Gallery {
             sheet_open: false,
             sheet_focus: cx.focus_handle(),
             sheet_trigger: cx.focus_handle(),
-            activity_scroll: gpui_base::VirtualListScrollHandle::new(),
-            timeline_scroll: gpui::ScrollHandle::new(),
+            activity_scroll: gpui_kit::base::VirtualListScrollHandle::new(),
+            timeline_scroll: gpui_kit::ScrollHandle::new(),
             activity_sizes: std::rc::Rc::new(
                 (0..1000)
                     .map(|index| size(px(400.), px(if index % 5 == 0 { 44. } else { 28. })))
@@ -438,7 +441,7 @@ impl Gallery {
         modal: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let state = if modal {
             &self.workspace_draft
@@ -518,8 +521,10 @@ impl Gallery {
                         .on_click(cx.listener(
                             move |this, _, window, cx| {
                                 if modal {
-                                    window
-                                        .dispatch_action(Box::new(gpui_base::actions::Cancel), cx);
+                                    window.dispatch_action(
+                                        Box::new(gpui_kit::base::actions::Cancel),
+                                        cx,
+                                    );
                                 } else {
                                     let value = this.saved_workspace.clone();
                                     this.workspace_name
@@ -546,7 +551,9 @@ impl Gallery {
                             move |this, _, window, cx| {
                                 if modal {
                                     window.dispatch_action(
-                                        Box::new(gpui_base::actions::Confirm { secondary: false }),
+                                        Box::new(gpui_kit::base::actions::Confirm {
+                                            secondary: false,
+                                        }),
                                         cx,
                                     );
                                 } else {
@@ -558,7 +565,7 @@ impl Gallery {
             )
     }
 
-    fn reset_form(&self, modal: bool, cx: &mut Context<Self>) -> gpui::Div {
+    fn reset_form(&self, modal: bool, cx: &mut Context<Self>) -> gpui_kit::Div {
         let t = cx.omarchy();
         div().flex().flex_col().gap(px(18.))
             .child(div().flex().items_center().gap(px(10.))
@@ -568,19 +575,23 @@ impl Gallery {
             .child(div().flex().justify_end().gap(px(8.))
                 .child(dialog_button(if modal { "modal-cancel" } else { "specimen-cancel" }, "Cancel", ButtonVariant::Secondary, cx)
                     .on_click(cx.listener(move |this, _, window, cx| {
-                        if modal { window.dispatch_action(Box::new(gpui_base::actions::Cancel), cx); }
+                        if modal { window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx); }
                         else { this.modal_result = "Workspace unchanged".into(); cx.notify(); }
                     })))
                 .child(dialog_button(if modal { "modal-confirm" } else { "specimen-confirm" }, "Reset", ButtonVariant::Danger, cx)
                     .on_click(cx.listener(move |this, _, window, cx| {
-                        if modal { window.dispatch_action(Box::new(gpui_base::actions::Confirm { secondary: false }), cx); }
+                        if modal { window.dispatch_action(Box::new(gpui_kit::base::actions::Confirm { secondary: false }), cx); }
                         else { this.reset_workspace(window, cx); }
                     }))))
     }
 }
 
 impl Gallery {
-    fn render_toggle_group(&self, mut content: gpui::Div, cx: &mut Context<Self>) -> gpui::Div {
+    fn render_toggle_group(
+        &self,
+        mut content: gpui_kit::Div,
+        cx: &mut Context<Self>,
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
 
         let labels = ["Draft", "In review", "Published"];
@@ -659,10 +670,10 @@ impl Gallery {
 impl Gallery {
     fn render_overview_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let form = self.workspace_form(false, window, cx);
         content = content
@@ -672,7 +683,7 @@ impl Gallery {
                     .flex_wrap()
                     .items_start()
                     .gap(px(24.))
-                    .child(div().w(px(420.)).max_w(gpui::relative(1.)).child(form))
+                    .child(div().w(px(420.)).max_w(gpui_kit::relative(1.)).child(form))
                     .child(
                         div()
                             .w(px(220.))
@@ -743,7 +754,7 @@ impl Gallery {
                     .into_iter()
                     .map(|(page, label)| {
                         dialog_button(
-                            (gpui::ElementId::from("overview-open"), page),
+                            (gpui_kit::ElementId::from("overview-open"), page),
                             label,
                             ButtonVariant::Secondary,
                             cx,
@@ -759,17 +770,17 @@ impl Gallery {
     }
     fn render_popover_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let target = cx.entity();
         content = content
             .child(
                 div()
                     .w(px(360.))
-                    .max_w(gpui::relative(1.))
+                    .max_w(gpui_kit::relative(1.))
                     .p(px(14.))
                     .bg(t.normal_fill())
                     .flex()
@@ -840,10 +851,10 @@ impl Gallery {
     }
     fn render_tooltip_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let action = if self.pressed {
             "Remove from favorites"
@@ -854,7 +865,7 @@ impl Gallery {
             .child(
                 div()
                     .w(px(360.))
-                    .max_w(gpui::relative(1.))
+                    .max_w(gpui_kit::relative(1.))
                     .p(px(14.))
                     .bg(t.normal_fill())
                     .flex()
@@ -896,10 +907,10 @@ impl Gallery {
     }
     fn render_menu_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let target = cx.entity();
         content = content
@@ -932,10 +943,10 @@ impl Gallery {
     }
     fn render_table_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let records = [
             (
@@ -1030,8 +1041,8 @@ impl Gallery {
                     .child(
                         table("projects", cx)
                             .min_w(px(640.))
-                            .child(gpui_base::TableHeader::new("head").child(heading))
-                            .child(gpui_base::TableBody::new("body").children(
+                            .child(gpui_kit::base::TableHeader::new("head").child(heading))
+                            .child(gpui_kit::base::TableBody::new("body").children(
                                 records.into_iter().enumerate().map(
                                     |(index, (name, label, status, owner, updated, files))| {
                                         table_row(index, index + 2, cx)
@@ -1063,10 +1074,10 @@ impl Gallery {
     }
     fn render_button_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content.child(div().text_color(t.secondary).child("Appearance"));
         for (key, label, variant) in [
@@ -1090,7 +1101,7 @@ impl Gallery {
                     )))
                     .child(
                         button(
-                            (gpui::ElementId::from(key), "disabled"),
+                            (gpui_kit::ElementId::from(key), "disabled"),
                             "Unavailable",
                             variant,
                             cx,
@@ -1151,10 +1162,10 @@ impl Gallery {
     }
     fn render_tabs_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let labels = ["Overview", "Activity", "Settings"];
         let target = cx.entity();
@@ -1176,7 +1187,7 @@ impl Gallery {
         );
         let mut body = div()
             .id("workspace-tab-panel")
-            .role(gpui::Role::TabPanel)
+            .role(gpui_kit::Role::TabPanel)
             .flex()
             .flex_col()
             .gap(px(14.))
@@ -1189,7 +1200,7 @@ impl Gallery {
                 body = body
                     .child(
                         div()
-                            .font_weight(gpui::FontWeight::BOLD)
+                            .font_weight(gpui_kit::FontWeight::BOLD)
                             .child("Personal workspace"),
                     )
                     .child(
@@ -1219,7 +1230,7 @@ impl Gallery {
                 body = body
                     .child(
                         div()
-                            .font_weight(gpui::FontWeight::BOLD)
+                            .font_weight(gpui_kit::FontWeight::BOLD)
                             .child("Recent activity"),
                     )
                     .child(
@@ -1272,13 +1283,13 @@ impl Gallery {
     }
     fn render_resizable_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content.child("Horizontal").child(div().w_full().h(px(300.)).border_1().border_color(t.border)
-                    .child(resizable("workspace-panes", gpui::Axis::Horizontal, cx)
+                    .child(resizable("workspace-panes", gpui_kit::Axis::Horizontal, cx)
                         .child(resizable_panel().size(px(220.)).size_range(px(140.)..px(420.))
                             .child(div().size_full().p(px(14.)).flex().flex_col().gap(px(10.))
                                 .child("Documents").child("Project brief.md").child("Meeting notes.md")))
@@ -1294,7 +1305,7 @@ impl Gallery {
                 .border_1()
                 .border_color(t.border)
                 .child(
-                    resizable("preview-console", gpui::Axis::Vertical, cx)
+                    resizable("preview-console", gpui_kit::Axis::Vertical, cx)
                         .child(
                             resizable_panel()
                                 .size(px(140.))
@@ -1332,10 +1343,10 @@ impl Gallery {
     }
     fn render_avatar_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content.child(
             div()
@@ -1387,10 +1398,10 @@ impl Gallery {
     }
     fn render_nav_stack_example(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
                     .child(
@@ -1404,7 +1415,7 @@ impl Gallery {
                                     .disabled(self.nav_state.read(cx).depth() <= 1)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.nav_state.update(cx, |state, cx| {
-                                            state.pop(gpui_base::NavMotion::Immediate, cx);
+                                            state.pop(gpui_kit::base::NavMotion::Immediate, cx);
                                         });
                                     })),
                             )
@@ -1414,7 +1425,7 @@ impl Gallery {
                                     .disabled(self.nav_state.read(cx).forward_views().len() == 0)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.nav_state.update(cx, |state, cx| {
-                                            state.forward(gpui_base::NavMotion::Immediate, cx);
+                                            state.forward(gpui_kit::base::NavMotion::Immediate, cx);
                                         });
                                     })),
                             )
@@ -1437,10 +1448,10 @@ impl Gallery {
 impl Gallery {
     fn render_progress_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content
             .child(format!("Progress: {:.0}%", self.progress))
             .child(progress("progress", self.progress, cx))
@@ -1470,10 +1481,10 @@ impl Gallery {
     }
     fn render_empty_state_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = if self.count == 0 {
             content.child(
                 empty_state(
@@ -1504,10 +1515,10 @@ impl Gallery {
     }
     fn render_badge_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         for (label, status) in [
             ("Idle", Status::Neutral),
             ("Applied", Status::Success),
@@ -1520,10 +1531,10 @@ impl Gallery {
     }
     fn render_keycap_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content.child(
             div()
                 .flex()
@@ -1538,10 +1549,10 @@ impl Gallery {
     }
     fn render_separator_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
             .child(div().text_color(t.secondary).child("Horizontal"))
@@ -1578,10 +1589,10 @@ impl Gallery {
     }
     fn render_panel_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content.child(
             panel("Workspace", cx)
                 .child("Theme-aware surface with a title and composable children")
@@ -1591,10 +1602,10 @@ impl Gallery {
     }
     fn render_calendar_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
             .child("Schedule a workspace review")
@@ -1615,7 +1626,7 @@ impl Gallery {
                 button("clear-date", "Clear date", ButtonVariant::Outline, cx).on_click(
                     cx.listener(|this, _, window, cx| {
                         this.calendar_state.update(cx, |state, cx| {
-                            state.set_date(gpui_base::Date::Single(None), window, cx)
+                            state.set_date(gpui_kit::base::Date::Single(None), window, cx)
                         });
                     }),
                 ),
@@ -1624,10 +1635,10 @@ impl Gallery {
     }
     fn render_date_picker_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
             .child("Review date")
@@ -1641,10 +1652,10 @@ impl Gallery {
     }
     fn render_color_picker_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let color = self.color_state.read(cx).value().unwrap_or(t.accent);
         content = content.child("Project label color")
@@ -1657,10 +1668,10 @@ impl Gallery {
     }
     fn render_tree_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
             .child("Workspace files")
@@ -1683,10 +1694,10 @@ impl Gallery {
     }
     fn render_dock_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
                     .child(button("reset-dock", "Reset layout", ButtonVariant::Outline, cx)
@@ -1700,10 +1711,10 @@ impl Gallery {
     }
     fn render_hover_card_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
             .child("Workspace owner")
@@ -1738,10 +1749,10 @@ impl Gallery {
     }
     fn render_otp_input_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
             .child("Verification code")
@@ -1790,10 +1801,10 @@ impl Gallery {
     }
     fn render_button_group_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let labels = ["Top", "Right", "Bottom", "Left"];
         let target = cx.entity();
@@ -1829,10 +1840,10 @@ impl Gallery {
     }
     fn render_link_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content
             .child(link(
                 "manual",
@@ -1853,10 +1864,10 @@ impl Gallery {
     }
     fn render_toggle_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content.child(
             toggle("toggle", "Favorite panel", self.pressed, cx)
                 .child(icon(IconName::Star))
@@ -1869,12 +1880,12 @@ impl Gallery {
     }
     fn render_radio_page(
         &mut self,
-        content: gpui::Div,
+        content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let theme = cx.omarchy().clone();
-        let mut options = gpui_base::RadioGroup::new("list-density")
+        let mut options = gpui_kit::base::RadioGroup::new("list-density")
             .aria_label("List density")
             .track_focus(&self.radio_focus.clone().tab_stop(true))
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, _, cx| {
@@ -1965,10 +1976,10 @@ impl Gallery {
     }
     fn render_switch_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content
             .child(
                 switch("switch", "Show metadata", self.enabled, cx).on_change(change(cx.listener(
@@ -1987,10 +1998,10 @@ impl Gallery {
     }
     fn render_checkbox_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let state = if self.mixed {
             CheckboxState::Indeterminate
         } else if self.checked {
@@ -2029,10 +2040,10 @@ impl Gallery {
     }
     fn render_textarea_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content
             .child("Workspace notes")
             .child(textarea("notes", &self.textarea, window, cx).max_w(px(520.)))
@@ -2041,10 +2052,10 @@ impl Gallery {
     }
     fn render_input_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content
             .child("Workspace name")
             .child(input("workspace-name", &self.input, window, cx).max_w(px(380.)))
@@ -2079,10 +2090,10 @@ impl Gallery {
     }
     fn render_number_input_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content
             .child("Quantity")
             .child(number_input(&self.number, cx))
@@ -2091,15 +2102,15 @@ impl Gallery {
     }
     fn render_pagination_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let listener = cx.listener(|this, page, _, cx| {
             this.current_page = *page;
             cx.notify();
         });
-        let state = gpui_base::PaginationState::new(self.current_page, 12)
+        let state = gpui_kit::base::PaginationState::new(self.current_page, 12)
             .on_change(move |page, window, cx| listener(&page, window, cx));
         content = content
             .child(format!("Page {} of 12", self.current_page))
@@ -2108,18 +2119,18 @@ impl Gallery {
     }
     fn render_accordion_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let mut sections = accordion("sections", cx);
         for (index, (title, description)) in [
                     ("Appearance", "Uses the current Omarchy system theme, with Tokyo Night as the fallback. Change the theme from the application menu."),
                     ("Keyboard navigation", "Tab moves between controls. Return or Space activates the focused control. Escape closes an open menu or dialog."),
                     ("Workspace data", "Changes in this gallery stay in memory for this session. Resetting an example does not remove files on disk."),
                 ].into_iter().enumerate() {
-                    sections = sections.child(gpui_base::AccordionItem::new().open(self.expanded[index])
-                        .header(gpui_base::AccordionHeader::new(accordion_trigger(("section", index), title, self.expanded[index], cx)
+                    sections = sections.child(gpui_kit::base::AccordionItem::new().open(self.expanded[index])
+                        .header(gpui_kit::base::AccordionHeader::new(accordion_trigger(("section", index), title, self.expanded[index], cx)
                             .debug_selector(move || format!("accordion-trigger-{index}"))
                             .on_change(change(cx.listener(move |this, next, _, cx| { this.expanded[index] = *next; cx.notify(); })))))
                         .panel(accordion_panel(cx).child(div().debug_selector(move || format!("accordion-panel-{index}")).child(description))));
@@ -2167,7 +2178,7 @@ impl Gallery {
                 0
             },
             message,
-            gpui_base::ToastOptions {
+            gpui_kit::base::ToastOptions {
                 timeout: (message != "Could not sync workspace")
                     .then_some(std::time::Duration::from_secs(6)),
             },
@@ -2306,10 +2317,10 @@ impl Gallery {
 
     fn render_toast_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content = content
             .child(
@@ -2350,10 +2361,10 @@ impl Gallery {
     }
     fn render_collapsible_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         content =
             content.child(
@@ -2402,10 +2413,10 @@ impl Gallery {
     }
     fn render_icon_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         _window: &mut Window,
         _cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         for (name, glyph) in [
             ("Check", IconName::Check),
             ("Minus", IconName::Minus),
@@ -2433,10 +2444,10 @@ impl Gallery {
     }
     fn render_slider_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content
             .child(format!("Volume: {}", self.slider_value.read(cx).value()))
             .child(slider(&self.slider_value, false, window, cx))
@@ -2449,10 +2460,10 @@ impl Gallery {
     }
     fn render_dialog_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let alert = self.page == "alert_dialog";
         let specimen = if alert {
@@ -2526,7 +2537,7 @@ impl Gallery {
             let popup = div()
                 .id("modal-surface")
                 .occlude()
-                .max_w(gpui::relative(0.9))
+                .max_w(gpui_kit::relative(0.9))
                 .child(dialog_popup(cx).w(px(460.)).child(body));
             let close = cx.listener(|this, confirmed: &bool, window, cx| {
                 this.modal_open = false;
@@ -2571,10 +2582,10 @@ impl Gallery {
     }
     fn render_select_page(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let t = cx.omarchy().clone();
         let searchable = self.page == "combobox";
         let state = if searchable {
@@ -2601,7 +2612,7 @@ impl Gallery {
             .child(
                 div()
                     .w(px(360.))
-                    .max_w(gpui::relative(1.))
+                    .max_w(gpui_kit::relative(1.))
                     .flex()
                     .flex_col()
                     .gap(px(8.))
@@ -2622,7 +2633,7 @@ impl Gallery {
             .child(
                 div()
                     .w(px(360.))
-                    .max_w(gpui::relative(1.))
+                    .max_w(gpui_kit::relative(1.))
                     .flex()
                     .flex_col()
                     .gap(px(8.))
@@ -2645,7 +2656,7 @@ impl Gallery {
         cx.notify();
     }
 
-    fn render_project_sheet(&self, cx: &mut Context<Self>) -> gpui_base::Sheet {
+    fn render_project_sheet(&self, cx: &mut Context<Self>) -> gpui_kit::base::Sheet {
         let surface = sheet_surface(cx)
             .debug_selector(|| "project-sheet".into())
             .child(dialog_title("Website refresh", cx))
@@ -2675,13 +2686,13 @@ impl Gallery {
 }
 
 impl Gallery {
-    fn render_text_view(&self, content: gpui::Div, cx: &App) -> gpui::Div {
+    fn render_text_view(&self, content: gpui_kit::Div, cx: &App) -> gpui_kit::Div {
         content.child(markdown("project-brief", "## Website refresh\n\nA clearer home for our **project documentation**. Keep navigation simple and preserve the reading experience.\n\n### Before launch\n\n- Review the introduction and installation steps.\n- Verify keyboard navigation in both themes.\n- Publish the release notes.\n\n> Changes should make the next step easier to understand.\n\nRun the gallery locally:\n\n```sh\ncargo run --example gallery\n```\n\nRead the [project source](https://github.com/huacnlee/gpui-omarchy) for usage examples.", cx))
             .child(separator(cx))
             .child(html("release-summary", "<h3>Release summary</h3><p><strong>Ready for review.</strong> The documentation is complete; launch follows the final keyboard check.</p><p><em>Updated by Alex Lee</em></p>", cx))
     }
 
-    fn render_horizontal_scrollbar(&self, content: gpui::Div, cx: &App) -> gpui::Div {
+    fn render_horizontal_scrollbar(&self, content: gpui_kit::Div, cx: &App) -> gpui_kit::Div {
         let t = cx.omarchy();
         content
             .child("Project timeline · Scroll horizontally")
@@ -2736,7 +2747,7 @@ impl Gallery {
                     )
                     .child(scrollbar(
                         "timeline-scrollbar",
-                        gpui_base::ScrollbarAxis::Horizontal,
+                        gpui_kit::base::ScrollbarAxis::Horizontal,
                         &self.timeline_scroll,
                         cx,
                     )),
@@ -2745,9 +2756,9 @@ impl Gallery {
 
     fn render_activity_list(
         &mut self,
-        mut content: gpui::Div,
+        mut content: gpui_kit::Div,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         content = content.child("Sample activity · 1,000 events").child(
             div().flex().gap(px(8.)).children(
                 [
@@ -2760,7 +2771,7 @@ impl Gallery {
                         .debug_selector(move || id.into())
                         .on_click(cx.listener(move |this, _, _, cx| {
                             this.activity_scroll
-                                .scroll_to_item(index, gpui::ScrollStrategy::Top);
+                                .scroll_to_item(index, gpui_kit::ScrollStrategy::Top);
                             cx.notify();
                         }))
                 }),
@@ -2799,7 +2810,7 @@ impl Gallery {
         .track_scroll(&self.activity_scroll);
         content.child(div().relative().w_full().border_1().border_color(cx.omarchy().border)
             .debug_selector(|| "activity-viewport".into()).child(list)
-            .child(scrollbar("activity-scrollbar", gpui_base::ScrollbarAxis::Vertical, &self.activity_scroll, cx)))
+            .child(scrollbar("activity-scrollbar", gpui_kit::base::ScrollbarAxis::Vertical, &self.activity_scroll, cx)))
             .child(div().text_color(cx.omarchy().secondary).child("Scroll through the log or jump to either end. Longer events keep their full description."))
     }
 }
@@ -3006,7 +3017,7 @@ impl Render for Gallery {
                 cx.notify();
             }))
             .child(
-                gpui::list(self.navigation_list.clone(), {
+                gpui_kit::list(self.navigation_list.clone(), {
                     let view = cx.entity();
                     move |index, _, cx| {
                         view.update(cx, |this, cx| {
@@ -3081,7 +3092,7 @@ impl Render for Gallery {
                             .text_size(px(14.))
                             .font_weight(FontWeight::BOLD)
                             .flex_1()
-                            .on_mouse_down(gpui::MouseButton::Left, |_, window, _| {
+                            .on_mouse_down(gpui_kit::MouseButton::Left, |_, window, _| {
                                 window.start_window_move()
                             })
                             .child("GPUI Omarchy"),
@@ -3132,7 +3143,7 @@ impl Render for Gallery {
                                 }
                             },
                         )
-                        .anchor(gpui::Anchor::TopRight),
+                        .anchor(gpui_kit::Anchor::TopRight),
                     ),
             )
             .child(
@@ -3195,7 +3206,7 @@ impl Render for Gallery {
                         ),
                     ),
             )
-            .child(gpui_base::TextSelectionLayer)
+            .child(gpui_kit::base::TextSelectionLayer)
             .when(self.sheet_open, |root| {
                 root.child(self.render_project_sheet(cx))
             })
@@ -3205,8 +3216,8 @@ impl Render for Gallery {
     }
 }
 
-fn demo_dock_layout(cx: &mut App) -> gpui_base::dock::DockLayout {
-    use gpui_base::dock::DockLayout;
+fn demo_dock_layout(cx: &mut App) -> gpui_kit::base::dock::DockLayout {
+    use gpui_kit::base::dock::DockLayout;
     let files = cx.new(|cx| DemoDockPanel {
         title: "Files",
         focus: cx.focus_handle(),
@@ -3228,18 +3239,18 @@ struct DemoDockPanel {
     title: &'static str,
     focus: FocusHandle,
 }
-impl gpui::EventEmitter<gpui_base::dock::PanelEvent> for DemoDockPanel {}
-impl gpui::Focusable for DemoDockPanel {
+impl gpui_kit::EventEmitter<gpui_kit::base::dock::PanelEvent> for DemoDockPanel {}
+impl gpui_kit::Focusable for DemoDockPanel {
     fn focus_handle(&self, _: &App) -> FocusHandle {
         self.focus.clone()
     }
 }
-impl gpui_base::dock::Panel for DemoDockPanel {
+impl gpui_kit::base::dock::Panel for DemoDockPanel {
     fn panel_name(&self) -> &'static str {
         self.title
     }
 }
-impl gpui::Render for DemoDockPanel {
+impl gpui_kit::Render for DemoDockPanel {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .size_full()
@@ -3272,12 +3283,12 @@ impl gpui::Render for DemoDockPanel {
     }
 }
 
-fn gallery_avatar() -> std::sync::Arc<gpui::Image> {
-    static IMAGE: std::sync::OnceLock<std::sync::Arc<gpui::Image>> = std::sync::OnceLock::new();
+fn gallery_avatar() -> std::sync::Arc<gpui_kit::Image> {
+    static IMAGE: std::sync::OnceLock<std::sync::Arc<gpui_kit::Image>> = std::sync::OnceLock::new();
     IMAGE
         .get_or_init(|| {
-            std::sync::Arc::new(gpui::Image::from_bytes(
-                gpui::ImageFormat::Png,
+            std::sync::Arc::new(gpui_kit::Image::from_bytes(
+                gpui_kit::ImageFormat::Png,
                 include_bytes!("../assets/huacnlee.png").to_vec(),
             ))
         })
@@ -3287,10 +3298,10 @@ fn gallery_avatar() -> std::sync::Arc<gpui::Image> {
 struct NavigationPage {
     level: usize,
     next: Option<Entity<NavigationPage>>,
-    navigation: gpui::WeakEntity<gpui_base::NavStackState>,
-    notes: Entity<gpui_base::input::InputState>,
+    navigation: gpui_kit::WeakEntity<gpui_kit::base::NavStackState>,
+    notes: Entity<gpui_kit::base::input::InputState>,
 }
-impl gpui::Render for NavigationPage {
+impl gpui_kit::Render for NavigationPage {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = cx.omarchy().clone();
         let (title, description) = match self.level {
@@ -3346,7 +3357,7 @@ impl gpui::Render for NavigationPage {
                             (this.navigation.upgrade(), this.next.clone())
                         {
                             navigation.update(cx, |state, cx| {
-                                state.push(next, gpui_base::NavMotion::Immediate, cx)
+                                state.push(next, gpui_kit::base::NavMotion::Immediate, cx)
                             });
                         }
                     })),
@@ -3405,7 +3416,7 @@ fn install_panic_report() {
 #[cfg(not(target_family = "wasm"))]
 pub fn run() {
     install_panic_report();
-    gpui::platform::application().run(move |cx| {
+    gpui_kit::platform::application().run(move |cx| {
         gpui_omarchy::init(cx);
         cx.open_window(
             WindowOptions {
@@ -3463,7 +3474,8 @@ fn change<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::TestAppContext;
+    use gpui_kit::TestAppContext;
+    use gpui_kit::gpui;
 
     #[gpui::test]
     fn dialogs_cancel_confirm_and_restore_focus(cx: &mut TestAppContext) {
@@ -3842,7 +3854,7 @@ mod tests {
             let this = view.read(cx);
             assert!(this.input.read(cx).value().is_empty());
             assert_eq!(this.count, 0);
-            use gpui::Focusable;
+            use gpui_kit::Focusable;
             assert!(this.input.read(cx).focus_handle(cx).is_focused(window));
         });
         cx.simulate_input("New name");
@@ -3910,8 +3922,8 @@ mod tests {
 
     #[gpui::test]
     fn dock_drag_merges_tabs_without_losing_panels(cx: &mut TestAppContext) {
-        use gpui::MouseButton;
-        use gpui_base::dock::DockPlacement;
+        use gpui_kit::MouseButton;
+        use gpui_kit::base::dock::DockPlacement;
         cx.update(gpui_omarchy::init);
         let (view, cx) = cx.add_window_view(Gallery::new);
         view.update(cx, |this, cx| {
@@ -3925,7 +3937,7 @@ mod tests {
         let destination = cx.debug_bounds("dock-tab-Preview").unwrap().center();
         cx.simulate_mouse_down(source, MouseButton::Left, Default::default());
         cx.simulate_mouse_move(
-            source + gpui::point(px(12.), px(0.)),
+            source + gpui_kit::point(px(12.), px(0.)),
             Some(MouseButton::Left),
             Default::default(),
         );
@@ -4039,9 +4051,9 @@ mod tests {
                 window.draw(cx).clear(cx);
                 let state = view.read(cx).color_state.read(cx);
                 assert!(!state.is_open());
-                assert!(gpui::Focusable::focus_handle(state, cx).is_focused(window));
+                assert!(gpui_kit::Focusable::focus_handle(state, cx).is_focused(window));
                 if commit {
-                    assert_eq!(state.value(), Some(gpui::hsla(0., 1., 0.5, 1.)));
+                    assert_eq!(state.value(), Some(gpui_kit::hsla(0., 1., 0.5, 1.)));
                 } else {
                     assert_eq!(state.value(), original);
                 }
@@ -4127,7 +4139,7 @@ mod tests {
                     cx.simulate_click(close, Default::default());
                 }
                 _ => cx.simulate_click(
-                    root.origin + gpui::point(px(10.), px(10.)),
+                    root.origin + gpui_kit::point(px(10.), px(10.)),
                     Default::default(),
                 ),
             }
@@ -4182,12 +4194,12 @@ mod tests {
             cx.update(|window, cx| window.draw(cx).clear(cx));
         }
         let bounds = cx.debug_bounds("activity-viewport").unwrap();
-        let start = gpui::point(bounds.right() - px(5.), bounds.top() + px(6.));
-        let end = gpui::point(start.x, bounds.bottom() - px(12.));
-        cx.simulate_mouse_down(start, gpui::MouseButton::Left, Default::default());
+        let start = gpui_kit::point(bounds.right() - px(5.), bounds.top() + px(6.));
+        let end = gpui_kit::point(start.x, bounds.bottom() - px(12.));
+        cx.simulate_mouse_down(start, gpui_kit::MouseButton::Left, Default::default());
         cx.update(|window, cx| window.draw(cx).clear(cx));
-        cx.simulate_mouse_move(end, Some(gpui::MouseButton::Left), Default::default());
-        cx.simulate_mouse_up(end, gpui::MouseButton::Left, Default::default());
+        cx.simulate_mouse_move(end, Some(gpui_kit::MouseButton::Left), Default::default());
+        cx.simulate_mouse_up(end, gpui_kit::MouseButton::Left, Default::default());
         for _ in 0..2 {
             cx.update(|window, cx| window.draw(cx).clear(cx));
         }
@@ -4210,12 +4222,12 @@ mod tests {
             cx.update(|window, cx| window.draw(cx).clear(cx));
         }
         let bounds = cx.debug_bounds("timeline-viewport").unwrap();
-        let start = gpui::point(bounds.left() + px(20.), bounds.bottom() - px(5.));
-        let end = gpui::point(bounds.right() - px(12.), start.y);
-        cx.simulate_mouse_down(start, gpui::MouseButton::Left, Default::default());
+        let start = gpui_kit::point(bounds.left() + px(20.), bounds.bottom() - px(5.));
+        let end = gpui_kit::point(bounds.right() - px(12.), start.y);
+        cx.simulate_mouse_down(start, gpui_kit::MouseButton::Left, Default::default());
         cx.update(|window, cx| window.draw(cx).clear(cx));
-        cx.simulate_mouse_move(end, Some(gpui::MouseButton::Left), Default::default());
-        cx.simulate_mouse_up(end, gpui::MouseButton::Left, Default::default());
+        cx.simulate_mouse_move(end, Some(gpui_kit::MouseButton::Left), Default::default());
+        cx.simulate_mouse_up(end, gpui_kit::MouseButton::Left, Default::default());
         for _ in 0..2 {
             cx.update(|window, cx| window.draw(cx).clear(cx));
         }

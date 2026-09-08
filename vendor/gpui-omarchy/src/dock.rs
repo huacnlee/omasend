@@ -1,7 +1,9 @@
 //! Dock presentation. Layout, reconciliation and drag operations stay in base.
 use crate::{ActiveTheme, ButtonVariant, button};
-use gpui::{AnyElement, App, Context, Div, SharedString, Stateful, Window, div, prelude::*, px};
-use gpui_base::dock::*;
+use gpui_kit::base::dock::*;
+use gpui_kit::{
+    AnyElement, App, Context, Div, SharedString, Stateful, Window, div, prelude::*, px,
+};
 use std::rc::Rc;
 
 pub fn dock_area(
@@ -92,10 +94,10 @@ impl TabGroupRenderer for OmarchyDock {
             .border_color(cx.omarchy().accent);
         Some(
             match indicator.placement() {
-                Some(gpui_base::Placement::Left) => hint.w(gpui::relative(0.5)),
-                Some(gpui_base::Placement::Right) => hint.left(gpui::relative(0.5)),
-                Some(gpui_base::Placement::Top) => hint.h(gpui::relative(0.5)),
-                Some(gpui_base::Placement::Bottom) => hint.top(gpui::relative(0.5)),
+                Some(gpui_kit::base::Placement::Left) => hint.w(gpui_kit::relative(0.5)),
+                Some(gpui_kit::base::Placement::Right) => hint.left(gpui_kit::relative(0.5)),
+                Some(gpui_kit::base::Placement::Top) => hint.h(gpui_kit::relative(0.5)),
+                Some(gpui_kit::base::Placement::Bottom) => hint.top(gpui_kit::relative(0.5)),
                 _ => hint,
             }
             .into_any_element(),
@@ -104,7 +106,7 @@ impl TabGroupRenderer for OmarchyDock {
 }
 
 struct DockDragLabel(&'static str);
-impl gpui::Render for DockDragLabel {
+impl gpui_kit::Render for DockDragLabel {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .px(px(10.))
@@ -120,6 +122,6 @@ impl gpui::Render for DockDragLabel {
 // Required by base's renderer contract; this skin offers tabbed/split docks only.
 impl TilesRenderer for OmarchyDock {
     fn render_drag_bar(&self, _: &TileContext, _: &mut Window, _: &mut App) -> AnyElement {
-        gpui::Empty.into_any_element()
+        gpui_kit::Empty.into_any_element()
     }
 }

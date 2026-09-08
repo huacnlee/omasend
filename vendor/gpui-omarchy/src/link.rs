@@ -1,16 +1,16 @@
 //! Link presentation that suppresses transient styles while disabled.
-use gpui::{
+use gpui_kit::base::LinkStyles;
+use gpui_kit::{
     AnyElement, App, ClickEvent, ElementId, InteractiveElement, Interactivity, IntoElement,
     ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, StyleRefinement, Styled,
     Window,
 };
-use gpui_base::LinkStyles;
 
 /// An Omarchy link backed by gpui-base's activation and focus behavior.
 /// Transient styles are applied only after the final disabled state is known.
 #[derive(IntoElement)]
 pub struct Link {
-    base: gpui_base::Link,
+    base: gpui_kit::base::Link,
     disabled: bool,
     hover: Option<Box<StyleRefinement>>,
     active: Option<Box<StyleRefinement>>,
@@ -20,7 +20,7 @@ pub struct Link {
 impl Link {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
-            base: gpui_base::Link::new(id),
+            base: gpui_kit::base::Link::new(id),
             disabled: false,
             hover: None,
             active: None,
@@ -131,7 +131,8 @@ impl RenderOnce for Link {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Context, Modifiers, MouseButton, Render, TestAppContext, div, point, px};
+    use gpui_kit::gpui;
+    use gpui_kit::{Context, Modifiers, MouseButton, Render, TestAppContext, div, point, px};
     #[gpui::test]
     fn disabled_link_suppresses_hover_and_pressed_geometry(cx: &mut TestAppContext) {
         cx.update(crate::init);

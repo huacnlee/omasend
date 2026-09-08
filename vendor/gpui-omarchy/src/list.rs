@@ -1,6 +1,6 @@
 //! Virtualized lists retain base's sizing and scroll model.
 use crate::ActiveTheme;
-use gpui::{
+use gpui_kit::{
     App, Context, ElementId, Entity, IntoElement, Pixels, Render, Size, Styled, Window, px,
 };
 use std::{ops::Range, rc::Rc};
@@ -14,9 +14,9 @@ pub fn virtual_list<V: Render, R: IntoElement>(
     sizes: Rc<Vec<Size<Pixels>>>,
     render: impl Fn(&mut V, Range<usize>, &mut Window, &mut Context<V>) -> Vec<R> + 'static,
     cx: &App,
-) -> gpui_base::VirtualList {
+) -> gpui_kit::base::VirtualList {
     let t = cx.omarchy();
-    gpui_base::v_virtual_list(view, id, sizes, render)
+    gpui_kit::base::v_virtual_list(view, id, sizes, render)
         .w_full()
         .h(px(280.))
         .font_family(t.font.clone())
@@ -27,17 +27,17 @@ pub fn virtual_list<V: Render, R: IntoElement>(
 
 /// Overlay scrollbar for a scrollable region. Render after that region inside a
 /// relative parent, using the same handle as the scrollable content.
-pub fn scrollbar<H: gpui_base::ScrollbarHandle + Clone>(
+pub fn scrollbar<H: gpui_kit::base::ScrollbarHandle + Clone>(
     id: impl Into<ElementId>,
-    axis: gpui_base::ScrollbarAxis,
+    axis: gpui_kit::base::ScrollbarAxis,
     handle: &H,
     cx: &App,
-) -> gpui_base::Scrollbar {
+) -> gpui_kit::base::Scrollbar {
     let t = cx.omarchy();
-    gpui_base::Scrollbar::new(handle)
+    gpui_kit::base::Scrollbar::new(handle)
         .id(id)
         .axis(axis)
-        .mode(gpui_base::ScrollbarMode::Always)
+        .mode(gpui_kit::base::ScrollbarMode::Always)
         .styles(|style| {
             style
                 .track(|track| track.width(px(8.)).bg(t.normal_fill()))

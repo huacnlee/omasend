@@ -1,5 +1,5 @@
 use super::{Home, size_label};
-use gpui_omarchy::gpui::{
+use gpui_kit::{
     AnimationExt, AnyElement, Context, ObjectFit, SharedString, div, img, prelude::*, px, rems,
 };
 use gpui_omarchy::{
@@ -40,7 +40,7 @@ impl Home {
                     .child(
                         div()
                             .text_color(theme.bright)
-                            .font_weight(gpui_omarchy::gpui::FontWeight::BOLD)
+                            .font_weight(gpui_kit::FontWeight::BOLD)
                             .child(self.language.text("Drop something here")),
                     )
                     .child(
@@ -146,7 +146,7 @@ impl Home {
                     .when(item.is_image(), |row| {
                         row.child(
                             button(
-                                gpui_omarchy::gpui::SharedString::from(format!("preview-{id}")),
+                                gpui_kit::SharedString::from(format!("preview-{id}")),
                                 self.language.text("Preview…"),
                                 ButtonVariant::Secondary,
                                 cx,
@@ -164,7 +164,7 @@ impl Home {
                     .when(!active, |row| {
                         row.child(
                             button(
-                                gpui_omarchy::gpui::SharedString::from(format!("remove-{id}")),
+                                gpui_kit::SharedString::from(format!("remove-{id}")),
                                 self.language.text("Remove"),
                                 ButtonVariant::Secondary,
                                 cx,

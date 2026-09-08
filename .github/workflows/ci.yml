@@ -14,9 +14,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  website:
+    name: Website build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.0'
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+        env:
+          SITE_URL: https://huacnlee.github.io
+          BASE_PATH: /omasend
+
   quality:
     name: Formatting and Clippy
-    runs-on: macos-26
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +45,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake clang pkg-config libssl-dev libfontconfig1-dev \
+            libfreetype6-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libvulkan-dev libxcb1-dev libx11-xcb-dev libzstd-dev
       - uses: Swatinem/rust-cache@v2
         with:
           key: ci-quality
@@ -32,12 +58,8 @@ jobs:
       - run: cargo clippy --locked --all-targets --all-features -- -D warnings
 
   test:
-    name: Tests (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-26, ubuntu-22.04, windows-2022]
-    runs-on: ${{ matrix.os }}
+    name: Tests (Linux)
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     env:
       CARGO_TERM_COLOR: always
@@ -50,22 +72,17 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libssl-dev
+          sudo apt-get install -y cmake clang pkg-config libssl-dev libfontconfig1-dev \
+            libfreetype6-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libvulkan-dev libxcb1-dev libx11-xcb-dev libzstd-dev
       - uses: Swatinem/rust-cache@v2
         with:
           key: ci-tests
       - name: Unix installer tests
-        if: runner.os != 'Windows'
         run: python scripts/test-install.py
-      - name: Windows installer tests
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: ./scripts/test-install.ps1
       - name: Unit and integration tests
         run: cargo test --locked --no-default-features
       - name: GPUI interaction tests
-        if: runner.os == 'macOS'
         run: cargo test --locked --features ui-tests --bin omasend

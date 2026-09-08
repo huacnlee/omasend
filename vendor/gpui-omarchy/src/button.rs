@@ -1,16 +1,16 @@
 //! Button presentation that suppresses transient styles while disabled.
-use gpui::{
+use gpui_kit::base::{ButtonStyles, RoleOverride};
+use gpui_kit::{
     AnyElement, App, ClickEvent, ElementId, FocusHandle, InteractiveElement, Interactivity,
     IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement,
     StyleRefinement, Styled, Window,
 };
-use gpui_base::{ButtonStyles, RoleOverride};
 
 /// An Omarchy button backed by gpui-base's activation and focus behavior.
 /// Transient styles are applied only after the final disabled state is known.
 #[derive(IntoElement)]
 pub struct Button {
-    base: gpui_base::Button,
+    base: gpui_kit::base::Button,
     disabled: bool,
     hover: Option<Box<StyleRefinement>>,
     active: Option<Box<StyleRefinement>>,
@@ -20,7 +20,7 @@ pub struct Button {
 impl Button {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
-            base: gpui_base::Button::new(id),
+            base: gpui_kit::base::Button::new(id),
             disabled: false,
             hover: None,
             active: None,
@@ -83,7 +83,7 @@ impl Button {
     }
 }
 
-impl gpui_base::Selectable for Button {
+impl gpui_kit::base::Selectable for Button {
     fn selected(self, selected: bool) -> Self {
         Button::selected(self, selected)
     }
@@ -148,7 +148,8 @@ impl RenderOnce for Button {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Context, Modifiers, MouseButton, Render, TestAppContext, div, point, px};
+    use gpui_kit::gpui;
+    use gpui_kit::{Context, Modifiers, MouseButton, Render, TestAppContext, div, point, px};
     #[gpui::test]
     fn disabled_button_suppresses_hover_and_pressed_geometry(cx: &mut TestAppContext) {
         cx.update(crate::init);

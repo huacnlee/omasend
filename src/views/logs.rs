@@ -1,5 +1,5 @@
 use super::Home;
-use gpui_omarchy::gpui::{
+use gpui_kit::{
     AnyElement, ClipboardItem, Context, ScrollHandle, Task, Window, div, prelude::*, rems,
 };
 use gpui_omarchy::{ActiveTheme, ButtonVariant, IconName, button, icon, sheet};
@@ -42,7 +42,7 @@ impl Home {
                     let text = omasend::diagnostics::snapshot();
                     if text != logs.text {
                         let following = (logs.scroll.offset().y + logs.scroll.max_offset().y).abs()
-                            <= gpui_omarchy::gpui::px(1.);
+                            <= gpui_kit::px(1.);
                         logs.text = text;
                         if following {
                             logs.scroll.scroll_to_bottom();

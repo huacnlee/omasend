@@ -1,9 +1,9 @@
 //! Dense, square surfaces and non-interactive information components.
 use crate::ActiveTheme;
-use gpui::{
+use gpui_kit::base::{Progress, ProgressIndicator, ProgressTrack};
+use gpui_kit::{
     App, Div, ElementId, FontWeight, ParentElement, SharedString, Styled, div, px, relative,
 };
-use gpui_base::{Progress, ProgressIndicator, ProgressTrack};
 
 pub fn panel(title: impl Into<SharedString>, cx: &App) -> Div {
     let t = cx.omarchy();
@@ -177,9 +177,9 @@ mod tests {
 
 /// Notification surface; compose actions and use gpui-base's ToastManager for
 /// application-owned stacking and timeout policy.
-pub fn toast(id: impl Into<gpui::ElementId>, cx: &App) -> gpui_base::Toast {
+pub fn toast(id: impl Into<gpui_kit::ElementId>, cx: &App) -> gpui_kit::base::Toast {
     let t = cx.omarchy();
-    gpui_base::Toast::new(id)
+    gpui_kit::base::Toast::new(id)
         .flex()
         .flex_col()
         .gap(px(10.))
@@ -196,9 +196,9 @@ pub fn toast(id: impl Into<gpui::ElementId>, cx: &App) -> gpui_base::Toast {
 
 /// A square identity marker. Supply initials or an icon in the fallback slot;
 /// callers can replace it with `avatar_image` through the base image builder.
-pub fn avatar(initials: impl Into<SharedString>, cx: &App) -> gpui_base::Avatar {
+pub fn avatar(initials: impl Into<SharedString>, cx: &App) -> gpui_kit::base::Avatar {
     let t = cx.omarchy();
-    gpui_base::Avatar::new()
+    gpui_kit::base::Avatar::new()
         .size(px(32.))
         .flex_shrink_0()
         .overflow_hidden()
@@ -210,7 +210,7 @@ pub fn avatar(initials: impl Into<SharedString>, cx: &App) -> gpui_base::Avatar 
         .text_size(px(12.))
         .text_color(t.foreground)
         .fallback(
-            gpui_base::AvatarFallback::new()
+            gpui_kit::base::AvatarFallback::new()
                 .size_full()
                 .flex()
                 .items_center()
@@ -221,6 +221,6 @@ pub fn avatar(initials: impl Into<SharedString>, cx: &App) -> gpui_base::Avatar 
 
 /// An image slot sized to its avatar. Image loading and failure policy remain
 /// with the application, matching gpui-base's explicit slot API.
-pub fn avatar_image(source: impl Into<gpui::ImageSource>) -> gpui_base::AvatarImage {
-    gpui_base::AvatarImage::new(source).size_full()
+pub fn avatar_image(source: impl Into<gpui_kit::ImageSource>) -> gpui_kit::base::AvatarImage {
+    gpui_kit::base::AvatarImage::new(source).size_full()
 }

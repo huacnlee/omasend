@@ -1,7 +1,9 @@
 //! Primitive tables: application-owned columns, rows and content.
 use crate::ActiveTheme;
-use gpui::{App, ElementId, FontWeight, InteractiveElement, Styled, prelude::FluentBuilder, px};
-use gpui_base::{Table, TableCell, TableHead, TableRow};
+use gpui_kit::base::{Table, TableCell, TableHead, TableRow};
+use gpui_kit::{
+    App, ElementId, FontWeight, InteractiveElement, Styled, prelude::FluentBuilder, px,
+};
 
 pub fn table(id: impl Into<ElementId>, cx: &App) -> Table {
     let t = cx.omarchy();

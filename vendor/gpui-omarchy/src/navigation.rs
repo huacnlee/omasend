@@ -1,11 +1,11 @@
 //! Composable section navigation with gpui-base state and accessibility.
 use crate::{ActiveTheme, ButtonVariant, button};
-use gpui::{
+use gpui_kit::base::{
+    Accordion, AccordionPanel, AccordionTrigger, Pagination, PaginationItem, PaginationState,
+};
+use gpui_kit::{
     App, ElementId, FontWeight, InteractiveElement, IntoElement, ParentElement, SharedString,
     Styled, div, px,
-};
-use gpui_base::{
-    Accordion, AccordionPanel, AccordionTrigger, Pagination, PaginationItem, PaginationState,
 };
 
 pub fn accordion(id: impl Into<ElementId>, cx: &App) -> Accordion {
@@ -91,8 +91,8 @@ pub fn pagination(id: impl Into<ElementId>, state: PaginationState, cx: &App) ->
 
 /// A controlled expandable region. Ordinary children remain visible; `content`
 /// is rendered only while open. The caller owns the trigger and its state.
-pub fn collapsible(open: bool, cx: &App) -> gpui_base::Collapsible {
-    gpui_base::Collapsible::new()
+pub fn collapsible(open: bool, cx: &App) -> gpui_kit::base::Collapsible {
+    gpui_kit::base::Collapsible::new()
         .open(open)
         .flex()
         .flex_col()
@@ -103,9 +103,12 @@ pub fn collapsible(open: bool, cx: &App) -> gpui_base::Collapsible {
 }
 
 /// Stateful page navigation with the base push/pop/forward lifecycle.
-pub fn nav_stack(state: &gpui::Entity<gpui_base::NavStackState>, cx: &App) -> gpui_base::NavStack {
+pub fn nav_stack(
+    state: &gpui_kit::Entity<gpui_kit::base::NavStackState>,
+    cx: &App,
+) -> gpui_kit::base::NavStack {
     let t = cx.omarchy();
-    gpui_base::NavStack::new(state)
+    gpui_kit::base::NavStack::new(state)
         .w_full()
         .h(px(280.))
         .border_1()

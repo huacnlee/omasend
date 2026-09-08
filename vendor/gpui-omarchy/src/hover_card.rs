@@ -1,6 +1,6 @@
 use crate::popover_surface;
-use gpui::{ElementId, IntoElement, ParentElement, Styled, prelude::*, px};
-use gpui_base::{HoverCard, HoverCardState};
+use gpui_kit::base::{HoverCard, HoverCardState};
+use gpui_kit::{ElementId, IntoElement, ParentElement, Styled, prelude::*, px};
 use std::time::Duration;
 
 /// Supplementary hover content. Keep essential information available inline.
@@ -9,8 +9,8 @@ pub fn hover_card<E: IntoElement>(
     trigger: impl IntoElement,
     content: impl FnOnce(
         &mut HoverCardState,
-        &mut gpui::Window,
-        &mut gpui::Context<HoverCardState>,
+        &mut gpui_kit::Window,
+        &mut gpui_kit::Context<HoverCardState>,
     ) -> E
     + 'static,
 ) -> HoverCard {

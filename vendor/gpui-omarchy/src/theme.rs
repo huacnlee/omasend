@@ -1,6 +1,6 @@
 //! Semantic palette and its projection into gpui-base.
-use gpui::{App, Global, Hsla, SharedString, px, rgb};
-use gpui_base::{ColorTokens, RadiusTokens, ThemeAppearance};
+use gpui_kit::base::{ColorTokens, RadiusTokens, ThemeAppearance};
+use gpui_kit::{App, Global, Hsla, SharedString, px, rgb};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
@@ -92,8 +92,8 @@ impl Theme {
     }
 
     /// Shell editors use foreground at 35%, independently of colors.toml selection.
-    pub fn input_style(&self) -> gpui_base::input::InputEditorStyle {
-        gpui_base::input::InputEditorStyle {
+    pub fn input_style(&self) -> gpui_kit::base::input::InputEditorStyle {
+        gpui_kit::base::input::InputEditorStyle {
             foreground: self.foreground,
             muted_foreground: self.foreground.opacity(0.55),
             background: self.normal_fill(),
@@ -135,7 +135,7 @@ impl Theme {
     }
 
     pub(crate) fn apply_palette(self, cx: &mut App) {
-        let base = gpui_base::Theme::global_mut(cx);
+        let base = gpui_kit::base::Theme::global_mut(cx);
         base.appearance = self.appearance;
         base.tokens.colors = self.tokens();
         base.tokens.radius = RadiusTokens {

@@ -1,7 +1,5 @@
 use super::{Home, size_label};
-use gpui_omarchy::gpui::{
-    AnimationExt, AnyElement, Context, SharedString, Window, div, prelude::*, rems,
-};
+use gpui_kit::{AnimationExt, AnyElement, Context, SharedString, Window, div, prelude::*, rems};
 use gpui_omarchy::{ActiveTheme, ButtonVariant, IconName, button, icon, progress, sheet};
 use omasend::model::{Transfer, TransferStatus};
 

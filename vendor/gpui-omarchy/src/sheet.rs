@@ -1,10 +1,10 @@
 //! Edge-attached modal details, with dismissal and focus trapping owned by base.
 use crate::{ActiveTheme, dialog_backdrop};
-use gpui::{App, Div, FocusHandle, div, prelude::*, px, relative};
+use gpui_kit::{App, Div, FocusHandle, div, prelude::*, px, relative};
 
 /// Focus `focus` when opening; restore the trigger in `request_close`.
-pub fn sheet(focus: &FocusHandle, cx: &mut App) -> gpui_base::Sheet {
-    gpui_base::Sheet::new(cx)
+pub fn sheet(focus: &FocusHandle, cx: &mut App) -> gpui_kit::base::Sheet {
+    gpui_kit::base::Sheet::new(cx)
         .focus_handle(focus.clone())
         .overlay(dialog_backdrop())
 }

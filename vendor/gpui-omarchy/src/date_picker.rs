@@ -1,8 +1,8 @@
 use crate::{ButtonVariant, IconName, button, calendar, icon};
-use gpui::{
+use gpui_kit::base::{CalendarEvent, CalendarState, DatePicker, Popup};
+use gpui_kit::{
     App, Context, ElementId, Entity, FocusHandle, MouseButton, Window, div, prelude::*, px,
 };
-use gpui_base::{CalendarEvent, CalendarState, DatePicker, Popup};
 
 pub struct DatePickerState {
     pub calendar: Entity<CalendarState>,
@@ -53,19 +53,19 @@ impl DatePickerState {
 
 pub(crate) fn init(cx: &mut App) {
     cx.bind_keys([
-        gpui::KeyBinding::new(
+        gpui_kit::KeyBinding::new(
             "enter",
-            gpui_base::actions::Confirm { secondary: false },
+            gpui_kit::base::actions::Confirm { secondary: false },
             Some("OmarchyDatePicker"),
         ),
-        gpui::KeyBinding::new(
+        gpui_kit::KeyBinding::new(
             "space",
-            gpui_base::actions::Confirm { secondary: false },
+            gpui_kit::base::actions::Confirm { secondary: false },
             Some("OmarchyDatePicker"),
         ),
-        gpui::KeyBinding::new(
+        gpui_kit::KeyBinding::new(
             "escape",
-            gpui_base::actions::Cancel,
+            gpui_kit::base::actions::Cancel,
             Some("OmarchyDatePicker"),
         ),
     ]);
@@ -101,10 +101,10 @@ pub fn date_picker(
             // Route pointer activation through the base root so builder refinements
             // such as `.disabled(true)` govern both keyboard and mouse behavior.
             if open {
-                window.dispatch_action(Box::new(gpui_base::actions::Cancel), cx);
+                window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx);
             } else {
                 window.dispatch_action(
-                    Box::new(gpui_base::actions::Confirm { secondary: false }),
+                    Box::new(gpui_kit::base::actions::Confirm { secondary: false }),
                     cx,
                 );
             }
@@ -139,7 +139,8 @@ pub fn date_picker(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Render, TestAppContext};
+    use gpui_kit::gpui;
+    use gpui_kit::{Render, TestAppContext};
 
     struct Harness {
         state: Entity<DatePickerState>,
@@ -203,7 +204,7 @@ mod tests {
             cx.update(|window, cx| window.draw(cx).clear(cx));
             // Header center + header half-height + section gap + weekday row
             // + one complete week + day half-height: select the second Saturday.
-            let day = next + gpui::point(px(0.), px(14. + 8. + 28. + 28. + 14.));
+            let day = next + gpui_kit::point(px(0.), px(14. + 8. + 28. + 28. + 14.));
             cx.simulate_click(day, Default::default());
             cx.update(|window, cx| {
                 window.draw(cx).clear(cx);
@@ -214,7 +215,7 @@ mod tests {
             });
             cx.simulate_click(trigger, Default::default());
             cx.update(|window, cx| window.draw(cx).clear(cx));
-            cx.simulate_click(gpui::point(px(500.), px(400.)), Default::default());
+            cx.simulate_click(gpui_kit::point(px(500.), px(400.)), Default::default());
             cx.update(|window, cx| {
                 window.draw(cx).clear(cx);
                 assert!(!view.read(cx).state.read(cx).is_open());

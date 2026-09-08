@@ -1,6 +1,6 @@
 use crate::{ActiveTheme, IconName, icon};
-use gpui::{App, Entity, div, prelude::*, px};
-use gpui_base::{Tree, TreeState};
+use gpui_kit::base::{Tree, TreeState};
+use gpui_kit::{App, Entity, div, prelude::*, px};
 
 /// Virtualized, keyboard-navigable tree with application-owned base state.
 pub fn tree(state: &Entity<TreeState>, cx: &App) -> Tree {
@@ -50,8 +50,9 @@ pub fn tree(state: &Entity<TreeState>, cx: &App) -> Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Context, Render, TestAppContext, Window};
-    use gpui_base::TreeItem;
+    use gpui_kit::base::TreeItem;
+    use gpui_kit::gpui;
+    use gpui_kit::{Context, Render, TestAppContext, Window};
     struct Harness {
         state: Entity<TreeState>,
     }
