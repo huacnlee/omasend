@@ -7,8 +7,8 @@ use anyhow::{Context, Result, ensure};
 use localsend::{
     crypto::cert::{SelfSignedCert, generate_self_signed},
     discovery::{
-        self, DeviceChannel, DeviceIdentity, DiscoveredDevice, DiscoveryConfig, DiscoveryHandle,
-        HttpChannel,
+        self, DeviceChannel, DeviceIdentity, DiscoveredDevice, DiscoveryConfig, DiscoveryEvent,
+        DiscoveryHandle, HttpChannel,
     },
     http::{
         dto_v2::RegisterDtoV2,
@@ -254,6 +254,7 @@ impl Actor {
         let (progress_tx, mut progress_rx) = mpsc::unbounded_channel();
         let (discovery, stop_discovery, discovery_task) = if discover {
             let (stop_tx, stop_rx) = oneshot::channel();
+            let (discovery_tx, discovery_rx) = mpsc::channel(256);
             let handle = Arc::new(
                 discovery::start(
                     DiscoveryConfig {
@@ -276,7 +277,7 @@ impl Actor {
                             private_key_pem: self.identity.private_key_pem.clone(),
                         },
                         timeout: Duration::from_secs(2),
-                        event_tx: None,
+                        event_tx: Some(discovery_tx),
                     },
                     stop_rx,
                 )
@@ -290,7 +291,12 @@ impl Actor {
                     )),
                 );
             }
-            let task = tokio::spawn(discover_devices(handle.clone(), self.events.clone()));
+            let task = tokio::spawn(publish_while_discovering(
+                handle.clone(),
+                self.events.clone(),
+                discovery_rx,
+                discover_devices(handle.clone(), self.events.clone()),
+            ));
             (Some(handle), Some(stop_tx), Some(task))
         } else {
             (None, None, None)
@@ -669,13 +675,109 @@ fn validate_offer(files: &HashMap<String, FileDto>) -> Result<()> {
     Ok(())
 }
 
+async fn publish_while_discovering(
+    discovery: Arc<DiscoveryHandle>,
+    events: Events,
+    mut updates: mpsc::Receiver<DiscoveryEvent>,
+    work: impl std::future::Future<Output = ()>,
+) {
+    // Announcements and HTTP probes may take seconds. Poll them alongside
+    // confirmations instead of making the GUI wait for a whole network pass.
+    tokio::pin!(work);
+    let mut refresh = tokio::time::interval(Duration::from_secs(1));
+    refresh.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut visible = HashMap::new();
+    let mut failures: HashMap<String, Instant> = HashMap::new();
+    let mut updates_open = true;
+    loop {
+        tokio::select! {
+            _ = &mut work => break,
+            update = updates.recv(), if updates_open => {
+                match update {
+                    Some(DiscoveryEvent::Discovered { .. } | DiscoveryEvent::Updated { .. }) => {}
+                    Some(DiscoveryEvent::ProbeFailed { host, alias, error }) => {
+                        let now = Instant::now();
+                        failures.retain(|_, last| now.duration_since(*last) < Duration::from_secs(60));
+                        if !failures.contains_key(&host) {
+                            failures.insert(host.clone(), now);
+                            let lower = error.to_ascii_lowercase();
+                            let message = if lower.contains("certificate") || lower.contains("fingerprint") {
+                                "Nearby device identity could not be verified"
+                            } else {
+                                "Could not connect to nearby device"
+                            };
+                            emit(&events, TransferEvent::NetworkError(format!(
+                                "{message}: {alias} ({host})"
+                            )));
+                        }
+                    }
+                    Some(DiscoveryEvent::MulticastFailed) => {
+                        emit(&events, TransferEvent::NetworkError(
+                            "Multicast unavailable; trying local network discovery: multicast sockets stopped".into()
+                        ));
+                    }
+                    None => updates_open = false,
+                }
+            }
+            _ = refresh.tick() => {}
+        }
+        // Events are bounded upstream and may be dropped in a burst. Read the
+        // authoritative store on both events and a timer; the timer also owns
+        // expiry when a slow network operation never produces a confirmation.
+        publish_discovery_snapshot(&discovery, &events, &mut visible, SystemTime::now());
+    }
+}
+
+fn publish_discovery_snapshot(
+    discovery: &DiscoveryHandle,
+    events: &Events,
+    visible: &mut HashMap<String, Device>,
+    now: SystemTime,
+) {
+    let mut next = HashMap::new();
+    for state in discovery.devices() {
+        let Some(last) = state.logs.last() else {
+            continue;
+        };
+        if now.duration_since(last.timestamp).unwrap_or_default() > Duration::from_secs(15) {
+            continue;
+        }
+        let Some(channel) = state.device.http() else {
+            continue;
+        };
+        if channel.protocol != ProtocolType::Https {
+            continue;
+        }
+        let device = Device {
+            fingerprint: state.device.fingerprint.clone(),
+            alias: state.device.alias.clone(),
+            model: state.device.device_model.clone().unwrap_or_default(),
+            host: channel.host.clone(),
+            port: channel.port,
+        };
+        if visible.get(&device.fingerprint).is_none_or(|known| {
+            known.alias != device.alias
+                || known.model != device.model
+                || known.host != device.host
+                || known.port != device.port
+        }) {
+            emit(events, TransferEvent::DeviceFound(device.clone()));
+            tracing::debug!(alias = %device.alias, host = %device.host, "Publishing nearby peer");
+        }
+        next.insert(device.fingerprint.clone(), device);
+    }
+    for id in visible.keys().filter(|id| !next.contains_key(*id)) {
+        emit(events, TransferEvent::DeviceLost(id.clone()));
+    }
+    *visible = next;
+}
+
 async fn discover_devices(discovery: Arc<DiscoveryHandle>, events: Events) {
     // Keep fallback scans separate from publishing the live device list. A
     // slow/unreachable subnet must not delay incoming peers or expiry updates.
     // JoinSet aborts outstanding probes when this discovery task is stopped.
     let mut scans = JoinSet::new();
     let mut next_scan = Instant::now();
-    let mut visible: HashMap<String, Device> = HashMap::new();
     loop {
         while scans.try_join_next().is_some() {}
         if Instant::now() >= next_scan && scans.is_empty() {
@@ -718,39 +820,6 @@ async fn discover_devices(discovery: Arc<DiscoveryHandle>, events: Events) {
             .collect();
         tracing::debug!("Probing known peers");
         let _ = discovery.discover_known_http_channels(known).await;
-        let mut next = HashMap::new();
-        for state in discovery.devices() {
-            let Some(last) = state.logs.last() else {
-                continue;
-            };
-            if SystemTime::now()
-                .duration_since(last.timestamp)
-                .unwrap_or_default()
-                > Duration::from_secs(15)
-            {
-                continue;
-            }
-            let Some(channel) = state.device.http() else {
-                continue;
-            };
-            if channel.protocol != ProtocolType::Https {
-                continue;
-            }
-            let device = Device {
-                fingerprint: state.device.fingerprint.clone(),
-                alias: state.device.alias.clone(),
-                model: state.device.device_model.clone().unwrap_or_default(),
-                host: channel.host.clone(),
-                port: channel.port,
-            };
-            emit(&events, TransferEvent::DeviceFound(device.clone()));
-            tracing::debug!(alias = %device.alias, host = %device.host, "Publishing nearby peer");
-            next.insert(device.fingerprint.clone(), device);
-        }
-        for id in visible.keys().filter(|id| !next.contains_key(*id)) {
-            emit(&events, TransferEvent::DeviceLost(id.clone()));
-        }
-        visible = next;
         emit(&events, TransferEvent::DiscoveryActive(!scans.is_empty()));
         tokio::time::sleep(Duration::from_secs(3)).await;
     }
@@ -813,8 +882,177 @@ fn machine_name() -> String {
 
 #[cfg(test)]
 mod discovery_tests {
-    use super::scan_targets;
+    use super::*;
     use std::net::Ipv4Addr;
+
+    async fn offline_discovery() -> (
+        Arc<DiscoveryHandle>,
+        mpsc::Receiver<DiscoveryEvent>,
+        mpsc::Sender<DiscoveryEvent>,
+    ) {
+        let (updates, receiver) = mpsc::channel(4);
+        let (_stop, stop_rx) = oneshot::channel();
+        let discovery = discovery::start(
+            DiscoveryConfig {
+                group: DEFAULT_MULTICAST_GROUP,
+                group_v6: None,
+                port: 0,
+                // An empty whitelist excludes every interface: no socket can
+                // bind or announce, and tests never probe the user's LAN.
+                interface_filter: localsend::util::interface::InterfaceFilter {
+                    whitelist: Some(Vec::new()),
+                    blacklist: None,
+                },
+                device: MulticastDevice {
+                    alias: "test receiver".into(),
+                    version: PROTOCOL_VERSION_V2.into(),
+                    device_model: None,
+                    device_type: Some(DeviceType::Desktop),
+                    fingerprint: "self".into(),
+                    port: 0,
+                    protocol: ProtocolType::Https,
+                    download: false,
+                },
+                identity: DeviceIdentity {
+                    cert_pem: String::new(),
+                    private_key_pem: String::new(),
+                },
+                timeout: Duration::from_secs(2),
+                event_tx: Some(updates.clone()),
+            },
+            stop_rx,
+        )
+        .await;
+        assert!(discovery.multicast_error().is_some());
+        (Arc::new(discovery), receiver, updates)
+    }
+
+    fn confirmed_peer(alias: &str) -> DiscoveredDevice {
+        DiscoveredDevice {
+            alias: alias.into(),
+            version: PROTOCOL_VERSION_V2.into(),
+            device_model: Some("Test desktop".into()),
+            device_type: Some(DeviceType::Desktop),
+            fingerprint: "confirmed-peer".into(),
+            channel: DeviceChannel::Http(HttpChannel {
+                host: "127.0.0.1".into(),
+                port: 45678,
+                protocol: ProtocolType::Https,
+            }),
+            download: false,
+        }
+    }
+
+    #[tokio::test]
+    async fn confirmations_reach_ui_while_announcement_or_probes_are_pending() {
+        let (discovery, updates, _) = offline_discovery().await;
+        let (events, receiver) = async_channel::unbounded();
+        let task = tokio::spawn(publish_while_discovering(
+            discovery.clone(),
+            events,
+            updates,
+            std::future::pending(),
+        ));
+        // Model a confirmed incoming register during an unfinished announce
+        // burst or unreachable-peer probe, using the official store + events.
+        discovery.add_device(confirmed_peer("New computer")).await;
+        let result = tokio::time::timeout(Duration::from_millis(250), receiver.recv()).await;
+        let event = result
+            .expect("confirmed peer must publish before discovery network work finishes")
+            .unwrap();
+        assert!(matches!(event, TransferEvent::DeviceFound(peer) if peer.alias == "New computer"));
+        discovery
+            .add_device(confirmed_peer("Renamed computer"))
+            .await;
+        let event = tokio::time::timeout(Duration::from_millis(250), receiver.recv())
+            .await
+            .expect("updated alias must publish without waiting for the next polling tick")
+            .unwrap();
+        task.abort();
+        assert!(
+            matches!(event, TransferEvent::DeviceFound(peer) if peer.alias == "Renamed computer")
+        );
+    }
+
+    #[tokio::test]
+    async fn snapshot_recovers_dropped_events_and_expires_visible_devices() {
+        let (discovery, _updates, _) = offline_discovery().await;
+        // The upstream event channel holds four messages. The official store
+        // must still publish every confirmed peer after notifications overflow.
+        for index in 0..8 {
+            let mut peer = confirmed_peer("Computer");
+            peer.fingerprint = format!("peer-{index}");
+            discovery.add_device(peer).await;
+        }
+        let (events, receiver) = async_channel::unbounded();
+        let mut visible = HashMap::new();
+        publish_discovery_snapshot(&discovery, &events, &mut visible, SystemTime::now());
+        assert_eq!(visible.len(), 8);
+        for _ in 0..8 {
+            assert!(matches!(
+                receiver.try_recv().unwrap(),
+                TransferEvent::DeviceFound(_)
+            ));
+        }
+        publish_discovery_snapshot(&discovery, &events, &mut visible, SystemTime::now());
+        assert!(
+            receiver.try_recv().is_err(),
+            "unchanged peers must not retrigger GUI work"
+        );
+        publish_discovery_snapshot(
+            &discovery,
+            &events,
+            &mut visible,
+            SystemTime::now() + Duration::from_secs(16),
+        );
+        assert!(visible.is_empty());
+        for _ in 0..8 {
+            assert!(matches!(
+                receiver.try_recv().unwrap(),
+                TransferEvent::DeviceLost(_)
+            ));
+        }
+    }
+
+    #[tokio::test]
+    async fn discovery_failures_are_visible_and_deduplicated_per_host() {
+        let (discovery, updates, sender) = offline_discovery().await;
+        let (events, receiver) = async_channel::unbounded();
+        let task = tokio::spawn(publish_while_discovering(
+            discovery,
+            events,
+            updates,
+            std::future::pending(),
+        ));
+        let failure = DiscoveryEvent::ProbeFailed {
+            host: "127.0.0.1".into(),
+            alias: "Office desktop".into(),
+            error: "server certificate fingerprint mismatch".into(),
+        };
+        sender.send(failure.clone()).await.unwrap();
+        sender.send(failure).await.unwrap();
+        sender
+            .send(DiscoveryEvent::ProbeFailed {
+                host: "127.0.0.2".into(),
+                alias: "Other desktop".into(),
+                error: "connection refused".into(),
+            })
+            .await
+            .unwrap();
+        for expected in [
+            "Nearby device identity could not be verified: Office desktop (127.0.0.1)",
+            "Could not connect to nearby device: Other desktop (127.0.0.2)",
+        ] {
+            let event = tokio::time::timeout(Duration::from_millis(250), receiver.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            assert!(matches!(event, TransferEvent::NetworkError(message) if message == expected));
+        }
+        task.abort();
+        assert!(receiver.try_recv().is_err());
+    }
+
     #[test]
     fn wifi_slash_23_covers_both_halves_and_large_ranges_are_bounded() {
         assert_eq!(

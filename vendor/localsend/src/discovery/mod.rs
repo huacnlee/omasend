@@ -82,6 +82,13 @@ pub struct DiscoveryConfig {
 /// [`DiscoveryHandle::devices`].
 #[derive(Clone, Debug)]
 pub enum DiscoveryEvent {
+    /// An announcing peer could not be verified or reached. No device is
+    /// accepted on this path; consumers can surface a scoped diagnostic.
+    ProbeFailed {
+        host: String,
+        alias: String,
+        error: String,
+    },
     /// A device was confirmed over one of its channels for the first time
     /// in this run.
     Discovered {
@@ -560,6 +567,13 @@ async fn answer_announcement(
                 message.alias,
                 ErrorChain(&err),
             );
+            if let Some(event_tx) = &state.event_tx {
+                let _ = event_tx.try_send(DiscoveryEvent::ProbeFailed {
+                    host,
+                    alias: message.alias,
+                    error: ErrorChain(&err).to_string(),
+                });
+            }
         }
     }
 }

@@ -114,8 +114,9 @@ exposed in the interface. Language selection and history are session-only.
 
 ## Dependencies and assets
 
-`vendor/localsend` is the unmodified official Rust core, pinned to the commit
-recorded in its `UPSTREAM.md`; WebRTC and web sharing are disabled.
+`vendor/localsend` pins the official Rust core to the commit recorded in its
+`UPSTREAM.md`, with a local discovery-diagnostic event patch; TLS verification
+is unchanged. WebRTC and web sharing are disabled.
 `vendor/gpui-omarchy` pins version 0.1.0 with menu shortcuts rendered by its
 existing `keycap` component and keyboard traversal respecting modal focus traps.
 See its `UPSTREAM.txt`.

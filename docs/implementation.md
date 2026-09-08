@@ -28,9 +28,12 @@ Run `cargo test --no-default-features`, `cargo fmt --check`, `cargo check --all-
 ## Current verification evidence
 
 - macOS: formatting, all-target compilation, Clippy with project warnings denied,
-  and the complete headless suite pass. The suite covers discovery scan bounds,
+  and all 25 headless tests pass. The suite covers discovery scan bounds,
   language catalogs, MIME/process boundaries, state transitions, and real HTTPS
   transfer acceptance/refusal/cancellation/fingerprint/receive safety.
+- Discovery publication is independent of slow announcement/probe work. Regression
+  tests cover immediate new/renamed peers, bounded-channel recovery, expiry and
+  deduplicated verification-failure diagnostics; TLS pinning remains enforced.
 - Linux: final all-target desktop compilation and all 22 headless tests pass
   inside a Rust 1.95 Debian container. No real Wayland session has been tested.
 - Native macOS screenshots confirm the English/Chinese interface, system machine

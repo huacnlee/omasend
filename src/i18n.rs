@@ -75,6 +75,14 @@ const CATALOG: &[(&str, &str)] = &[
     ("Exit", "退出"),
     ("Retry", "重试"),
     ("Dismiss", "关闭提示"),
+    (
+        "Nearby device identity could not be verified",
+        "无法验证附近设备的身份，请检查对方是否重启或更换了应用",
+    ),
+    (
+        "Could not connect to nearby device",
+        "无法连接附近设备，请检查对方应用和网络连接",
+    ),
     ("Outbox", "待发送"),
     ("Preparing…", "正在准备…"),
     ("Send", "发送"),
