@@ -25,3 +25,5 @@ h1 span{display:inline-block}nav,select,.note,.network-label,.device-label,.netw
 
 /* Three routes carry packets concurrently from the local emblem. */
 .transfer-routes{position:absolute;inset:0;width:100%;height:100%;overflow:visible}.transfer-line{fill:none;stroke:var(--border);stroke-width:1;stroke-dasharray:4 5;vector-effect:non-scaling-stroke}.transfer-endpoint,.transfer-routes .packet{fill:var(--brand)}.transfer-routes .packet{animation:none}.transfer-label{fill:var(--muted);font-size:11px}.network-art .hero-logo{position:absolute;left:20%;top:50%;transform:translate(-50%,-50%);width:32%;height:auto;aspect-ratio:1}.source-label{left:20%;top:calc(50% + 70px);transform:translateX(-50%);white-space:nowrap}
+
+.app-screenshot{margin:0;padding:0 0 48px}.app-screenshot img{display:block;width:100%;height:auto}
