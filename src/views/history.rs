@@ -10,7 +10,7 @@ impl Home {
             .accessibility_label(t!("history.title"))
             .map(|button| gpui_omarchy::with_tooltip(button, t!("history.title")))
             .disabled(self.state.transfers.is_empty())
-            .child(icon(IconName::RotateCw).size(rems(0.875)))
+            .child(icon(IconName::ClockFading).size(rems(0.875)))
             .on_click(cx.listener(|view, _, window, cx| view.open_history(window, cx)))
             .into_any_element()
     }

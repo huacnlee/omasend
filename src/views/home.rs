@@ -969,7 +969,7 @@ impl Render for Home {
                                     .child(
                                         button("send", "", ButtonVariant::Primary, cx)
                                             .accessibility_label(send_label.clone())
-                                            .child(icon(IconName::ArrowRight).size(rems(0.875)))
+                                            .child(icon(IconName::Send).size(rems(0.875)))
                                             .child(send_label)
                                             .disabled(!can_send)
                                             .on_click(cx.listener(|view, _, window, cx| {
