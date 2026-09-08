@@ -155,6 +155,19 @@ impl Home {
                                     ButtonVariant::Outline,
                                     cx,
                                 )
+                                .text_color(theme.danger)
+                                .border_color(theme.danger)
+                                .hover(|style| {
+                                    style
+                                        .bg(theme.danger.opacity(0.08))
+                                        .border_color(theme.danger)
+                                })
+                                .focus_visible(|style| {
+                                    style
+                                        .bg(theme.danger.opacity(0.08))
+                                        .border_color(theme.danger)
+                                })
+                                .active(|style| style.bg(theme.danger.opacity(0.14)))
                                 .disabled(logs.text.is_empty())
                                 .on_click(cx.listener(
                                     |view, _, _, cx| {

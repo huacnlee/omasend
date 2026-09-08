@@ -86,9 +86,22 @@ impl Home {
                         button(
                             "clear-transfer-history",
                             self.language.text("Clear"),
-                            ButtonVariant::Danger,
+                            ButtonVariant::Outline,
                             cx,
                         )
+                        .text_color(theme.danger)
+                        .border_color(theme.danger)
+                        .hover(|style| {
+                            style
+                                .bg(theme.danger.opacity(0.08))
+                                .border_color(theme.danger)
+                        })
+                        .focus_visible(|style| {
+                            style
+                                .bg(theme.danger.opacity(0.08))
+                                .border_color(theme.danger)
+                        })
+                        .active(|style| style.bg(theme.danger.opacity(0.14)))
                         .accessibility_label(self.language.text("Clear transfer history"))
                         .disabled(
                             !self
