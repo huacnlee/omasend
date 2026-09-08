@@ -4,7 +4,7 @@ Releases are published at <https://github.com/huacnlee/omasend/releases>.
 The installers download the latest stable release and verify its `SHA256SUMS`
 before installing. They run as the current user and do not require administrator
 access. A release must have been published before these commands can succeed.
-Published builds support Apple Silicon and Intel macOS, x86_64 Linux, and
+Published builds support Apple Silicon and Intel macOS, x86_64 and ARM64 Linux, and
 x86_64 Windows. Other architectures require a source build.
 
 ## macOS and Linux

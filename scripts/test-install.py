@@ -5,6 +5,7 @@ import io
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -72,6 +73,30 @@ else:
         self.assertTrue((self.dest / "share/applications/omasend.desktop").is_file())
         self.assertTrue((self.dest / "share/icons/hicolor/1024x1024/apps/omasend.png").is_file())
 
+    def test_linux_arm64_package_install_and_upgrade(self):
+        binary = self.root / "arm64-binary"
+        binary.write_bytes(b"#!/bin/sh\n# arm64 release fixture\n")
+        result = subprocess.run([
+            sys.executable,
+            str(SCRIPT.parent / "packaging/build-release.py"),
+            "--target", "aarch64-unknown-linux-gnu", "--version", "0.1.0",
+            "--binary", str(binary), "--output", str(self.root),
+        ], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        checksum = self.root / "omasend-0.1.0-aarch64-unknown-linux-gnu.tar.gz.sha256"
+        (self.root / "SHA256SUMS").write_bytes(checksum.read_bytes())
+        for architecture in ("aarch64", "arm64"):
+            with self.subTest(architecture=architecture):
+                self.env["MOCK_ARCH"] = architecture
+                for _ in range(2):
+                    result = self.run_install()
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                installed = self.dest / "bin/omasend"
+                self.assertEqual(installed.read_bytes(), binary.read_bytes())
+                self.assertTrue(os.access(installed, os.X_OK))
+                self.assertTrue((self.dest / "share/applications/omasend.desktop").is_file())
+                self.assertTrue((self.dest / "share/icons/hicolor/1024x1024/apps/omasend.png").is_file())
+
     def test_mac_bundle_install_and_upgrade(self):
         self.env.update(MOCK_OS="Darwin", MOCK_ARCH="arm64")
         self.mock("ditto", '#!/bin/sh\ncp -R "$1" "$2"\n')
@@ -112,10 +137,10 @@ else:
         self.assertFalse(self.dest.exists())
 
     def test_unsupported_architecture(self):
-        self.env["MOCK_ARCH"] = "aarch64"
+        self.env["MOCK_ARCH"] = "armv7l"
         result = self.run_install()
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("x86_64 only", result.stderr)
+        self.assertIn("Unsupported CPU architecture", result.stderr)
 
     def test_invalid_version_does_not_download(self):
         result = self.run_install("--version", "../bad")
