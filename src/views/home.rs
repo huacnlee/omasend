@@ -374,7 +374,14 @@ impl Render for Home {
             .on_action(cx.listener(Self::paste))
             .on_action(cx.listener(Self::open_files))
             .on_action(cx.listener(Self::back))
-            .on_action(cx.listener(Self::send))
+            .on_action(cx.listener(|view, action: &Confirm, window, cx| {
+                if view.focus.is_focused(window) {
+                    view.send(action, window, cx);
+                } else {
+                    // Let the focused button or nested control handle Enter.
+                    cx.propagate();
+                }
+            }))
             .on_action(cx.listener(|view, _: &PreviousDevice, window, cx| {
                 view.state.navigate(-1);
                 view.focus.focus(window, cx);
@@ -611,5 +618,72 @@ impl Render for Home {
             root = root.child(self.preview_dialog(cx));
         }
         root
+    }
+}
+
+#[cfg(all(test, feature = "ui-tests"))]
+mod keyboard_tests {
+    use super::*;
+    use gpui::{KeyDownEvent, KeyUpEvent, Keystroke, TestAppContext};
+
+    #[gpui::test]
+    fn tab_then_enter_can_remove_a_composer_item(cx: &mut TestAppContext) {
+        remove_with_key(cx, "enter");
+    }
+    #[gpui::test]
+    fn tab_then_space_can_remove_a_composer_item(cx: &mut TestAppContext) {
+        remove_with_key(cx, "space");
+    }
+    fn remove_with_key(cx: &mut TestAppContext, activation: &str) {
+        cx.update(|cx| {
+            gpui_omarchy::init(cx);
+            super::super::init(cx);
+        });
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let handle = runtime.handle().clone();
+        let (view, cx) = cx.add_window_view(move |window, cx| {
+            let focus = cx.focus_handle();
+            focus.focus(window, cx);
+            let mut state = AppState::default();
+            state
+                .composer
+                .push(ComposerItem::new(SendItem::Text("test".into())).unwrap());
+            Home {
+                state,
+                logo: std::sync::Arc::new(gpui::Image::from_bytes(
+                    gpui::ImageFormat::Png,
+                    include_bytes!("../../assets/omasend.png").to_vec(),
+                )),
+                language: omasend::i18n::Language::En,
+                node: None,
+                runtime: handle,
+                focus,
+                modal_focus: cx.focus_handle(),
+                restore_focus: None,
+                preview: None,
+                loading_input: false,
+                starting: false,
+            }
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        // Tab walks to the menu and then the item's Remove button.
+        cx.simulate_keystrokes("tab tab");
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let key = Keystroke::parse(activation).unwrap();
+        cx.simulate_event(KeyDownEvent {
+            keystroke: key.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        cx.simulate_event(KeyUpEvent { keystroke: key });
+        view.read_with(cx, |view, _| {
+            assert!(
+                view.state.composer.is_empty(),
+                "Enter must activate Remove rather than the background send action"
+            )
+        });
     }
 }

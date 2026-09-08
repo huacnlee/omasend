@@ -2,7 +2,7 @@ mod home;
 mod motion;
 mod panels;
 
-use gpui_omarchy::gpui::{self, App, KeyBinding, actions};
+use gpui_omarchy::gpui::{App, KeyBinding, actions};
 pub use home::Home;
 
 actions!(
