@@ -76,12 +76,12 @@ const logoSegments = [
           <div class="network-art" aria-hidden="true">
             <div class="device-label source-label">{t.desktop}</div>
             <svg class="transfer-routes" viewBox="0 0 400 240" preserveAspectRatio="none">
-              {[40, 120, 200].map((y, index) => <g class="transfer-route">
-                <path class="transfer-line" d={`M148 120 L370 ${y}`} />
+              {[80, 120, 160].map((y, index) => <g class="transfer-route">
+                <path class="transfer-line" d={`M148 ${y} L370 ${y}`} />
                 <rect class="transfer-endpoint" x="366" y={y - 4} width="8" height="8" />
                 <text class="transfer-label" x="370" y={y + 23} text-anchor="end">{t.peer} {index + 1}</text>
                 <rect class="packet" x="-2.5" y="-2.5" width="5" height="5">
-                  <animateMotion dur="0.8s" repeatCount="indefinite" begin={`${-index * 0.26}s`} path={`M148 120 L370 ${y}`} />
+                  <animateMotion dur="0.8s" repeatCount="indefinite" begin={`${-index * 0.26}s`} path={`M148 ${y} L370 ${y}`} />
                 </rect>
               </g>)}
             </svg>
