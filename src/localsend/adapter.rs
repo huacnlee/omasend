@@ -433,25 +433,10 @@ impl Actor {
         match event {
             ServerEventV2::Register { ip, info } => {
                 tracing::debug!(%ip, alias = %info.alias, protocol = ?info.protocol, "Registered peer");
-                if info.protocol != ProtocolType::Https {
-                    return;
-                }
-                if let Some(discovery) = discovery {
-                    discovery
-                        .add_device(DiscoveredDevice {
-                            alias: info.alias,
-                            version: info.version,
-                            device_model: info.device_model,
-                            device_type: info.device_type,
-                            fingerprint: info.fingerprint,
-                            channel: DeviceChannel::Http(HttpChannel {
-                                host: ip.to_string(),
-                                port: info.port,
-                                protocol: info.protocol,
-                            }),
-                            download: info.download,
-                        })
-                        .await;
+                if let Some(discovery) = discovery
+                    && let Some(peer) = registered_peer(ip, info, &self.register.fingerprint)
+                {
+                    discovery.add_device(peer).await;
                 }
             }
             ServerEventV2::PrepareUpload {
@@ -657,6 +642,31 @@ fn offer(file: &FileDto) -> OfferedFile {
         size: file.size,
         mime: file.file_type.clone(),
     }
+}
+
+// Incoming registrations may echo our own announcement. Filter them at the
+// application boundary; matching names alone must not hide other computers.
+fn registered_peer(
+    ip: impl ToString,
+    info: RegisterDtoV2,
+    own_fingerprint: &str,
+) -> Option<DiscoveredDevice> {
+    if info.protocol != ProtocolType::Https || info.fingerprint == own_fingerprint {
+        return None;
+    }
+    Some(DiscoveredDevice {
+        alias: info.alias,
+        version: info.version,
+        device_model: info.device_model,
+        device_type: info.device_type,
+        fingerprint: info.fingerprint,
+        channel: DeviceChannel::Http(HttpChannel {
+            host: ip.to_string(),
+            port: info.port,
+            protocol: info.protocol,
+        }),
+        download: info.download,
+    })
 }
 
 fn validate_offer(files: &HashMap<String, FileDto>) -> Result<()> {
@@ -942,6 +952,27 @@ mod discovery_tests {
             }),
             download: false,
         }
+    }
+
+    #[test]
+    fn own_registration_is_not_published_as_a_nearby_device() {
+        let info = |fingerprint: &str, protocol| RegisterDtoV2 {
+            alias: "Same computer name".into(),
+            version: PROTOCOL_VERSION_V2.into(),
+            device_model: Some("Omasend".into()),
+            device_type: Some(DeviceType::Desktop),
+            fingerprint: fingerprint.into(),
+            port: 53317,
+            protocol,
+            download: false,
+        };
+        let ip = "192.168.1.10";
+        assert!(registered_peer(ip, info("self", ProtocolType::Https), "self").is_none());
+        let peer = registered_peer(ip, info("peer", ProtocolType::Https), "self").unwrap();
+        assert_eq!(peer.fingerprint, "peer");
+        assert_eq!(peer.alias, "Same computer name");
+        assert_eq!(peer.http().unwrap().host, "192.168.1.10");
+        assert!(registered_peer(ip, info("peer", ProtocolType::Http), "self").is_none());
     }
 
     #[tokio::test]

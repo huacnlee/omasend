@@ -3,7 +3,8 @@ use gpui_kit::{
     AnimationExt, AnyElement, Context, ObjectFit, SharedString, div, img, prelude::*, px, rems,
 };
 use gpui_omarchy::{
-    ActiveTheme, ButtonVariant, alert_dialog, button, dialog, dialog_popup, dialog_title, keycap,
+    ActiveTheme, ButtonVariant, IconName, alert_dialog, button, dialog, dialog_popup, dialog_title,
+    icon, keycap,
 };
 use omasend::model::{SendItem, TransferStatus};
 
@@ -18,9 +19,81 @@ impl Home {
             .flex_1()
             .min_h(rems(8.))
             .gap_3();
+        if self.state.composer.is_empty()
+            && let Some(transfer) = self
+                .state
+                .transfers
+                .iter()
+                .filter(|transfer| transfer.status == TransferStatus::Completed)
+                .max_by_key(|transfer| transfer.when)
+            && self.dismissed_success.as_ref() != Some(&transfer.id)
+        {
+            let transfer_id = transfer.id.clone();
+            return list
+                .child(
+                    div()
+                        .id("last-completed-transfer")
+                        .debug_selector(|| "last-completed-transfer".into())
+                        .relative()
+                        .flex()
+                        .flex_col()
+                        .flex_1()
+                        .items_center()
+                        .justify_center()
+                        .bg(theme.background)
+                        .border_1()
+                        .border_color(theme.divider())
+                        .p_4()
+                        .child(
+                            div()
+                                .w(rems(28.))
+                                .max_w_full()
+                                .flex()
+                                .flex_col()
+                                .gap_3()
+                                .child(
+                                    div()
+                                        .flex()
+                                        .justify_center()
+                                        .text_color(theme.success)
+                                        .child(icon(IconName::Check).size(rems(2.))),
+                                )
+                                .child(self.transfer_summary(transfer, cx))
+                                .child(
+                                    div()
+                                        .flex()
+                                        .justify_center()
+                                        .items_center()
+                                        .gap_2()
+                                        .child(
+                                            div()
+                                                .id("dismiss-transfer-success")
+                                                .debug_selector(|| "dismiss-transfer-success".into())
+                                                .child(
+                                                    button("confirm-transfer-success", self.language.text("Done"), ButtonVariant::Outline, cx)
+                                                        .on_click(cx.listener(move |view, _, window, cx| {
+                                                            view.dismissed_success = Some(transfer_id.clone());
+                                                            view.focus.focus(window, cx);
+                                                            cx.notify();
+                                                        })),
+                                                ),
+                                        )
+                                        .when_some(transfer.paths.first().cloned(), |actions, path| {
+                                            actions.child(
+                                                button("reveal-completed-transfer", self.language.text("Show in Files"), ButtonVariant::Outline, cx)
+                                                    .on_click(move |_, _, cx| cx.reveal_path(&path)),
+                                            )
+                                        }),
+                                ),
+                        ),
+                )
+                .into_any_element();
+        }
         if self.state.composer.is_empty() {
             list = list.child(
                 div()
+                    .id("composer-welcome")
+                    .debug_selector(|| "composer-welcome".into())
                     .flex()
                     .flex_col()
                     .flex_1()
@@ -284,11 +357,24 @@ impl Home {
             );
         let ok = cx.listener(|view: &mut Self, _, window, cx| view.decide(true, window, cx));
         alert_dialog(&self.modal_focus, cx)
-            .popup(popup.with_animation(
-                "popup-enter",
-                super::motion::popup_enter(),
-                |popup, phase| popup.opacity(phase).top(px(4. * (1. - phase))),
-            ))
+            .popup(
+                div()
+                    .size_full()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        div()
+                            .id("receive-popup")
+                            .debug_selector(|| "receive-popup".into())
+                            .max_w_full()
+                            .child(popup.with_animation(
+                                "popup-enter",
+                                super::motion::popup_enter(),
+                                |popup, phase| popup.opacity(phase).top(px(4. * (1. - phase))),
+                            )),
+                    ),
+            )
             .on_ok(move |event, window, cx| {
                 ok(event, window, cx);
                 false

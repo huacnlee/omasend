@@ -53,6 +53,36 @@ impl Language {
         self.text(if count == 1 { singular } else { plural })
             .replacen("{count}", &count.to_string(), 1)
     }
+    /// Transfer failures contain transport internals; only show actionable summaries.
+    pub fn transfer_error(self, error: &str) -> String {
+        let details = error.to_ascii_lowercase();
+        let message = if details.contains("certificate") || details.contains("tls") {
+            "Could not verify the receiver. Check its identity and try again"
+        } else if details.contains("timed out") || details.contains("timeout") {
+            "The receiver did not respond. Try again"
+        } else if details.contains("error sending request")
+            || details.contains("connection refused")
+            || details.contains("connection reset")
+            || details.contains("connection closed")
+            || details.contains("network is unreachable")
+            || details.contains("dns error")
+        {
+            "Cannot connect to the receiver. Make sure it is online and try again"
+        } else if CATALOG.iter().any(|(key, _)| *key == error) {
+            error
+        } else {
+            let formatted = self.error(error);
+            if error.split_once(';').is_some_and(|(code, _)| {
+                code.parse::<u16>()
+                    .is_ok_and(|code| (400..600).contains(&code))
+            }) {
+                return formatted;
+            }
+            "Transfer failed. View logs for details"
+        };
+        self.text(message).to_owned()
+    }
+
     pub fn error(self, error: &str) -> String {
         // The protocol core formats HTTP errors as `409;Some("...")`.
         // Never expose remote response bodies or Rust debug wrappers in UI.
@@ -78,6 +108,20 @@ impl Language {
 }
 
 const CATALOG: &[(&str, &str)] = &[
+    ("Done", "完成"),
+    ("Average speed", "平均速度"),
+    (
+        "Cannot connect to the receiver. Make sure it is online and try again",
+        "无法连接接收方，请确认对方在线后重试",
+    ),
+    (
+        "The receiver did not respond. Try again",
+        "接收方响应超时，请重试",
+    ),
+    (
+        "Could not verify the receiver. Check its identity and try again",
+        "无法验证接收方身份，请确认对方身份后重试",
+    ),
     ("Install {name}…", "安装 {name}…"),
     ("Downloading update…", "正在下载更新…"),
     ("Installing update…", "正在安装更新…"),
@@ -318,6 +362,46 @@ const CATALOG: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn transfer_errors_hide_transport_details_in_both_languages() {
+        let request = "error sending request for url (https://127.0.0.1:53317/api/localsend/v2/prepare-upload): client error (Connect): connection refused";
+        for (raw, en, zh) in [
+            (
+                request,
+                "Cannot connect to the receiver. Make sure it is online and try again",
+                "无法连接接收方，请确认对方在线后重试",
+            ),
+            (
+                "error sending request: operation timed out",
+                "The receiver did not respond. Try again",
+                "接收方响应超时，请重试",
+            ),
+            (
+                "error sending request: invalid peer certificate",
+                "Could not verify the receiver. Check its identity and try again",
+                "无法验证接收方身份，请确认对方身份后重试",
+            ),
+            (
+                "409;Some(\"Blocked by another session\")",
+                "The receiver is busy. Try again shortly",
+                "接收方正忙，请稍后重试",
+            ),
+            (
+                "unrecognized internal details",
+                "Transfer failed. View logs for details",
+                "传输失败，可查看日志了解详情",
+            ),
+            (
+                "Sender stopped responding",
+                "Sender stopped responding",
+                "发送方停止响应",
+            ),
+        ] {
+            assert_eq!(Language::En.transfer_error(raw), en);
+            assert_eq!(Language::ZhCn.transfer_error(raw), zh);
+        }
+    }
+
     #[test]
     fn protocol_errors_hide_raw_response_details() {
         let raw = "409;Some(\"Blocked by another session\")";

@@ -98,6 +98,9 @@ const logoSegments = [
         </div>)}
         <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
       </section>
+      <figure class="app-screenshot">
+        <img src={asset('screenshot.png')} width="2546" height="1402" loading="lazy" decoding="async" alt={t.screenshot} />
+      </figure>
       <section id="workflow" class="section workflow">
         <div class="section-heading"><span class="index" aria-hidden="true">01 /</span><h2>{t.workflow}</h2><p>{t.workflowIntro}</p></div>
         <ol class="steps">{t.steps.map(([title, body], i) => <li><span class="step-number" aria-hidden="true">0{i + 1}</span><div><h3>{title}</h3><p>{body}</p></div><span class="step-symbol" aria-hidden="true">{['↓', '→', '↗'][i]}</span></li>)}</ol>

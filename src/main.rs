@@ -130,6 +130,7 @@ mod lifecycle_tests {
                 history_scroll: gpui_kit::ScrollHandle::new(),
                 logs: None,
                 about_open: false,
+                dismissed_success: None,
                 update_state: Default::default(),
                 show_update_status: false,
                 update_status_dismiss: None,
