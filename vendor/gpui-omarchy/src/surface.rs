@@ -68,6 +68,37 @@ pub enum Status {
     Error,
 }
 
+/// Inline feedback with square borders and semantic theme colors.
+pub fn alert(message: impl Into<SharedString>, status: Status, cx: &App) -> Div {
+    let theme = cx.omarchy();
+    let color = match status {
+        Status::Neutral => theme.secondary,
+        Status::Success => theme.success,
+        Status::Warning => theme.warning,
+        Status::Error => theme.danger,
+    };
+    div()
+        .flex()
+        .items_center()
+        .gap(px(10.))
+        .p(px(10.))
+        .border_1()
+        .border_color(color.opacity(0.35))
+        .bg(color.opacity(0.06))
+        .text_color(theme.foreground)
+        .child(
+            crate::icon(match status {
+                Status::Success => crate::IconName::Check,
+                Status::Neutral => crate::IconName::Minus,
+                Status::Warning | Status::Error => crate::IconName::TriangleAlert,
+            })
+            .size(px(14.))
+            .flex_shrink_0()
+            .text_color(color),
+        )
+        .child(div().flex_1().min_w_0().child(message.into()))
+}
+
 pub fn badge(label: impl Into<SharedString>, status: Status, cx: &App) -> Div {
     let t = cx.omarchy();
     let color = match status {

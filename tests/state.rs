@@ -100,3 +100,35 @@ fn acceptance_is_independent_of_the_first_uploaded_byte() {
     assert!(!state.transfers[0].awaiting_acceptance);
     assert_eq!(state.transfers[0].transferred, 0);
 }
+
+#[test]
+fn active_peer_survives_discovery_expiry_until_transfer_finishes() {
+    let mut state = AppState::default();
+    let peer = Device {
+        fingerprint: "peer".into(),
+        alias: "Same name".into(),
+        model: "macOS".into(),
+        host: "192.168.1.2".into(),
+        port: 53317,
+    };
+    state.apply(TransferEvent::DeviceFound(peer.clone()));
+    state.track_send("transfer".into());
+    state.apply(TransferEvent::DeviceLost(peer.fingerprint.clone()));
+    assert_eq!(state.devices.len(), 1);
+    assert_eq!(state.selected.as_deref(), Some("peer"));
+    state.apply(TransferEvent::Completed {
+        id: "transfer".into(),
+        paths: vec![],
+    });
+    assert!(state.devices.is_empty());
+    state.apply(TransferEvent::DeviceFound(peer.clone()));
+    state.track_send("next".into());
+    state.apply(TransferEvent::DeviceLost(peer.fingerprint.clone()));
+    state.apply(TransferEvent::DeviceFound(peer));
+    state.apply(TransferEvent::Cancelled { id: "next".into() });
+    assert_eq!(
+        state.devices.len(),
+        1,
+        "rediscovered peers remain after transfer"
+    );
+}

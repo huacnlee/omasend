@@ -23,30 +23,15 @@ impl Home {
                 .child(self.language.text("No transfers yet"))
                 .into_any_element();
         };
-        footer = footer
-            .child(
-                div()
-                    .id("latest-transfer")
-                    .flex_1()
-                    .min_w_0()
-                    .max_h(rems(8.))
-                    .overflow_y_scroll()
-                    .child(self.transfer_row(latest, false, cx)),
-            )
-            .child(self.transfer_status(latest, cx))
-            .child(
-                button("toggle-transfer-history", "", ButtonVariant::Secondary, cx)
-                    .accessibility_label(self.language.text("Transfer history"))
-                    .map(|button| {
-                        gpui_omarchy::with_tooltip(button, self.language.text("Transfer history"))
-                    })
-                    .flex_shrink_0()
-                    .p_1()
-                    .child(icon(IconName::ChevronUp).size(rems(0.875)))
-                    .on_click(cx.listener(|view, _, window, cx| {
-                        view.open_history(window, cx);
-                    })),
-            );
+        footer = footer.child(
+            div()
+                .id("latest-transfer")
+                .flex_1()
+                .min_w_0()
+                .max_h(rems(12.))
+                .overflow_y_scroll()
+                .child(self.transfer_row(latest, true, cx)),
+        );
         footer.into_any_element()
     }
 
@@ -78,7 +63,7 @@ impl Home {
             .track_scroll(&self.history_scroll)
             .px_4();
         for transfer in &self.state.transfers {
-            records = records.child(self.transfer_row(transfer, true, cx));
+            records = records.child(self.transfer_row(transfer, false, cx));
         }
         let surface = div()
             .id("history-dock")
@@ -174,7 +159,7 @@ impl Home {
     fn transfer_row(
         &self,
         transfer: &Transfer,
-        show_status: bool,
+        expandable: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = cx.omarchy().clone();
@@ -209,8 +194,23 @@ impl Home {
                                     .join(", "),
                             ),
                     )
-                    .when(show_status, |row| {
-                        row.child(self.transfer_status(transfer, cx))
+                    .when(expandable, |row| {
+                        row.child(
+                            button("toggle-transfer-history", "", ButtonVariant::Secondary, cx)
+                                .accessibility_label(self.language.text("Transfer history"))
+                                .map(|button| {
+                                    gpui_omarchy::with_tooltip(
+                                        button,
+                                        self.language.text("Transfer history"),
+                                    )
+                                })
+                                .flex_shrink_0()
+                                .p_1()
+                                .child(icon(IconName::ChevronUp).size(rems(0.875)))
+                                .on_click(cx.listener(|view, _, window, cx| {
+                                    view.open_history(window, cx);
+                                })),
+                        )
                     }),
             )
             .child(
@@ -263,24 +263,39 @@ impl Home {
             } else {
                 transfer.transferred as f32 / transfer.total as f32 * 100.
             };
-            row = row
-                .child(progress(
-                    SharedString::from(format!("progress-{}", transfer.id)),
-                    percentage,
-                    cx,
-                ))
-                .child(
-                    div()
-                        .text_size(rems(0.6875))
-                        .text_color(theme.secondary)
-                        .child(format!(
-                            "{} / {} · {:.0}%",
-                            size_label(transfer.transferred),
-                            size_label(transfer.total),
-                            percentage
-                        )),
-                );
+            row = row.child(progress(
+                SharedString::from(format!("progress-{}", transfer.id)),
+                percentage,
+                cx,
+            ));
         }
+        row = row.child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap_3()
+                .child(self.transfer_status(transfer, cx))
+                .when(active && !transfer.awaiting_acceptance, |row| {
+                    let percentage = if transfer.total == 0 {
+                        0.
+                    } else {
+                        transfer.transferred as f64 / transfer.total as f64 * 100.
+                    };
+                    row.child(
+                        div()
+                            .text_size(rems(0.6875))
+                            .text_color(theme.secondary)
+                            .child(format!(
+                                "{} / {} · {:.0}% · {}/s",
+                                size_label(transfer.transferred),
+                                size_label(transfer.total),
+                                percentage,
+                                size_label(transfer.bytes_per_second()),
+                            )),
+                    )
+                }),
+        );
         if let TransferStatus::Failed(error) = &transfer.status {
             row = row.child(
                 div()

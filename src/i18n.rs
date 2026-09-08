@@ -63,6 +63,13 @@ impl Language {
 }
 
 const CATALOG: &[(&str, &str)] = &[
+    ("View logs", "查看日志"),
+    ("Logs", "日志"),
+    ("Copy logs", "复制日志"),
+    ("Clear logs", "清空日志"),
+    ("No logs yet", "暂无日志"),
+    ("Copied", "已复制"),
+    ("to {name}", "至 {name}"),
     ("To {name}", "发送至 {name}"),
     ("From {name}", "来自 {name}"),
     ("Choose a nearby device", "请选择附近的设备"),

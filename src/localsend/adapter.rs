@@ -696,16 +696,17 @@ async fn publish_while_discovering(
                 match update {
                     Some(DiscoveryEvent::Discovered { .. } | DiscoveryEvent::Updated { .. }) => {}
                     Some(DiscoveryEvent::ProbeFailed { host, alias, error }) => {
+                        let lower = error.to_ascii_lowercase();
+                        if !lower.contains("certificate") && !lower.contains("fingerprint") {
+                            // Background peers routinely disappear or time out.
+                            // The discovery core logs these; they are not UI errors.
+                            continue;
+                        }
                         let now = Instant::now();
                         failures.retain(|_, last| now.duration_since(*last) < Duration::from_secs(60));
                         if !failures.contains_key(&host) {
                             failures.insert(host.clone(), now);
-                            let lower = error.to_ascii_lowercase();
-                            let message = if lower.contains("certificate") || lower.contains("fingerprint") {
-                                "Nearby device identity could not be verified"
-                            } else {
-                                "Could not connect to nearby device"
-                            };
+                            let message = "Nearby device identity could not be verified";
                             emit(&events, TransferEvent::NetworkError(format!(
                                 "{message}: {alias} ({host})"
                             )));
@@ -1039,9 +1040,17 @@ mod discovery_tests {
             })
             .await
             .unwrap();
+        sender
+            .send(DiscoveryEvent::ProbeFailed {
+                host: "127.0.0.2".into(),
+                alias: "Other desktop".into(),
+                error: "server certificate fingerprint mismatch".into(),
+            })
+            .await
+            .unwrap();
         for expected in [
             "Nearby device identity could not be verified: Office desktop (127.0.0.1)",
-            "Could not connect to nearby device: Other desktop (127.0.0.2)",
+            "Nearby device identity could not be verified: Other desktop (127.0.0.2)",
         ] {
             let event = tokio::time::timeout(Duration::from_millis(250), receiver.recv())
                 .await

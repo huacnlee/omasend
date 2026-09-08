@@ -1,5 +1,6 @@
 mod history;
 mod home;
+mod logs;
 mod motion;
 mod nearby;
 mod panels;

@@ -1,5 +1,6 @@
 gpui-omarchy 0.1.0 from crates.io, https://github.com/huacnlee/gpui-omarchy
 Local patches:
+- src/surface.rs provides a theme-aware inline alert for application feedback.
 - src/menu.rs renders shortcut hints with the existing keycap component.
 - src/focus.rs respects gpui-base modal focus traps during Tab/Shift+Tab traversal.
 - src/icon.rs exposes ChevronUp and Send; bundled SVGs are from Lucide

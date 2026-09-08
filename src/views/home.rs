@@ -24,6 +24,7 @@ pub struct Home {
     pub nearby_scroll: gpui::UniformListScrollHandle,
     pub history_expanded: bool,
     pub history_scroll: gpui::ScrollHandle,
+    pub logs: Option<super::logs::LogsPanel>,
     pub restore_focus: Option<FocusHandle>,
     pub preview: Option<String>,
     pub loading_input: bool,
@@ -50,6 +51,7 @@ impl Home {
             nearby_scroll: gpui::UniformListScrollHandle::new(),
             history_expanded: false,
             history_scroll: gpui::ScrollHandle::new(),
+            logs: None,
             restore_focus: None,
             preview: None,
             loading_input: false,
@@ -70,6 +72,7 @@ impl Home {
 
     pub fn close_window(&mut self, window: &mut Window, _: &mut Context<Self>) {
         self.window_handle = None;
+        self.logs = None;
         self.restore_focus = None;
         self.history_expanded = false;
         self.preview = None;
@@ -126,9 +129,11 @@ impl Home {
                                 let was_incoming = view.state.incoming.is_some();
                                 let incoming =
                                     matches!(&event, TransferEvent::IncomingRequest { .. });
-                                let preserve_focus =
-                                    view.history_expanded || view.preview.is_some();
+                                let preserve_focus = view.history_expanded
+                                    || view.preview.is_some()
+                                    || view.logs.is_some();
                                 if incoming {
+                                    view.logs = None;
                                     view.history_expanded = false;
                                     view.preview = None;
                                 }
@@ -176,6 +181,7 @@ impl Home {
     pub fn add_items(&mut self, items: Vec<SendItem>, _: &mut Window, cx: &mut Context<Self>) {
         if self.loading_input
             || self.history_expanded
+            || self.logs.is_some()
             || self.preview.is_some()
             || self.state.incoming.is_some()
         {
@@ -207,7 +213,8 @@ impl Home {
                     Err(error) => view.state.error = Some(format!("{error:#}")),
                 }
                 view.with_window(cx, |view, window, cx| {
-                    if !view.history_expanded
+                    if view.logs.is_none()
+                        && !view.history_expanded
                         && view.preview.is_none()
                         && view.state.incoming.is_none()
                     {
@@ -223,6 +230,7 @@ impl Home {
     pub(super) fn paste(&mut self, _: &Paste, _window: &mut Window, cx: &mut Context<Self>) {
         if self.loading_input
             || self.history_expanded
+            || self.logs.is_some()
             || self.preview.is_some()
             || self.state.incoming.is_some()
         {
@@ -323,6 +331,7 @@ impl Home {
     pub(super) fn open_files(&mut self, _: &OpenFiles, _: &mut Window, cx: &mut Context<Self>) {
         if self.loading_input
             || self.history_expanded
+            || self.logs.is_some()
             || self.preview.is_some()
             || self.state.incoming.is_some()
         {
@@ -384,7 +393,9 @@ impl Home {
     }
 
     fn back(&mut self, _: &Back, window: &mut Window, cx: &mut Context<Self>) {
-        if self.history_expanded {
+        if self.logs.is_some() {
+            self.close_logs(window, cx);
+        } else if self.history_expanded {
             self.close_history(window, cx);
         } else if self.preview.take().is_some() {
             self.restore(window, cx);
@@ -465,7 +476,10 @@ impl Render for Home {
                 }
             }))
             .on_action(cx.listener(|view, _: &PreviousDevice, window, cx| {
-                if view.preview.is_some() || view.state.incoming.is_some() || view.history_expanded
+                if view.logs.is_some()
+                    || view.preview.is_some()
+                    || view.state.incoming.is_some()
+                    || view.history_expanded
                 {
                     return;
                 }
@@ -479,7 +493,10 @@ impl Render for Home {
                 cx.notify();
             }))
             .on_action(cx.listener(|view, _: &NextDevice, window, cx| {
-                if view.preview.is_some() || view.state.incoming.is_some() || view.history_expanded
+                if view.logs.is_some()
+                    || view.preview.is_some()
+                    || view.state.incoming.is_some()
+                    || view.history_expanded
                 {
                     return;
                 }
@@ -546,6 +563,7 @@ impl Render for Home {
                                 .checked(self.language == omasend::i18n::Language::ZhCn),
                             MenuItem::new("OmaSend").separator_before(),
                             MenuItem::new("GitHub"),
+                            MenuItem::new(self.language.text("View logs")),
                             MenuItem::new(self.language.text("Exit")).separator_before(),
                         ],
                         {
@@ -564,7 +582,8 @@ impl Render for Home {
                                     }
                                     4 => cx.open_url("https://huacnlee.github.io/omasend/"),
                                     5 => cx.open_url("https://github.com/huacnlee/omasend"),
-                                    6 => cx.quit(),
+                                    6 => view.open_logs(window, cx),
+                                    7 => cx.quit(),
                                     _ => {}
                                 });
                             }
@@ -574,20 +593,9 @@ impl Render for Home {
             .child(separator(cx));
         if let Some(error) = &self.state.error {
             root = root.child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_3()
-                    .px_4()
-                    .py_2()
-                    .bg(theme.surface)
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w_0()
-                            .text_color(theme.danger)
-                            .child(self.language.error(error)),
-                    )
+                gpui_omarchy::alert(self.language.error(error), gpui_omarchy::Status::Error, cx)
+                    .mx_4()
+                    .mt_3()
                     .when(self.node.is_none() && !self.starting, |row| {
                         row.child(
                             button(
@@ -600,16 +608,17 @@ impl Render for Home {
                         )
                     })
                     .child(
-                        button(
-                            "dismiss-error",
-                            self.language.text("Dismiss"),
-                            ButtonVariant::Secondary,
-                            cx,
-                        )
-                        .on_click(cx.listener(|view, _, _, cx| {
-                            view.state.error = None;
-                            cx.notify();
-                        })),
+                        button("dismiss-error", "", ButtonVariant::Secondary, cx)
+                            .accessibility_label(self.language.text("Dismiss"))
+                            .map(|button| {
+                                gpui_omarchy::with_tooltip(button, self.language.text("Dismiss"))
+                            })
+                            .p_1()
+                            .child(icon(IconName::Close).size(rems(0.875)))
+                            .on_click(cx.listener(|view, _, _, cx| {
+                                view.state.error = None;
+                                cx.notify();
+                            })),
                     ),
             );
         }
@@ -627,58 +636,67 @@ impl Render for Home {
                     .child(
                         div()
                             .flex()
-                            .flex_col()
-                            .gap_1()
+                            .items_center()
+                            .justify_between()
+                            .gap_3()
                             .child(
                                 div()
                                     .flex()
-                                    .items_center()
-                                    .justify_between()
+                                    .items_baseline()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .gap_2()
                                     .child(
                                         div()
+                                            .flex_shrink_0()
                                             .font_weight(gpui::FontWeight::BOLD)
                                             .text_color(theme.bright)
                                             .child(self.language.text("Outbox")),
                                     )
-                                    .child(div().text_color(theme.secondary).child(
-                                        if self.loading_input {
-                                            self.language.text("Preparing…").into()
-                                        } else if self.state.composer.is_empty() {
-                                            String::new()
-                                        } else {
-                                            format!(
-                                                "{} / {}",
-                                                self.language.count(
-                                                    self.state.composer.len(),
-                                                    "{count} item",
-                                                    "{count} items"
-                                                ),
-                                                size_label(
-                                                    self.state
-                                                        .composer
-                                                        .iter()
-                                                        .map(|item| item.size())
-                                                        .sum()
-                                                )
-                                            )
-                                        },
-                                    )),
-                            )
-                            .child(
-                                div()
-                                    .text_size(rems(0.75))
-                                    .text_color(theme.secondary)
                                     .child(
-                                        self.state
-                                            .selected_device()
-                                            .map(|device| {
-                                                self.language.named("To {name}", &device.alias)
-                                            })
-                                            .unwrap_or_else(|| {
-                                                self.language.text("Choose a nearby device").into()
-                                            }),
+                                        div()
+                                            .min_w_0()
+                                            .text_ellipsis()
+                                            .overflow_hidden()
+                                            .text_color(theme.secondary)
+                                            .child(
+                                                self.state
+                                                    .selected_device()
+                                                    .map(|device| {
+                                                        self.language
+                                                            .named("to {name}", &device.alias)
+                                                    })
+                                                    .unwrap_or_else(|| {
+                                                        self.language
+                                                            .text("Choose a nearby device")
+                                                            .into()
+                                                    }),
+                                            ),
                                     ),
-                            ),
+                            )
+                            .child(div().flex_shrink_0().text_color(theme.secondary).child(
+                                if self.loading_input {
+                                    self.language.text("Preparing…").into()
+                                } else if self.state.composer.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!(
+                                        "{} / {}",
+                                        self.language.count(
+                                            self.state.composer.len(),
+                                            "{count} item",
+                                            "{count} items"
+                                        ),
+                                        size_label(
+                                            self.state
+                                                .composer
+                                                .iter()
+                                                .map(|item| item.size())
+                                                .sum()
+                                        )
+                                    )
+                                },
+                            )),
                     )
                     .child(self.composer(cx))
                     .child(
@@ -733,7 +751,9 @@ impl Render for Home {
                     ),
             )
             .child(self.transfers(cx));
-        if self.history_expanded && self.state.incoming.is_none() && self.preview.is_none() {
+        if self.logs.is_some() && self.state.incoming.is_none() {
+            root = root.child(self.logs_overlay(window, cx));
+        } else if self.history_expanded && self.state.incoming.is_none() && self.preview.is_none() {
             root = root.child(self.history_overlay(window, cx));
         }
         if self.state.incoming.is_some() {
@@ -790,6 +810,7 @@ mod keyboard_tests {
                 nearby_scroll: gpui::UniformListScrollHandle::new(),
                 history_expanded: false,
                 history_scroll: gpui::ScrollHandle::new(),
+                logs: None,
                 restore_focus: None,
                 preview: None,
                 loading_input: false,
@@ -1075,6 +1096,64 @@ mod keyboard_tests {
                     !view.read(cx).history_expanded,
                     "backdrop click closes the sheet"
                 );
+                assert_eq!(window.focused(cx), Some(trigger.clone()));
+            });
+        });
+    }
+    #[gpui::test]
+    fn logs_panel_copies_raw_text_and_restores_focus(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            cx.simulate_keystrokes("tab tab");
+            let trigger = cx.update(|window, cx| window.focused(cx).unwrap());
+            view.update_in(cx, |view, window, cx| {
+                view.open_logs(window, cx);
+                let logs = view.logs.as_mut().unwrap();
+                // Freeze the live backend while exercising exact viewer content.
+                logs.refresh = None;
+                logs.text = "WARN local discovery failed\nDEBUG retrying peer".into();
+                cx.notify();
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            cx.simulate_keystrokes("tab");
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            let enter = Keystroke::parse("enter").unwrap();
+            cx.simulate_event(KeyDownEvent {
+                keystroke: enter.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            });
+            cx.simulate_event(KeyUpEvent { keystroke: enter });
+            cx.update(|window, cx| {
+                let clipboard = cx.read_from_clipboard().expect("Copy logs writes text");
+                let text = clipboard
+                    .into_entries()
+                    .filter_map(|entry| match entry {
+                        gpui::ClipboardEntry::String(value) => Some(value.text().clone()),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .join("");
+                assert_eq!(text, "WARN local discovery failed\nDEBUG retrying peer");
+                assert!(view.read(cx).modal_focus.contains_focused(window, cx));
+            });
+            for key in ["tab", "shift-tab", "right", "left", "ctrl-v"] {
+                cx.simulate_keystrokes(key);
+                cx.update(|window, cx| {
+                    assert!(view.read(cx).logs.is_some());
+                    assert!(
+                        view.read(cx).modal_focus.contains_focused(window, cx),
+                        "{key} escaped logs"
+                    );
+                    assert_eq!(
+                        view.read(cx).state.composer.len(),
+                        1,
+                        "{key} changed the composer behind logs"
+                    );
+                });
+            }
+            cx.simulate_keystrokes("escape");
+            cx.update(|window, cx| {
+                assert!(view.read(cx).logs.is_none());
                 assert_eq!(window.focused(cx), Some(trigger.clone()));
             });
         });

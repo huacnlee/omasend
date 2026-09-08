@@ -51,12 +51,7 @@ fn open_or_activate_window(cx: &mut App, runtime: tokio::runtime::Handle) -> any
 }
 
 fn main() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
-        )
-        .with_ansi(false)
-        .init();
+    omasend::diagnostics::init();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .thread_name("omasend-network")
@@ -131,6 +126,7 @@ mod lifecycle_tests {
                 nearby_scroll: gpui::UniformListScrollHandle::new(),
                 history_expanded: false,
                 history_scroll: gpui::ScrollHandle::new(),
+                logs: None,
                 restore_focus: None,
                 preview: None,
                 loading_input: false,

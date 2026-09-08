@@ -1,6 +1,10 @@
 use super::SendItem;
 use crate::localsend::{Device, OfferedFile, TransferEvent, Upload};
-use std::{collections::HashSet, path::PathBuf, time::SystemTime};
+use std::{
+    collections::HashSet,
+    path::PathBuf,
+    time::{Duration, Instant, SystemTime},
+};
 
 pub struct ComposerItem {
     pub id: String,
@@ -53,9 +57,31 @@ pub enum TransferStatus {
     Failed(String),
 }
 
+#[derive(Default)]
+struct TransferRate {
+    sample: Option<(Instant, u64)>,
+    bytes_per_second: u64,
+}
+
+impl TransferRate {
+    fn update(&mut self, bytes: u64, now: Instant) {
+        let Some((start, previous)) = self.sample else {
+            self.sample = Some((now, bytes));
+            return;
+        };
+        let elapsed = now.duration_since(start);
+        if elapsed >= Duration::from_millis(500) {
+            self.bytes_per_second =
+                (bytes.saturating_sub(previous) as f64 / elapsed.as_secs_f64()) as u64;
+            self.sample = Some((now, bytes));
+        }
+    }
+}
+
 pub struct Transfer {
     pub id: String,
     pub peer: String,
+    peer_id: Option<String>,
     pub sending: bool,
     pub awaiting_acceptance: bool,
     pub files: Vec<OfferedFile>,
@@ -65,6 +91,13 @@ pub struct Transfer {
     pub status: TransferStatus,
     pub when: SystemTime,
     pub composer_ids: HashSet<String>,
+    rate: TransferRate,
+}
+
+impl Transfer {
+    pub fn bytes_per_second(&self) -> u64 {
+        self.rate.bytes_per_second
+    }
 }
 
 pub struct IncomingRequest {
@@ -83,6 +116,7 @@ pub struct AppState {
     pub transfers: Vec<Transfer>,
     pub incoming: Option<IncomingRequest>,
     pub error: Option<String>,
+    expired_devices: HashSet<String>,
 }
 
 impl AppState {
@@ -116,6 +150,7 @@ impl AppState {
                 .selected_device()
                 .map(|device| device.alias.clone())
                 .unwrap_or_default(),
+            peer_id: self.selected.clone(),
             sending: true,
             awaiting_acceptance: true,
             files: self
@@ -124,6 +159,7 @@ impl AppState {
                 .flat_map(|item| item.uploads.iter().map(|file| file.offer.clone()))
                 .collect(),
             transferred: 0,
+            rate: TransferRate::default(),
             total: self.composer.iter().map(ComposerItem::size).sum(),
             paths: Vec::new(),
             status: TransferStatus::Active,
@@ -135,6 +171,7 @@ impl AppState {
         match event {
             TransferEvent::DiscoveryActive(active) => self.discovering = active,
             TransferEvent::DeviceFound(device) => {
+                self.expired_devices.remove(&device.fingerprint);
                 if let Some(existing) = self
                     .devices
                     .iter_mut()
@@ -153,13 +190,8 @@ impl AppState {
                 }
             }
             TransferEvent::DeviceLost(id) => {
-                self.devices.retain(|device| device.fingerprint != id);
-                if self.selected.as_ref() == Some(&id) {
-                    self.selected = self
-                        .devices
-                        .first()
-                        .map(|device| device.fingerprint.clone());
-                }
+                self.expired_devices.insert(id);
+                self.remove_expired_devices();
             }
             TransferEvent::NetworkError(error) => self.error = Some(error),
             TransferEvent::IncomingRequest { id, peer, files } => {
@@ -172,6 +204,11 @@ impl AppState {
                 files,
                 total,
             } => {
+                let peer_id = self
+                    .incoming
+                    .as_ref()
+                    .filter(|request| request.id == id)
+                    .map(|request| request.peer.fingerprint.clone());
                 if self
                     .incoming
                     .as_ref()
@@ -188,11 +225,13 @@ impl AppState {
                     self.transfers.push(Transfer {
                         id,
                         peer,
+                        peer_id,
                         sending,
                         awaiting_acceptance: sending,
                         files,
                         total,
                         transferred: 0,
+                        rate: TransferRate::default(),
                         paths: Vec::new(),
                         status: TransferStatus::Active,
                         when: SystemTime::now(),
@@ -207,6 +246,7 @@ impl AppState {
                     .find(|transfer| transfer.id == id && transfer.status == TransferStatus::Active)
                 {
                     transfer.awaiting_acceptance = false;
+                    transfer.rate.update(0, Instant::now());
                 }
             }
             TransferEvent::Progress {
@@ -220,6 +260,7 @@ impl AppState {
                     .find(|transfer| transfer.id == id && transfer.status == TransferStatus::Active)
                 {
                     transfer.transferred = transferred.min(total);
+                    transfer.rate.update(transfer.transferred, Instant::now());
                     transfer.total = total;
                 }
             }
@@ -244,6 +285,28 @@ impl AppState {
             self.transfers.remove(index);
         }
     }
+    fn remove_expired_devices(&mut self) {
+        self.devices.retain(|device| {
+            !self.expired_devices.contains(&device.fingerprint)
+                || self.transfers.iter().any(|transfer| {
+                    transfer.status == TransferStatus::Active
+                        && transfer.peer_id.as_ref() == Some(&device.fingerprint)
+                })
+        });
+        if !self
+            .devices
+            .iter()
+            .any(|device| Some(&device.fingerprint) == self.selected.as_ref())
+        {
+            self.selected = self
+                .devices
+                .first()
+                .map(|device| device.fingerprint.clone());
+        }
+        self.expired_devices
+            .retain(|id| self.devices.iter().any(|device| &device.fingerprint == id));
+    }
+
     fn finish(&mut self, id: &str, status: TransferStatus, paths: Vec<PathBuf>) {
         if self
             .incoming
@@ -262,5 +325,26 @@ impl AppState {
             transfer.paths = paths;
             transfer.when = SystemTime::now();
         }
+        self.remove_expired_devices();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn transfer_rate_uses_recent_bytes_and_handles_stalls() {
+        let start = Instant::now();
+        let mut rate = TransferRate::default();
+        rate.update(0, start);
+        rate.update(1024, start + Duration::from_millis(500));
+        assert_eq!(rate.bytes_per_second, 2048);
+        rate.update(1536, start + Duration::from_secs(1));
+        assert_eq!(rate.bytes_per_second, 1024);
+        rate.update(1536, start + Duration::from_secs(2));
+        assert_eq!(rate.bytes_per_second, 0);
+        rate.update(0, start + Duration::from_secs(3));
+        assert_eq!(rate.bytes_per_second, 0);
     }
 }

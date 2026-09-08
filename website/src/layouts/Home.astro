@@ -102,10 +102,10 @@ const logoSegments = [
         <div class="section-heading"><span class="index" aria-hidden="true">01 /</span><h2>{t.workflow}</h2><p>{t.workflowIntro}</p></div>
         <ol class="steps">{t.steps.map(([title, body], i) => <li><span class="step-number" aria-hidden="true">0{i + 1}</span><div><h3>{title}</h3><p>{body}</p></div><span class="step-symbol" aria-hidden="true">{['↓', '→', '↗'][i]}</span></li>)}</ol>
       </section>
-      <section class="section details"><div class="section-heading"><span class="index" aria-hidden="true">02 /</span><h2>{t.details}</h2><p class="foundation"><a class="text-link" href="https://huacnlee.github.io/gpui-omarchy/">GPUI Omarchy ↗</a><br /><a class="text-link" href="https://github.com/localsend/localsend">LocalSend Rust core ↗</a></p></div><dl>{t.facts.map(([title, body]) => <div><dt>{title}</dt><dd>{body}</dd></div>)}</dl></section>
+      <section class="section details"><div class="section-heading"><span class="index" aria-hidden="true">02 /</span><h2>{t.details}</h2><p class="foundation"><a class="text-link" href="https://gpui-kit.com/">GPUI Kit ↗</a><br /><a class="text-link" href="https://huacnlee.github.io/gpui-omarchy/">GPUI Omarchy ↗</a><br /><a class="text-link" href="https://github.com/localsend/localsend">LocalSend Rust core ↗</a></p></div><dl>{t.facts.map(([title, body]) => <div><dt>{title}</dt><dd>{body}</dd></div>)}</dl></section>
 
     </main>
-    <footer><div class="shell"><span>OmaSend · {t.footer}</span><span>{t.built} <a class="text-link" href="https://huacnlee.github.io/gpui-omarchy/">GPUI Omarchy</a> · <a class="text-link" href={repo}>{t.source}</a></span></div></footer>
+    <footer><div class="shell"><span>OmaSend · {t.footer}</span><span>{t.built} <a class="text-link" href="https://gpui-kit.com/">GPUI Kit</a> · <a class="text-link" href="https://huacnlee.github.io/gpui-omarchy/">GPUI Omarchy</a> · <a class="text-link" href={repo}>{t.source}</a></span></div></footer>
     <script>
       const root = document.documentElement;
       const modeQuery = matchMedia('(prefers-color-scheme: light)');
