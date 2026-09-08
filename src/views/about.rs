@@ -38,7 +38,7 @@ impl Home {
                                 .flex_col()
                                 .flex_1()
                                 .gap_1()
-                                .child(dialog_title("OmaSend", cx))
+                                .child(dialog_title("Omasend", cx))
                                 .child(
                                     div()
                                         .text_color(theme.secondary)

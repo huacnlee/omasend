@@ -176,7 +176,7 @@ impl Home {
                 view.update_state = match result {
                     Ok(Ok(())) => UpdateState::Ready { version },
                     error => {
-                        tracing::error!(?error, "Could not install OmaSend update");
+                        tracing::error!(?error, "Could not install Omasend update");
                         UpdateState::InstallFailed { version }
                     }
                 };

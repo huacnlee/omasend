@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the published OmaSend app for the current user. No sudo required.
+# Install the published Omasend app for the current user. No sudo required.
 set -eu
 
 version="${OMASEND_VERSION:-latest}"
@@ -18,7 +18,7 @@ while [ "$#" -gt 0 ]; do
     *) usage >&2; exit 2 ;;
   esac
 done
-die() { printf 'OmaSend: %s\n' "$*" >&2; exit 1; }
+die() { printf 'Omasend: %s\n' "$*" >&2; exit 1; }
 for tool in curl tar awk; do command -v "$tool" >/dev/null || die "Required command missing: $tool"; done
 case "$(uname -s)" in
   Darwin) platform=macos; suffix=apple-darwin; destination="${destination:-$HOME/Applications}" ;;
@@ -45,7 +45,7 @@ asset="omasend-$version-$arch-$suffix.tar.gz"
 base="$repo/releases/download/v$version"
 work="$(mktemp -d "${TMPDIR:-/tmp}/omasend-install.XXXXXXXX")"
 trap 'rm -rf "$work"' 0
-printf 'Downloading OmaSend %s for %s %s…\n' "$version" "$platform" "$arch"
+printf 'Downloading Omasend %s for %s %s…\n' "$version" "$platform" "$arch"
 download "$base/$asset" --output "$work/$asset"
 download "$base/SHA256SUMS" --output "$work/SHA256SUMS"
 expected="$(awk -v name="$asset" '$2 == name || $2 == "*" name { print $1 }' "$work/SHA256SUMS")"

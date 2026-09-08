@@ -33,21 +33,21 @@ actions!(
 pub fn init(cx: &mut App) {
     cx.set_global(theme::ThemeMode::default());
     cx.bind_keys([
-        KeyBinding::new("ctrl-v", Paste, Some("OmaSend")),
-        KeyBinding::new("ctrl-o", OpenFiles, Some("OmaSend")),
-        KeyBinding::new("escape", Back, Some("OmaSend")),
-        KeyBinding::new("enter", Confirm, Some("OmaSend")),
-        KeyBinding::new("up", PreviousDevice, Some("OmaSend")),
-        KeyBinding::new("left", PreviousDevice, Some("OmaSend")),
-        KeyBinding::new("down", NextDevice, Some("OmaSend")),
-        KeyBinding::new("right", NextDevice, Some("OmaSend")),
+        KeyBinding::new("ctrl-v", Paste, Some("Omasend")),
+        KeyBinding::new("ctrl-o", OpenFiles, Some("Omasend")),
+        KeyBinding::new("escape", Back, Some("Omasend")),
+        KeyBinding::new("enter", Confirm, Some("Omasend")),
+        KeyBinding::new("up", PreviousDevice, Some("Omasend")),
+        KeyBinding::new("left", PreviousDevice, Some("Omasend")),
+        KeyBinding::new("down", NextDevice, Some("Omasend")),
+        KeyBinding::new("right", NextDevice, Some("Omasend")),
     ]);
     #[cfg(target_os = "macos")]
     cx.bind_keys([
-        KeyBinding::new("cmd-v", Paste, Some("OmaSend")),
-        KeyBinding::new("cmd-o", OpenFiles, Some("OmaSend")),
+        KeyBinding::new("cmd-v", Paste, Some("Omasend")),
+        KeyBinding::new("cmd-o", OpenFiles, Some("Omasend")),
         KeyBinding::new("cmd-q", Quit, None),
-        KeyBinding::new("cmd-w", CloseWindow, Some("OmaSend")),
+        KeyBinding::new("cmd-w", CloseWindow, Some("Omasend")),
     ]);
 }
 

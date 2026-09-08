@@ -1,4 +1,4 @@
-# Install the published OmaSend app for the current Windows user.
+# Install the published Omasend app for the current Windows user.
 [CmdletBinding()]
 param(
     [string]$Version = 'latest',
@@ -26,7 +26,7 @@ $base = "$repository/releases/download/v$Version"
 $work = Join-Path ([IO.Path]::GetTempPath()) ('omasend-install-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work | Out-Null
 try {
-    Write-Host "Downloading OmaSend $Version for $target…"
+    Write-Host "Downloading Omasend $Version for $target…"
     $archive = Join-Path $work $asset
     Invoke-WebRequest -UseBasicParsing -Uri "$base/$asset" -OutFile $archive
     $checksums = Join-Path $work 'SHA256SUMS'
@@ -42,14 +42,14 @@ try {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     # Windows refuses replacement while the app is running; report the failure.
     Copy-Item -Path (Join-Path $unpacked '*') -Destination $InstallDir -Recurse -Force
-    $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'OmaSend.lnk'
+    $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'Omasend.lnk'
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($startMenu)
     $shortcut.TargetPath = Join-Path $InstallDir 'omasend.exe'
     $shortcut.WorkingDirectory = $InstallDir
     $shortcut.IconLocation = "$InstallDir\omasend.exe,0"
     $shortcut.Save()
-    Write-Host "Installed $InstallDir. Launch OmaSend from the Start menu."
+    Write-Host "Installed $InstallDir. Launch Omasend from the Start menu."
 } finally {
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 }

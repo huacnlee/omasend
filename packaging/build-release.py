@@ -51,8 +51,8 @@ def package(root, binary, output, version, target):
             with (contents / "Info.plist").open("wb") as stream:
                 plistlib.dump({
                     "CFBundleIdentifier": "org.omasend.OmaSend",
-                    "CFBundleName": "OmaSend",
-                    "CFBundleDisplayName": "OmaSend",
+                    "CFBundleName": "Omasend",
+                    "CFBundleDisplayName": "Omasend",
                     "CFBundleExecutable": "omasend",
                     "CFBundleIconFile": "omasend.icns",
                     "CFBundleIconName": "OmaSend",
@@ -62,7 +62,7 @@ def package(root, binary, output, version, target):
                     "LSMinimumSystemVersion": "13.0",
                     "LSApplicationCategoryType": "public.app-category.utilities",
                     "NSHighResolutionCapable": True,
-                    "NSLocalNetworkUsageDescription": "OmaSend discovers nearby devices and transfers files on your local network.",
+                    "NSLocalNetworkUsageDescription": "Omasend discovers nearby devices and transfers files on your local network.",
                     "CFBundleLocalizations": ["en", "zh_CN"],
                 }, stream)
             # Ad-hoc signing preserves executable integrity on Apple Silicon.

@@ -6,7 +6,7 @@ use tokio::{io::AsyncReadExt, process::Command};
 
 fn runtime_directory() -> Result<PathBuf> {
     let root = std::env::var_os("XDG_RUNTIME_DIR")
-        .context("XDG_RUNTIME_DIR is not set; start OmaSend in your Wayland session")?;
+        .context("XDG_RUNTIME_DIR is not set; start Omasend in your Wayland session")?;
     let directory = PathBuf::from(root).join("omasend");
     let mut builder = std::fs::DirBuilder::new();
     #[cfg(unix)]

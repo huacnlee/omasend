@@ -372,7 +372,7 @@ impl Home {
             files: true,
             directories: true,
             multiple: true,
-            prompt: Some(self.language.text("Add to OmaSend").into()),
+            prompt: Some(self.language.text("Add to Omasend").into()),
         });
         cx.spawn(async move |this, cx| {
             let result = prompt.await;
@@ -549,7 +549,7 @@ impl Render for Home {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // Keep the application and popup controls in the same mono face.
         // Published gpui-omarchy defaults to the platform sans face; preserve
-        // any explicit theme font while adapting that fallback for OmaSend.
+        // any explicit theme font while adapting that fallback for Omasend.
         if cx.omarchy().font.as_ref() == ".SystemUIFont" {
             cx.global_mut::<gpui_omarchy::Theme>().font = if cfg!(target_os = "macos") {
                 "Menlo"
@@ -578,7 +578,7 @@ impl Render for Home {
             },
         );
         let mut root = focus_scope("omasend")
-            .key_context("OmaSend OmarchyFocusScope")
+            .key_context("Omasend OmarchyFocusScope")
             .track_focus(&self.focus)
             .size_full()
             .relative()
@@ -717,7 +717,7 @@ impl Render for Home {
                             MenuItem::new(self.language.text("Check for update"))
                                 .separator_before(),
                             MenuItem::new(self.language.text("About…")).separator_before(),
-                            MenuItem::new("OmaSend…"),
+                            MenuItem::new("Omasend…"),
                             MenuItem::new("GitHub…"),
                             MenuItem::new(self.language.text("Logs…")).separator_before(),
                             MenuItem::new(self.language.text("Exit")).separator_before(),

@@ -1,6 +1,6 @@
 下面这版可以直接保存成 `RFC-OmaSend.md`，也适合直接交给 AI Coding Agent 作为开发指引。
 
-# OmaSend — Omarchy Native LocalSend Client
+# Omasend — Omarchy Native LocalSend Client
 
 > Status: Draft
 > Target: v0.1
@@ -10,13 +10,13 @@
 
 ## 1. 项目目标
 
-OmaSend 是一个专门面向 Omarchy 的 LocalSend 兼容客户端。
+Omasend 是一个专门面向 Omarchy 的 LocalSend 兼容客户端。
 
 第一阶段的目标非常克制：
 
 > **用 GPUI 实现一个真正符合 Omarchy 视觉、交互和键盘操作习惯的 LocalSend 客户端，作为 Omarchy 当前 LocalSend Flutter GUI 的原生替代。**
 
-OmaSend **不是重新设计 LocalSend 协议**，也暂时不是 Omarchy 的系统级 AirDrop。
+Omasend **不是重新设计 LocalSend 协议**，也暂时不是 Omarchy 的系统级 AirDrop。
 
 核心价值是：
 
@@ -28,7 +28,7 @@ OmaSend **不是重新设计 LocalSend 协议**，也暂时不是 Omarchy 的系
 * 与 Omarchy Screenshot / Screen Recording / Clipboard 工作流自然结合
 * 与现有 LocalSend Android / iOS / macOS / Windows / Linux 客户端完全互通
 
-未来如果 OmaSend 被社区接受，再逐步向 Omarchy 的系统级文件传输能力演进。
+未来如果 Omasend 被社区接受，再逐步向 Omarchy 的系统级文件传输能力演进。
 
 ---
 
@@ -44,7 +44,7 @@ v0.1 不做：
 * 自研协议
 * 公网传输
 * WebRTC
-* OmaSend 手机客户端
+* Omasend 手机客户端
 * 系统级 AirDrop replacement
 * 复杂账号体系
 * 云端服务
@@ -56,7 +56,7 @@ omarchy-launch-or-focus omasend
               │
               ▼
         ┌──────────────┐
-        │   OmaSend    │
+        │   Omasend    │
         │    GPUI      │
         └──────┬───────┘
                │
@@ -94,7 +94,7 @@ LocalSend 当前公开协议已经发展到 **Protocol v2.2**，默认使用 UDP
 
 LocalSend 在 2026 年已经完成核心网络和文件 I/O 的 Rust 化，v1.18.0 的 CLI 与 Flutter App 使用相同的 Rust library。([GitHub][2])
 
-因此 OmaSend 应首先研究并复用：
+因此 Omasend 应首先研究并复用：
 
 ```text
 localsend/localsend
@@ -117,7 +117,7 @@ packages/core/src/http/dto_v2.rs
 ```text
 1. 直接依赖 / vendoring 官方 LocalSend Rust core
         ↓
-2. 如果 API 不适合外部使用，做很薄的 OmaSend adapter
+2. 如果 API 不适合外部使用，做很薄的 Omasend adapter
         ↓
 3. 只有确实无法复用时，才自行实现协议部分
 ```
@@ -172,13 +172,13 @@ Clipboard Video
 Clipboard File
 ```
 
-其中 **Clipboard 是 OmaSend 的重点体验之一。**
+其中 **Clipboard 是 Omasend 的重点体验之一。**
 
 ---
 
 # 6. Clipboard First
 
-OmaSend 必须把：
+Omasend 必须把：
 
 > **复制 → 粘贴 → 发送**
 
@@ -199,7 +199,7 @@ OmaSend 必须把：
 ```text
 Copy
 ↓
-打开 OmaSend
+打开 Omasend
 ↓
 Ctrl+V
 ↓
@@ -211,7 +211,7 @@ Send
 甚至可以进一步做到：
 
 ```text
-打开 OmaSend
+打开 Omasend
 ↓
 Ctrl+V
 ↓
@@ -269,7 +269,7 @@ text/uri-list
 file:///home/jason/Pictures/demo.png
 ```
 
-OmaSend 应解析成本地文件：
+Omasend 应解析成本地文件：
 
 ```rust
 SendItem::File(PathBuf)
@@ -292,7 +292,7 @@ UI 显示：
 
 # 9. Clipboard Image
 
-这是 OmaSend 的重要场景。
+这是 Omasend 的重要场景。
 
 Omarchy 官方截图工作流本身就会：
 
@@ -301,7 +301,7 @@ Omarchy 官方截图工作流本身就会：
 
 官方文档明确描述截图结果同时进入 `~/Pictures` 和 clipboard。([GitHub][5])
 
-所以典型 OmaSend 工作流是：
+所以典型 Omasend 工作流是：
 
 ```text
 Print Screen
@@ -310,7 +310,7 @@ Omarchy Screenshot
      ↓
 Clipboard: image/png
      ↓
-打开 OmaSend
+打开 Omasend
      ↓
 Ctrl+V
      ↓
@@ -329,7 +329,7 @@ image/png
 
 而不是文件 URI：
 
-OmaSend 创建临时文件：
+Omasend 创建临时文件：
 
 ```text
 $XDG_RUNTIME_DIR/omasend/
@@ -352,7 +352,7 @@ Screen Recording 应采用与 File 相同的模型。
 
 Omarchy 官方录屏/转码工作流本身已经大量围绕 `~/Videos`、文件以及 clipboard file URI 工作。例如 Transcode 完成后会把生成文件的 file URI 写入 clipboard，供支持 file drop 的应用直接粘贴。([GitHub][5])
 
-因此 OmaSend 不应该特殊设计一套：
+因此 Omasend 不应该特殊设计一套：
 
 ```text
 ScreenRecording
@@ -441,7 +441,7 @@ Ctrl+V
 例如：
 
 ```text
-OmaSend
+Omasend
 ────────────────────────────────────
 
 Nearby
@@ -520,7 +520,7 @@ File Manager
      │
      │ drag
      ▼
-  OmaSend
+  Omasend
 ```
 
 与 Clipboard 共用：
@@ -617,10 +617,10 @@ IMG_3021.HEIC
 不要：
 
 ```text
-~/Downloads/OmaSend
+~/Downloads/Omasend
 ```
 
-不要创建 OmaSend 专属目录。
+不要创建 Omasend 专属目录。
 
 目标是和 AirDrop 类似：
 
@@ -700,7 +700,7 @@ update state
 
 ```text
 ┌─────────────────────────────────────┐
-│               OmaSend               │
+│               Omasend               │
 │                                     │
 │  ┌───────────────────────────────┐  │
 │  │           GPUI UI             │  │
@@ -710,7 +710,7 @@ update state
 │  └───────────────┬───────────────┘  │
 │                  │                  │
 │  ┌───────────────▼───────────────┐  │
-│  │        OmaSend App State      │  │
+│  │        Omasend App State      │  │
 │  └───────────────┬───────────────┘  │
 │                  │                  │
 │  ┌───────────────▼───────────────┐  │
@@ -772,7 +772,7 @@ omasend/
 
 # 22. GPUI / UI
 
-OmaSend 必须使用：
+Omasend 必须使用：
 
 ```text
 GPUI
@@ -788,13 +788,13 @@ GPUI Omarchy
 
 > **GPUI Omarchy 的真实生产应用 / dogfooding 项目。**
 
-因此 OmaSend 中遇到的通用 UI 能力缺口：
+因此 Omasend 中遇到的通用 UI 能力缺口：
 
 ```text
 GPUI Omarchy
 ```
 
-应该优先补回主题库，而不是在 OmaSend 中 hack。
+应该优先补回主题库，而不是在 Omasend 中 hack。
 
 ---
 
@@ -895,7 +895,7 @@ LocalSend 当前默认通过 HTTPS 传输，并动态生成 TLS certificate。([
 
 因此原则是：
 
-> **OmaSend 应继承官方 Rust core 的 TLS / fingerprint / verification 行为，而不是自己做一套“简化版 HTTP”。**
+> **Omasend 应继承官方 Rust core 的 TLS / fingerprint / verification 行为，而不是自己做一套“简化版 HTTP”。**
 
 这也是优先复用官方 core 的重要原因。
 

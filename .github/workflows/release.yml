@@ -175,4 +175,4 @@ jobs:
           prerelease=()
           if [[ "$RELEASE_TAG" == *-* ]]; then prerelease+=(--prerelease); fi
           gh release create "$RELEASE_TAG" --verify-tag --generate-notes \
-            --title "OmaSend $RELEASE_TAG" "${prerelease[@]}" dist/*
+            --title "Omasend $RELEASE_TAG" "${prerelease[@]}" dist/*

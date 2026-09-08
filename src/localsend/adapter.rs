@@ -127,7 +127,7 @@ impl Node {
         let info = ClientInfo {
             alias: config.alias.clone(),
             version: PROTOCOL_VERSION_V2.into(),
-            device_model: Some("OmaSend".into()),
+            device_model: Some("Omasend".into()),
             device_type: Some(DeviceType::Desktop),
             token: identity.fingerprint.clone(),
         };
@@ -152,7 +152,7 @@ impl Node {
         let device = Device {
             fingerprint: identity.fingerprint.clone(),
             alias: config.alias,
-            model: "OmaSend".into(),
+            model: "Omasend".into(),
             host: "127.0.0.1".into(),
             port: server.port(),
         };
@@ -582,7 +582,7 @@ impl Actor {
             ServerEventV2::ListenerFailed { error } => emit(
                 &self.events,
                 TransferEvent::NetworkError(format!(
-                    "Receiving stopped: {error}. Reopen OmaSend to reconnect."
+                    "Receiving stopped: {error}. Reopen Omasend to reconnect."
                 )),
             ),
         }
@@ -875,7 +875,7 @@ fn machine_name() -> String {
         .trim()
         .to_owned();
     if hostname.is_empty() {
-        "OmaSend".into()
+        "Omasend".into()
     } else {
         hostname
     }

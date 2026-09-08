@@ -75,7 +75,7 @@ pub fn init() {
         .with_writer(LogWriter)
         .with_ansi(false)
         .init();
-    tracing::info!("OmaSend session started");
+    tracing::info!("Omasend session started");
 }
 
 #[cfg(test)]
