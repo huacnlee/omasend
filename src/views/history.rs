@@ -146,7 +146,10 @@ impl Home {
             .items_center()
             .flex_shrink_0()
             .gap_3()
-            .child(div().text_color(color).child(self.language.text(status)))
+            .child(div().text_color(color).child(match &transfer.status {
+                TransferStatus::Failed(error) => self.language.error(error),
+                _ => self.language.text(status).to_owned(),
+            }))
             .child(
                 div()
                     .text_size(rems(0.6875))
@@ -194,48 +197,6 @@ impl Home {
                                     .join(", "),
                             ),
                     )
-                    .when(expandable, |row| {
-                        row.child(
-                            button("toggle-transfer-history", "", ButtonVariant::Secondary, cx)
-                                .accessibility_label(self.language.text("Transfer history"))
-                                .map(|button| {
-                                    gpui_omarchy::with_tooltip(
-                                        button,
-                                        self.language.text("Transfer history"),
-                                    )
-                                })
-                                .flex_shrink_0()
-                                .p_1()
-                                .child(icon(IconName::ChevronUp).size(rems(0.875)))
-                                .on_click(cx.listener(|view, _, window, cx| {
-                                    view.open_history(window, cx);
-                                })),
-                        )
-                    }),
-            )
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_3()
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w_0()
-                            .text_color(theme.secondary)
-                            .child(format!(
-                                "{} · {}",
-                                self.language.named(
-                                    if transfer.sending {
-                                        "To {name}"
-                                    } else {
-                                        "From {name}"
-                                    },
-                                    &transfer.peer
-                                ),
-                                size_label(transfer.total)
-                            )),
-                    )
                     .when(active, |row| {
                         row.child(
                             button(
@@ -255,8 +216,40 @@ impl Home {
                                 },
                             )),
                         )
+                    })
+                    .when(expandable, |row| {
+                        row.child(
+                            button("toggle-transfer-history", "", ButtonVariant::Secondary, cx)
+                                .accessibility_label(self.language.text("Transfer history"))
+                                .map(|button| {
+                                    gpui_omarchy::with_tooltip(
+                                        button,
+                                        self.language.text("Transfer history"),
+                                    )
+                                })
+                                .flex_shrink_0()
+                                .p_1()
+                                .child(icon(IconName::ChevronUp).size(rems(0.875)))
+                                .on_click(cx.listener(|view, _, window, cx| {
+                                    view.open_history(window, cx);
+                                })),
+                        )
                     }),
-            );
+            )
+            .when(!expandable, |row| {
+                row.child(div().text_color(theme.secondary).child(format!(
+                    "{} · {}",
+                    self.language.named(
+                        if transfer.sending {
+                            "To {name}"
+                        } else {
+                            "From {name}"
+                        },
+                        &transfer.peer
+                    ),
+                    size_label(transfer.total),
+                )))
+            });
         if active && !transfer.awaiting_acceptance {
             let percentage = if transfer.total == 0 {
                 0.
@@ -296,13 +289,6 @@ impl Home {
                     )
                 }),
         );
-        if let TransferStatus::Failed(error) = &transfer.status {
-            row = row.child(
-                div()
-                    .text_color(theme.danger)
-                    .child(self.language.error(error)),
-            );
-        }
         for (index, path) in transfer.paths.iter().enumerate() {
             let open_path = path.clone();
             let reveal_path = path.clone();

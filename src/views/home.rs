@@ -561,9 +561,9 @@ impl Render for Home {
                                 .separator_before(),
                             MenuItem::new("简体中文")
                                 .checked(self.language == omasend::i18n::Language::ZhCn),
-                            MenuItem::new("OmaSend").separator_before(),
-                            MenuItem::new("GitHub"),
-                            MenuItem::new(self.language.text("View logs")),
+                            MenuItem::new("OmaSend…").separator_before(),
+                            MenuItem::new("GitHub…"),
+                            MenuItem::new(self.language.text("Logs…")).separator_before(),
                             MenuItem::new(self.language.text("Exit")).separator_before(),
                         ],
                         {

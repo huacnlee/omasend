@@ -79,7 +79,7 @@ Ensure `~/.local/bin` is on PATH. On Omarchy, use
 - Arrow keys: choose a nearby device.
 - `enter`: send / confirm; `esc`: cancel / go back.
 - `tab` / `shift+tab`: move keyboard focus.
-- View logs in the menu opens the latest 500 session log events, with copy and
+- Logs… in the menu opens the latest 500 session log events, with copy and
   clear actions. Ordinary background discovery timeouts stay in the logs.
 - Exit is in the menu. Omarchy's compositor owns `super+w` window closing;
   OmaSend does not override it or bind `ctrl+q`.

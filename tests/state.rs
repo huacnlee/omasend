@@ -43,6 +43,14 @@ fn failure_retains_composer_and_selection_tracks_device_identity() {
         error: "offline".into(),
     });
     assert_eq!(state.composer.len(), 1);
+    assert!(
+        state.error.is_none(),
+        "tracked failures belong only in their transfer row"
+    );
+    assert_eq!(
+        state.transfers[0].status,
+        TransferStatus::Failed("offline".into())
+    );
     for id in ["a", "b"] {
         state.apply(TransferEvent::DeviceFound(Device {
             fingerprint: id.into(),

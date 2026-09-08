@@ -54,6 +54,21 @@ impl Language {
             .replacen("{count}", &count.to_string(), 1)
     }
     pub fn error(self, error: &str) -> String {
+        // The protocol core formats HTTP errors as `409;Some("...")`.
+        // Never expose remote response bodies or Rust debug wrappers in UI.
+        if let Some((code, _)) = error.split_once(';')
+            && let Ok(code) = code.parse::<u16>()
+            && (400..600).contains(&code)
+        {
+            let message = match code {
+                401 => "The receiver requires a PIN",
+                403 => "The receiver declined the transfer",
+                409 => "The receiver is busy. Try again shortly",
+                422 => "File verification failed. Try sending again",
+                _ => "Transfer failed. View logs for details",
+            };
+            return self.text(message).to_owned();
+        }
         error
             .split(": ")
             .map(|part| self.text(part))
@@ -63,7 +78,21 @@ impl Language {
 }
 
 const CATALOG: &[(&str, &str)] = &[
-    ("View logs", "查看日志"),
+    ("The receiver requires a PIN", "接收方需要 PIN 码"),
+    ("The receiver declined the transfer", "接收方拒绝了传输"),
+    (
+        "The receiver is busy. Try again shortly",
+        "接收方正忙，请稍后重试",
+    ),
+    (
+        "File verification failed. Try sending again",
+        "文件校验失败，请重新发送",
+    ),
+    (
+        "Transfer failed. View logs for details",
+        "传输失败，可查看日志了解详情",
+    ),
+    ("Logs…", "日志…"),
     ("Logs", "日志"),
     ("Copy logs", "复制日志"),
     ("Clear logs", "清空日志"),
@@ -264,6 +293,20 @@ const CATALOG: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn protocol_errors_hide_raw_response_details() {
+        let raw = "409;Some(\"Blocked by another session\")";
+        assert_eq!(
+            Language::En.error(raw),
+            "The receiver is busy. Try again shortly"
+        );
+        assert_eq!(Language::ZhCn.error(raw), "接收方正忙，请稍后重试");
+        assert_eq!(
+            Language::En.error("500;Some(\"internal details\")"),
+            "Transfer failed. View logs for details"
+        );
+    }
+
     #[test]
     fn locale_fallback_and_user_content_are_predictable() {
         for locale in ["zh-CN", "zh_CN.UTF-8", "zh-Hans-CN", "zh_SG"] {

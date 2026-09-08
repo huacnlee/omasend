@@ -271,7 +271,10 @@ impl AppState {
                 self.finish(&id, TransferStatus::Cancelled, Vec::new())
             }
             TransferEvent::Failed { id, error } => {
-                self.error = Some(error.clone());
+                tracing::warn!(transfer_id = %id, error = %error, "Transfer failed");
+                if !self.transfers.iter().any(|transfer| transfer.id == id) {
+                    self.error = Some(error.clone());
+                }
                 self.finish(&id, TransferStatus::Failed(error), Vec::new());
             }
         }

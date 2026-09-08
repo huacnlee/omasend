@@ -85,7 +85,7 @@ pub fn alert(message: impl Into<SharedString>, status: Status, cx: &App) -> Div 
         .border_1()
         .border_color(color.opacity(0.35))
         .bg(color.opacity(0.06))
-        .text_color(theme.foreground)
+        .text_color(color)
         .child(
             crate::icon(match status {
                 Status::Success => crate::IconName::Check,
