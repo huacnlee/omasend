@@ -23,7 +23,10 @@ impl Home {
         cx.notify();
     }
     pub fn check_updates(&mut self, cx: &mut Context<Self>) {
-        if self.update_state == UpdateState::Checking {
+        if matches!(
+            self.update_state,
+            UpdateState::Checking | UpdateState::Installing { .. } | UpdateState::Ready { .. }
+        ) {
             return;
         }
         // Cancel the previous dismissal so it cannot hide a newer check's result.
@@ -65,20 +68,122 @@ impl Home {
     pub fn update_status_label(&self) -> String {
         match &self.update_state {
             UpdateState::Available { version, .. } => {
-                self.language.named("Download {name}…", version)
+                self.language.named("Install {name}…", version)
             }
             UpdateState::Checking => self.language.text("Checking for updates…").into(),
             UpdateState::Current => self.language.text("Up to date").into(),
             UpdateState::NoRelease => self.language.text("No releases yet").into(),
             UpdateState::Failed => self.language.text("Update check failed").into(),
+            UpdateState::Installing { downloaded, total } => {
+                if total.is_some_and(|total| total > 0 && *downloaded >= total) {
+                    self.language.text("Installing update…").into()
+                } else if let Some(total) = total.filter(|total| *total > 0) {
+                    format!(
+                        "{} {}%",
+                        self.language.text("Downloading update…"),
+                        downloaded.saturating_mul(100) / total
+                    )
+                } else {
+                    self.language.text("Downloading update…").into()
+                }
+            }
+            UpdateState::Ready { .. } => self.language.text("Restart to update").into(),
+            UpdateState::InstallFailed { .. } => self.language.text("Update failed · Retry").into(),
             UpdateState::Idle => String::new(),
         }
     }
+    pub fn update_action_available(&self) -> bool {
+        matches!(
+            self.update_state,
+            UpdateState::Available { .. }
+                | UpdateState::Ready { .. }
+                | UpdateState::InstallFailed { .. }
+        )
+    }
+
     pub fn activate_update(&mut self, _: &mut Window, cx: &mut Context<Self>) {
-        if let UpdateState::Available { url, .. } = &self.update_state {
-            cx.open_url(url);
-        } else {
-            self.check_updates(cx);
+        match &self.update_state {
+            UpdateState::Ready { .. } => {
+                if self.loading_input
+                    || self.state.incoming.is_some()
+                    || self
+                        .state
+                        .transfers
+                        .iter()
+                        .any(|transfer| transfer.status == omasend::model::TransferStatus::Active)
+                    || !self.state.composer.is_empty()
+                {
+                    self.state.error = Some(
+                        self.language
+                            .text("Finish transfers and clear Outbox before restarting")
+                            .into(),
+                    );
+                    cx.notify();
+                    return;
+                }
+                omasend::updates::RESTART_REQUESTED
+                    .store(true, std::sync::atomic::Ordering::SeqCst);
+                cx.quit();
+            }
+            UpdateState::Available { version, .. } | UpdateState::InstallFailed { version } => {
+                let version = version.clone();
+                self.install_update(version, cx);
+            }
+            _ => {}
         }
+    }
+
+    fn install_update(&mut self, version: String, cx: &mut Context<Self>) {
+        self.update_status_dismiss = None;
+        self.show_update_status = true;
+        self.update_state = UpdateState::Installing {
+            downloaded: 0,
+            total: None,
+        };
+        let (sender, receiver) = async_channel::bounded(1);
+        let target_version = version.clone();
+        let task = self.runtime.spawn_blocking(move || {
+            let last_progress = std::sync::Mutex::new(std::time::Instant::now());
+            omasend::updates::install::install(&target_version, move |downloaded, total| {
+                let mut last = last_progress.lock().unwrap();
+                if (last.elapsed() >= std::time::Duration::from_millis(100)
+                    || total.is_some_and(|total| downloaded >= total))
+                    && sender.try_send((downloaded, total)).is_ok()
+                {
+                    *last = std::time::Instant::now();
+                }
+            })
+        });
+        cx.spawn(async move |this, cx| {
+            while let Ok((downloaded, total)) = receiver.recv().await {
+                if this
+                    .update(cx, |view, cx| {
+                        if matches!(view.update_state, UpdateState::Installing { .. }) {
+                            view.update_state = UpdateState::Installing { downloaded, total };
+                            cx.notify();
+                        }
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        })
+        .detach();
+        cx.spawn(async move |this, cx| {
+            let result = task.await;
+            let _ = this.update(cx, |view, cx| {
+                view.update_state = match result {
+                    Ok(Ok(())) => UpdateState::Ready { version },
+                    error => {
+                        tracing::error!(?error, "Could not install OmaSend update");
+                        UpdateState::InstallFailed { version }
+                    }
+                };
+                cx.notify();
+            });
+        })
+        .detach();
+        cx.notify();
     }
 }

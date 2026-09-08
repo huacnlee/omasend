@@ -1,4 +1,8 @@
-//! Checks public stable releases without downloading or replacing the application.
+//! Stable release checks and verified in-app installation.
+pub mod install;
+
+pub static RESTART_REQUESTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 use anyhow::{Context, Result, ensure};
 use semver::Version;
 
@@ -16,6 +20,16 @@ pub enum UpdateState {
         url: String,
     },
     Failed,
+    Installing {
+        downloaded: u64,
+        total: Option<u64>,
+    },
+    Ready {
+        version: String,
+    },
+    InstallFailed {
+        version: String,
+    },
 }
 
 fn client_builder() -> localsend::reqwest::ClientBuilder {

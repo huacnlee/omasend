@@ -51,6 +51,7 @@ fn open_or_activate_window(cx: &mut App, runtime: tokio::runtime::Handle) -> any
 }
 
 fn main() -> anyhow::Result<()> {
+    let executable = std::env::current_exe()?;
     omasend::diagnostics::init();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -92,6 +93,9 @@ fn main() -> anyhow::Result<()> {
         }
     });
     runtime.shutdown_timeout(std::time::Duration::from_secs(5));
+    if omasend::updates::RESTART_REQUESTED.load(std::sync::atomic::Ordering::SeqCst) {
+        omasend::updates::install::restart(&executable)?;
+    }
     Ok(())
 }
 

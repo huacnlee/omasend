@@ -38,6 +38,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "2"
 uuid = { version = "1", features = ["v4"] }
+self_update = { version = "1.3", default-features = false, features = ["ureq", "rustls", "github", "archive-tar", "compression-tar-gz", "archive-zip", "compression-zip-deflate", "checksums"] }
 
 [[bin]]
 name = "omasend"
@@ -49,3 +50,9 @@ debug = "limited"
 
 [patch.crates-io]
 gpui-omarchy = { path = "vendor/gpui-omarchy" }
+
+[dev-dependencies]
+flate2 = "1"
+sha2 = "0.10"
+tar = "0.4"
+zip = { version = "8", default-features = false, features = ["deflate"] }

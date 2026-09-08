@@ -78,7 +78,15 @@ impl Language {
 }
 
 const CATALOG: &[(&str, &str)] = &[
-    ("Download {name}…", "下载 {name}…"),
+    ("Install {name}…", "安装 {name}…"),
+    ("Downloading update…", "正在下载更新…"),
+    ("Installing update…", "正在安装更新…"),
+    ("Restart to update", "重启以完成更新"),
+    ("Update failed · Retry", "更新失败 · 重试"),
+    (
+        "Finish transfers and clear Outbox before restarting",
+        "请先完成传输并清空待发送内容，再重启",
+    ),
     ("Check for update", "检查更新"),
     ("Checking for updates…", "正在检查更新…"),
     ("Up to date", "已是最新版本"),

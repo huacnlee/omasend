@@ -131,8 +131,16 @@ The header logo is static; the empty send area animates its outer pixel segments
 Both render a transparent vector emblem in the current theme's accent color.
 GPUI's reduced-motion setting renders a static logo.
 
-The menu includes About OmaSend with the current version and Check for updates.
+The menu includes About… with the current version and Check for update.
 OmaSend checks GitHub's latest stable release at startup and every six hours.
-New versions appear in the status bar and link to the release download page;
-checks do not download or replace the running application. Network failures stay
-in Logs and can be retried from the menu.
+Click Install in the status bar to download and install that version with
+[self_update](https://github.com/jaemk/self_update). The updater requires the
+release's SHA256SUMS checksum before replacing files. macOS updates the entire
+signed OmaSend.app bundle; Linux and Windows replace the executable in place.
+The installation directory must be writable by the current user.
+
+Download progress, installation status, retry, and Restart to update appear in
+the status bar. Restart is available after transfers finish and Outbox is empty;
+network services shut down before the new process starts. Update failures leave
+details in Logs. On macOS, run the installed .app to update, rather than a bare
+development binary. Routine check results disappear after five seconds.

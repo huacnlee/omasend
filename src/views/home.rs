@@ -491,33 +491,30 @@ impl Home {
                     .text_ellipsis()
                     .child(name),
             )
-            .when(
-                matches!(
-                    self.update_state,
-                    omasend::updates::UpdateState::Available { .. }
-                ),
-                |bar| {
-                    bar.child(
-                        button(
-                            "available-update",
-                            self.update_status_label(),
-                            ButtonVariant::Secondary,
-                            cx,
-                        )
-                        .py_0()
-                        .text_color(theme.accent)
-                        .on_click(
-                            cx.listener(|view, _, window, cx| view.activate_update(window, cx)),
-                        ),
+            .when(self.update_action_available(), |bar| {
+                bar.child(
+                    button(
+                        "available-update",
+                        self.update_status_label(),
+                        ButtonVariant::Secondary,
+                        cx,
                     )
-                },
-            )
+                    .py_0()
+                    .text_color(
+                        if matches!(
+                            self.update_state,
+                            omasend::updates::UpdateState::InstallFailed { .. }
+                        ) {
+                            theme.danger
+                        } else {
+                            theme.accent
+                        },
+                    )
+                    .on_click(cx.listener(|view, _, window, cx| view.activate_update(window, cx))),
+                )
+            })
             .when(
-                self.show_update_status
-                    && !matches!(
-                        self.update_state,
-                        omasend::updates::UpdateState::Available { .. }
-                    ),
+                self.show_update_status && !self.update_action_available(),
                 |bar| {
                     bar.child(
                         div()
@@ -962,6 +959,39 @@ impl Render for Home {
 mod keyboard_tests {
     use super::*;
     use gpui::{KeyDownEvent, KeyUpEvent, Keystroke, TestAppContext};
+
+    #[gpui::test]
+    fn update_restart_preserves_outbox_and_check_does_not_interrupt_install(
+        cx: &mut TestAppContext,
+    ) {
+        with_home(cx, |view, cx| {
+            view.update_in(cx, |view, window, cx| {
+                view.update_state = omasend::updates::UpdateState::Ready {
+                    version: "v9.0.0".into(),
+                };
+                view.activate_update(window, cx);
+                assert!(view.state.error.is_some());
+                assert_eq!(view.state.composer.len(), 1);
+                assert!(
+                    !omasend::updates::RESTART_REQUESTED.load(std::sync::atomic::Ordering::SeqCst)
+                );
+                view.check_updates_manually(cx);
+                assert!(matches!(
+                    view.update_state,
+                    omasend::updates::UpdateState::Ready { .. }
+                ));
+                view.update_state = omasend::updates::UpdateState::Installing {
+                    downloaded: 50,
+                    total: Some(100),
+                };
+                view.check_updates_manually(cx);
+                assert!(matches!(
+                    view.update_state,
+                    omasend::updates::UpdateState::Installing { downloaded: 50, .. }
+                ));
+            });
+        });
+    }
 
     #[gpui::test]
     fn tab_then_enter_can_remove_a_composer_item(cx: &mut TestAppContext) {
