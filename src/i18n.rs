@@ -96,7 +96,7 @@ const CATALOG: &[(&str, &str)] = &[
     ("Cancelled", "已取消"),
     ("Failed", "失败"),
     ("Nearby", "附近设备"),
-    ("Show all", "展开全部"),
+    ("Expand", "展开"),
     ("Collapse", "收起"),
     ("Show earlier", "展开更早记录"),
     ("This session", "本次会话"),

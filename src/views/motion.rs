@@ -116,23 +116,6 @@ pub fn logo(size: f32, color: gpui_omarchy::gpui::Hsla) -> gpui_omarchy::gpui::S
 
 // Shared with the website: adjacent segments overlap as one clockwise wave.
 fn ripple(phase: f32) -> (f32, f32) {
-    let points = [
-        (0., 1., 1.),
-        (0.125, 0.65, 0.25),
-        (0.25, 0.25, 0.),
-        (0.875, 0.25, 0.),
-        (1., 1., 1.),
-    ];
-    for pair in points.windows(2) {
-        let (start, alpha, lift) = pair[0];
-        let (end, next_alpha, next_lift) = pair[1];
-        if phase <= end {
-            let t = (phase - start) / (end - start);
-            return (
-                alpha + (next_alpha - alpha) * t,
-                lift + (next_lift - lift) * t,
-            );
-        }
-    }
-    (1., 1.)
+    let wave = ((1. + (phase * std::f32::consts::TAU).cos()) * 0.5).powi(2);
+    (0.25 + 0.75 * wave, 0.65 * wave)
 }

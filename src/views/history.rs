@@ -112,7 +112,7 @@ impl Home {
                                 gpui_omarchy::with_tooltip(button, self.language.text("Close"))
                             })
                             .p_1()
-                            .child(icon(IconName::Close).size(rems(0.875)))
+                            .child(icon(IconName::ChevronDown).size(rems(0.875)))
                             .on_click(cx.listener(|view, _, window, cx| {
                                 view.close_history(window, cx);
                             })),

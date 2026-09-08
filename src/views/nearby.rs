@@ -108,7 +108,7 @@ impl Home {
                                 self.language.text(if self.nearby_expanded {
                                     "Collapse"
                                 } else {
-                                    "Show all"
+                                    "Expand"
                                 }),
                                 ButtonVariant::Secondary,
                                 cx,

@@ -114,7 +114,7 @@ for (const width of [360, 768, 1440]) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('./');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    await expect(page.locator('.packet-left')).toHaveCSS('display', 'none');
+    await expect(page.locator('.packet').first()).toHaveCSS('display', 'none');
     await expect(page.locator('h1')).toBeVisible();
     await page.locator('#language-toggle').click();
   await page.getByRole('menuitemradio', { name: '简体中文' }).click();
@@ -144,11 +144,17 @@ test('logo chases eight outer segments around a fixed center and packets travel 
     element.getAnimations({ subtree: true }).forEach(animation => { animation.pause(); animation.currentTime = 0; });
   });
   await expect(page.locator('.logo-segment').first()).toHaveCSS('opacity', '1');
-  await expect(page.locator('.logo-segment').nth(7)).toHaveCSS('opacity', '0.65');
+  const trailOpacity = await page.locator('.logo-segment').nth(7).evaluate(el => Number(getComputedStyle(el).opacity));
+  expect(trailOpacity).toBeGreaterThan(0.75);
+  expect(trailOpacity).toBeLessThan(0.85);
   await expect(page.locator('.logo-center')).toHaveCSS('transform', 'none');
   await page.screenshot({ path: '/tmp/omasend-logo-chase.png' });
 
-  await expect(page.locator('.packet-left')).toHaveCSS('animation-duration', '0.8s');
+  await expect(page.locator('.transfer-route')).toHaveCount(3);
+  for (const motion of await page.locator('.packet animateMotion').all()) {
+    await expect(motion).toHaveAttribute('dur', '0.8s');
+    await expect(motion).toHaveAttribute('repeatCount', 'indefinite');
+  }
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('.logo-segment').first()).toHaveCSS('animation-name', 'none');
   await expect(page.locator('.logo-segment').first()).toHaveCSS('opacity', '1');
