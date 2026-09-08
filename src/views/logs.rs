@@ -130,12 +130,9 @@ impl Home {
                             .child(
                                 button(
                                     "copy-logs",
-                                    self.language.text(if logs.copied {
-                                        "Copied"
-                                    } else {
-                                        "Copy logs"
-                                    }),
-                                    ButtonVariant::Secondary,
+                                    self.language
+                                        .text(if logs.copied { "Copied" } else { "Copy" }),
+                                    ButtonVariant::Outline,
                                     cx,
                                 )
                                 .disabled(logs.text.is_empty())
@@ -154,8 +151,8 @@ impl Home {
                             .child(
                                 button(
                                     "clear-logs",
-                                    self.language.text("Clear logs"),
-                                    ButtonVariant::Secondary,
+                                    self.language.text("Clear"),
+                                    ButtonVariant::Outline,
                                     cx,
                                 )
                                 .disabled(logs.text.is_empty())

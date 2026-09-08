@@ -120,6 +120,11 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn clear_transfer_history(&mut self) {
+        self.transfers
+            .retain(|transfer| transfer.status == TransferStatus::Active);
+    }
+
     pub fn selected_device(&self) -> Option<&Device> {
         self.devices
             .iter()

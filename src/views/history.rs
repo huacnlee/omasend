@@ -65,6 +65,14 @@ impl Home {
         for transfer in &self.state.transfers {
             records = records.child(self.transfer_row(transfer, false, cx));
         }
+        if self.state.transfers.is_empty() {
+            records = records.child(
+                div()
+                    .py_3()
+                    .text_color(theme.secondary)
+                    .child(self.language.text("No transfers yet")),
+            );
+        }
         let surface = div()
             .id("history-dock")
             .absolute()
@@ -89,7 +97,29 @@ impl Home {
                     .py_2()
                     .border_b_1()
                     .border_color(theme.divider())
-                    .child(self.language.text("Transfer history"))
+                    .child(div().flex_1().child(self.language.text("Transfer history")))
+                    .child(
+                        button(
+                            "clear-transfer-history",
+                            self.language.text("Clear"),
+                            ButtonVariant::Outline,
+                            cx,
+                        )
+                        .accessibility_label(self.language.text("Clear transfer history"))
+                        .disabled(
+                            !self
+                                .state
+                                .transfers
+                                .iter()
+                                .any(|transfer| transfer.status != TransferStatus::Active),
+                        )
+                        .on_click(cx.listener(|view, _, window, cx| {
+                            view.state.clear_transfer_history();
+                            view.history_scroll.scroll_to_bottom();
+                            view.modal_focus.focus(window, cx);
+                            cx.notify();
+                        })),
+                    )
                     .child(
                         button("close-transfer-history", "", ButtonVariant::Secondary, cx)
                             .accessibility_label(self.language.text("Close"))

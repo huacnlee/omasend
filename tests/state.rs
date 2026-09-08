@@ -140,3 +140,42 @@ fn active_peer_survives_discovery_expiry_until_transfer_finishes() {
         "rediscovered peers remain after transfer"
     );
 }
+
+#[test]
+fn clearing_history_preserves_active_work_and_received_files() {
+    let root = tempfile::tempdir().unwrap();
+    let file = root.path().join("received.txt");
+    std::fs::write(&file, "keep").unwrap();
+    let mut state = AppState::default();
+    state.track_send("completed".into());
+    state.apply(TransferEvent::Completed {
+        id: "completed".into(),
+        paths: vec![file.clone()],
+    });
+    state.track_send("failed".into());
+    state.apply(TransferEvent::Failed {
+        id: "failed".into(),
+        error: "offline".into(),
+    });
+    state.track_send("cancelled".into());
+    state.apply(TransferEvent::Cancelled {
+        id: "cancelled".into(),
+    });
+    state
+        .composer
+        .push(ComposerItem::new(SendItem::Text("pending".into())).unwrap());
+    state.track_send("active".into());
+    state.clear_transfer_history();
+    assert_eq!(state.transfers.len(), 1);
+    assert_eq!(state.transfers[0].id, "active");
+    assert!(state.sending());
+    assert_eq!(state.composer.len(), 1);
+    assert_eq!(std::fs::read_to_string(file).unwrap(), "keep");
+    state.apply(TransferEvent::Completed {
+        id: "active".into(),
+        paths: vec![],
+    });
+    state.clear_transfer_history();
+    assert!(state.transfers.is_empty());
+    state.clear_transfer_history();
+}
