@@ -29,7 +29,7 @@ pub fn discovery_logo(
         root = root.child(
             div().size_full().with_animation(
                 "discovery-pixels",
-                Animation::new(Duration::from_millis(900))
+                Animation::new(Duration::from_millis(2250))
                     .repeat()
                     .with_max_fps(60.),
                 move |mut frame, phase| {
@@ -52,8 +52,23 @@ pub fn discovery_logo(
                             } else {
                                 let index =
                                     order.iter().position(|cell| *cell == (col, row)).unwrap();
-                                let local = (phase - index as f32 * 35. / 900.).rem_euclid(1.);
-                                mechanical_stroke(local)
+                                let elapsed = phase * 2250.;
+                                let turn = if elapsed < 600. {
+                                    Some(elapsed / 600.)
+                                } else if elapsed < 1000. {
+                                    Some((elapsed - 600.) / 400.)
+                                } else if elapsed < 1550. {
+                                    Some((elapsed - 1000.) / 550.)
+                                } else {
+                                    None
+                                };
+                                let local = turn.map(|turn| turn - index as f32 * 0.1);
+                                match local {
+                                    Some(local) if local >= 0. => {
+                                        mechanical_stroke(local * 500. / 1200.)
+                                    }
+                                    _ => (0.6, 0.),
+                                }
                             };
                             let distance = size * if row != 1 && col != 1 { 0.0375 } else { 0.05 };
                             let dx = (col as f32 - 1.) * distance * lift;

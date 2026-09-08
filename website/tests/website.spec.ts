@@ -138,15 +138,19 @@ test('logo parts complete a quick actuation burst then rest together', async ({ 
   const parts = page.locator('.logo-segment:not(.logo-center)');
   await expect(parts).toHaveCount(8);
   await expect(page.locator('.logo-center')).toHaveCSS('animation-name', 'none');
-  await expect(parts.first()).toHaveCSS('animation-name', 'part-actuate');
+  await expect(parts.first()).toHaveCSS('animation-name', 'part-actuate-0');
   const periods = await parts.evaluateAll(elements => elements.map(el => getComputedStyle(el).animationDuration));
-  expect(new Set(periods)).toEqual(new Set(['0.9s']));
+  expect(new Set(periods)).toEqual(new Set(['2.25s']));
   await parts.first().evaluate(element => {
     const animation = element.getAnimations()[0];
     animation.pause(); animation.currentTime = 50;
   });
   await expect(parts.first()).toHaveCSS('opacity', '1');
-  await parts.evaluateAll(elements => elements.forEach(element => { const animation = element.getAnimations()[0]; animation.pause(); animation.currentTime = 700; }));
+  for (const time of [650, 1050]) {
+    await parts.first().evaluate((element, time) => { element.getAnimations()[0].currentTime = time; }, time);
+    await expect(parts.first()).toHaveCSS('opacity', '1');
+  }
+  await parts.evaluateAll(elements => elements.forEach(element => { const animation = element.getAnimations()[0]; animation.pause(); animation.currentTime = 1800; }));
   for (const part of await parts.all()) await expect(part).toHaveCSS('opacity', '0.6');
   await expect(parts.first()).toHaveCSS('opacity', '0.6');
   await expect(parts.first()).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');

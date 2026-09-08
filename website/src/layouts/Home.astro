@@ -84,7 +84,7 @@ const logoSegments = [
                 </rect>
               </g>)}
             </svg>
-            <div class="hero-logo">{logoSegments.map(([part, path, x, y], index) => <span class:list={['logo-segment', { 'logo-center': part === 'center' }]} style={`--part-x:${x}px;--part-y:${y}px;--part-delay:${index * 35}ms;--part-period:900ms`}><svg aria-hidden="true" viewBox="-4 -4 40 40" fill="currentColor"><path d={path}/></svg></span>)}</div>
+            <div class="hero-logo">{logoSegments.map(([part, path, x, y], index) => <span class:list={['logo-segment', { 'logo-center': part === 'center' }]} style={`--part-x:${x}px;--part-y:${y}px;--part-motion:part-actuate-${index % 8}`}><svg aria-hidden="true" viewBox="-4 -4 40 40" fill="currentColor"><path d={path}/></svg></span>)}</div>
           </div>
         </figure>
       </section>
