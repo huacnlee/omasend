@@ -70,7 +70,7 @@ impl Home {
                                                 .id("dismiss-transfer-success")
                                                 .debug_selector(|| "dismiss-transfer-success".into())
                                                 .child(
-                                                    button("confirm-transfer-success", self.language.text("Ok"), ButtonVariant::Outline, cx)
+                                                    button("confirm-transfer-success", self.language.text("Done"), ButtonVariant::Outline, cx)
                                                         .on_click(cx.listener(move |view, _, window, cx| {
                                                             view.dismissed_success = Some(transfer_id.clone());
                                                             view.focus.focus(window, cx);
