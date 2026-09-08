@@ -27,6 +27,7 @@ pub struct Home {
     pub history_scroll: gpui_kit::ScrollHandle,
     pub logs: Option<super::logs::LogsPanel>,
     pub about_open: bool,
+    pub dismissed_success: Option<String>,
     pub update_state: omasend::updates::UpdateState,
     pub show_update_status: bool,
     pub update_status_dismiss: Option<gpui_kit::Task<()>>,
@@ -58,6 +59,7 @@ impl Home {
             history_scroll: gpui_kit::ScrollHandle::new(),
             logs: None,
             about_open: false,
+            dismissed_success: None,
             update_state: Default::default(),
             show_update_status: false,
             update_status_dismiss: None,
@@ -1042,6 +1044,7 @@ mod keyboard_tests {
                 history_scroll: gpui_kit::ScrollHandle::new(),
                 logs: None,
                 about_open: false,
+                dismissed_success: None,
                 update_state: Default::default(),
                 show_update_status: false,
                 update_status_dismiss: None,
@@ -1374,6 +1377,49 @@ mod keyboard_tests {
             });
         });
     }
+    #[gpui::test]
+    fn instant_transfer_success_can_be_dismissed_and_replaced(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            view.update_in(cx, |view, _, cx| {
+                view.state.track_send("instant-text".into());
+                // Completion arrives before a single progress frame is drawn.
+                view.state.apply(TransferEvent::Completed {
+                    id: "instant-text".into(),
+                    paths: Vec::new(),
+                });
+                assert!(view.state.composer.is_empty());
+                cx.notify();
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            assert!(cx.debug_bounds("last-completed-transfer").is_some());
+            let close = cx.debug_bounds("dismiss-transfer-success").unwrap();
+            cx.simulate_click(close.center(), Default::default());
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            assert!(cx.debug_bounds("last-completed-transfer").is_none());
+            assert!(cx.debug_bounds("composer-welcome").is_some());
+            assert_eq!(view.read_with(cx, |view, _| view.state.transfers.len()), 1);
+            view.update_in(cx, |view, _, cx| {
+                view.state
+                    .composer
+                    .push(ComposerItem::new(SendItem::Text("Next message".into())).unwrap());
+                cx.notify();
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            assert!(cx.debug_bounds("last-completed-transfer").is_none());
+            view.update_in(cx, |view, _, cx| {
+                view.state.track_send("next-text".into());
+                view.state.apply(TransferEvent::Completed {
+                    id: "next-text".into(),
+                    paths: Vec::new(),
+                });
+                cx.notify();
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            assert!(cx.debug_bounds("last-completed-transfer").is_some());
+            assert_eq!(view.read_with(cx, |view, _| view.state.transfers.len()), 2);
+        });
+    }
+
     #[gpui::test]
     fn history_dock_scrolls_all_records_and_restores_keyboard_focus(cx: &mut TestAppContext) {
         with_home(cx, |view, cx| {

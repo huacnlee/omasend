@@ -246,7 +246,7 @@ impl Home {
             .into_any_element()
     }
 
-    fn transfer_row(
+    pub(super) fn transfer_row(
         &self,
         transfer: &Transfer,
         compact: bool,
