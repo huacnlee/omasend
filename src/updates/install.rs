@@ -107,11 +107,11 @@ pub fn restart(executable: &Path) -> Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
-        Err(command.exec()).context("Could not restart OmaSend")
+        Err(command.exec()).context("Could not restart Omasend")
     }
     #[cfg(windows)]
     {
-        command.spawn().context("Could not restart OmaSend")?;
+        command.spawn().context("Could not restart Omasend")?;
         Ok(())
     }
 }

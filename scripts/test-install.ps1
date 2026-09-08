@@ -5,14 +5,18 @@ $installer = Join-Path (Split-Path $PSScriptRoot -Parent) 'install.ps1'
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ('omasend-installer-test-' + [Guid]::NewGuid().ToString('N'))
 $oldArchitecture = $env:PROCESSOR_ARCHITECTURE
 $oldWowArchitecture = $env:PROCESSOR_ARCHITEW6432
-$script:shortcutSaved = $null
-$script:latestCalls = 0
-$script:downloadCalls = 0
+# Mocks run inside the installer's child script scope. Mutate one shared
+# object instead of rebinding $script: variables in that child scope.
+$installerTestState = [PSCustomObject]@{
+    ShortcutSaved = $null
+    LatestCalls = 0
+    DownloadCalls = 0
+}
 
 function Invoke-RestMethod {
     param([string]$Uri)
     if ($Uri -ne 'https://api.github.com/repos/huacnlee/omasend/releases/latest') { throw "Unexpected API request: $Uri" }
-    $script:latestCalls++
+    $installerTestState.LatestCalls++
     return @{ tag_name = 'v0.1.0' }
 }
 
@@ -20,18 +24,29 @@ function Invoke-WebRequest {
     param([switch]$UseBasicParsing, [string]$Uri, [string]$OutFile)
     $prefix = 'https://github.com/huacnlee/omasend/releases/download/v0.1.0/'
     if (-not $Uri.StartsWith($prefix)) { throw "Unexpected download: $Uri" }
-    $script:downloadCalls++
+    $installerTestState.DownloadCalls++
     Copy-Item -LiteralPath (Join-Path $testRoot $Uri.Substring($prefix.Length)) -Destination $OutFile
 }
 
 function New-Object {
-    param([string]$ComObject)
+    [CmdletBinding(DefaultParameterSetName = 'Net')]
+    param(
+        [Parameter(Mandatory, Position = 0, ParameterSetName = 'Net')][string]$TypeName,
+        [Parameter(Position = 1, ParameterSetName = 'Net')][object[]]$ArgumentList,
+        [Parameter(Mandatory, ParameterSetName = 'Com')][string]$ComObject,
+        [System.Collections.IDictionary]$Property,
+        [switch]$Strict
+    )
+    # Archive module autoloading can also construct ordinary .NET objects.
+    if ($PSCmdlet.ParameterSetName -eq 'Net') {
+        return Microsoft.PowerShell.Utility\New-Object @PSBoundParameters
+    }
     if ($ComObject -ne 'WScript.Shell') { throw "Unexpected COM object: $ComObject" }
     $shell = [PSCustomObject]@{}
     $shell | Add-Member -MemberType ScriptMethod -Name CreateShortcut -Value {
         param($Path)
         $shortcut = [PSCustomObject]@{ Path = $Path; TargetPath = ''; WorkingDirectory = ''; IconLocation = '' }
-        $shortcut | Add-Member -MemberType ScriptMethod -Name Save -Value { $script:shortcutSaved = $this }
+        $shortcut | Add-Member -MemberType ScriptMethod -Name Save -Value { $installerTestState.ShortcutSaved = $this }
         return $shortcut
     }
     return $shell
@@ -67,16 +82,17 @@ try {
     $destination = Join-Path $testRoot 'install with spaces'
 
     & $installer -InstallDir $destination
-    Assert-True ($script:latestCalls -eq 1) 'latest release lookup'
+    Assert-True ($installerTestState.LatestCalls -eq 1) 'latest release lookup'
+    Assert-True ($installerTestState.DownloadCalls -eq 2) 'archive and checksum downloads'
     Assert-True (Test-Path -LiteralPath (Join-Path $destination 'omasend.exe')) 'executable installed'
     Assert-True (Test-Path -LiteralPath (Join-Path $destination 'LICENSE')) 'supporting files installed'
-    Assert-True ($script:shortcutSaved.TargetPath -eq (Join-Path $destination 'omasend.exe')) 'shortcut targets installed executable'
-    Assert-True ($script:shortcutSaved.WorkingDirectory -eq $destination) 'shortcut working directory'
+    Assert-True ($installerTestState.ShortcutSaved.TargetPath -eq (Join-Path $destination 'omasend.exe')) 'shortcut targets installed executable'
+    Assert-True ($installerTestState.ShortcutSaved.WorkingDirectory -eq $destination) 'shortcut working directory'
     Write-Host 'PASS latest release installation and shortcut'
 
     Set-Content -LiteralPath (Join-Path $destination 'omasend.exe') -Value 'old executable'
     & $installer -Version v0.1.0 -InstallDir $destination
-    Assert-True ($script:latestCalls -eq 1) 'explicit version avoids latest lookup'
+    Assert-True ($installerTestState.LatestCalls -eq 1) 'explicit version avoids latest lookup'
     Assert-True ((Get-Content (Join-Path $destination 'omasend.exe')) -eq 'fixture executable v1') 'upgrade replaces executable'
     Write-Host 'PASS explicit version upgrade'
 
@@ -91,11 +107,11 @@ try {
     Assert-Fails { & $installer -Version 0.1.0 -InstallDir $destination } 'Missing or ambiguous checksum'
     Write-Host 'PASS duplicate checksum rejection'
 
-    $downloadsBefore = $script:downloadCalls
+    $downloadsBefore = $installerTestState.DownloadCalls
     Assert-Fails { & $installer -Version '../bad' -InstallDir $destination } 'Version must be'
     $env:PROCESSOR_ARCHITECTURE = 'ARM64'
     Assert-Fails { & $installer -Version 0.1.0 -InstallDir $destination } 'x86_64 only'
-    Assert-True ($script:downloadCalls -eq $downloadsBefore) 'invalid input avoids downloads'
+    Assert-True ($installerTestState.DownloadCalls -eq $downloadsBefore) 'invalid input avoids downloads'
     Write-Host 'PASS invalid version and unsupported architecture'
 
     $env:PROCESSOR_ARCHITECTURE = 'AMD64'

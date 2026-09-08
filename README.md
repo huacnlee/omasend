@@ -1,4 +1,4 @@
-# OmaSend
+# Omasend
 
 A native GPUI + gpui-omarchy LocalSend client for Omarchy and Wayland.
 
@@ -82,7 +82,7 @@ Ensure `~/.local/bin` is on PATH. On Omarchy, use
 - Logs… in the menu opens the latest 500 session log events, with copy and
   clear actions. Ordinary background discovery timeouts stay in the logs.
 - Exit is in the menu. Omarchy's compositor owns `super+w` window closing;
-  OmaSend does not override it or bind `ctrl+q`.
+  Omasend does not override it or bind `ctrl+q`.
 - macOS also accepts `cmd+v`, `cmd+o`, and `cmd+q`. `cmd+w` closes the
   window while keeping the session available from the Dock.
 
@@ -123,7 +123,7 @@ is unchanged. WebRTC and web sharing are disabled.
 existing `keycap` component and keyboard traversal respecting modal focus traps.
 See its `UPSTREAM.txt`.
 
-The original OmaSend emblem is inspired by LocalSend's local-discovery shape
+The original Omasend emblem is inspired by LocalSend's local-discovery shape
 and Omarchy's pixel geometry; it is not either project's official mark. Linux
 uses the square PNG; macOS combines Icon Composer assets for modern systems
 with a rounded, transparent-margin ICNS for older releases.
@@ -132,7 +132,7 @@ Both render a transparent vector emblem in the current theme's accent color.
 GPUI's reduced-motion setting renders a static logo.
 
 The menu includes About… with the current version and Check for update.
-OmaSend checks GitHub's latest stable release at startup and every six hours.
+Omasend checks GitHub's latest stable release at startup and every six hours.
 Click Install in the status bar to download and install that version with
 [self_update](https://github.com/jaemk/self_update). The updater requires the
 release's SHA256SUMS checksum before replacing files. macOS updates the entire

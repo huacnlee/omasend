@@ -1,4 +1,4 @@
-# OmaSend v0.1 implementation and acceptance
+# Omasend v0.1 implementation and acceptance
 
 Spec: [RFC-OmaSend.md](../RFC-OmaSend.md). The source RFC ends before listing its development order; this document supplies the sequence without reducing its scope.
 

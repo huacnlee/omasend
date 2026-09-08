@@ -64,20 +64,20 @@ fn main() -> anyhow::Result<()> {
         let handle = handle.clone();
         application.on_reopen(move |cx| {
             if let Err(error) = open_or_activate_window(cx, handle.clone()) {
-                tracing::error!("Could not reopen OmaSend: {error:#}");
+                tracing::error!("Could not reopen Omasend: {error:#}");
             }
         });
     }
     application.run(move |cx| {
         gpui_omarchy::init(cx);
-        cx.set_app_identity("omasend", "OmaSend");
+        cx.set_app_identity("omasend", "Omasend");
         views::init(cx);
         views::theme::load(cx);
         cx.set_global(DesktopSession { home: None });
         cx.on_action(|_: &views::Quit, cx| cx.quit());
         #[cfg(target_os = "macos")]
         cx.set_menus(vec![
-            gpui_omarchy::gpui::Menu::new("OmaSend")
+            gpui_omarchy::gpui::Menu::new("Omasend")
                 .items([gpui_omarchy::gpui::MenuItem::action("Exit", views::Quit)]),
         ]);
         #[cfg(not(target_os = "macos"))]
@@ -88,7 +88,7 @@ fn main() -> anyhow::Result<()> {
         })
         .detach();
         if let Err(error) = open_or_activate_window(cx, handle) {
-            eprintln!("Could not open OmaSend: {error:#}");
+            eprintln!("Could not open Omasend: {error:#}");
             cx.quit();
         }
     });

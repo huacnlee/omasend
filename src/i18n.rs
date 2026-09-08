@@ -181,7 +181,7 @@ const CATALOG: &[(&str, &str)] = &[
         "正在查找设备… 请在同一 Wi-Fi 下打开 LocalSend。",
     ),
     ("Save to your Downloads folder", "保存到下载文件夹"),
-    ("Add to OmaSend", "添加到 OmaSend"),
+    ("Add to Omasend", "添加到 Omasend"),
     ("Clipboard is empty", "剪贴板为空"),
     (
         "Copy the image as PNG or JPEG",
@@ -198,8 +198,8 @@ const CATALOG: &[(&str, &str)] = &[
     ("{count} file", "{count} 个文件"),
     ("{count} files", "{count} 个文件"),
     (
-        "XDG_RUNTIME_DIR is not set; start OmaSend in your Wayland session",
-        "未设置 XDG_RUNTIME_DIR；请在 Wayland 会话中启动 OmaSend",
+        "XDG_RUNTIME_DIR is not set; start Omasend in your Wayland session",
+        "未设置 XDG_RUNTIME_DIR；请在 Wayland 会话中启动 Omasend",
     ),
     (
         "Clipboard temporary directory is not a directory",

@@ -1,15 +1,15 @@
 export const copy = {
   en: {
-    description: 'OmaSend is a native desktop LocalSend client built for Omarchy. Send files, screenshots, recordings and text across your local network.',
+    description: 'Omasend is a native desktop LocalSend client built for Omarchy. Send files, screenshots, recordings and text across your local network.',
     skip: 'Skip to content', download: 'Download', source: 'Source', theme: 'Theme', language: 'Language', darkMode: 'Dark mode', nav: 'Main navigation',
     eyebrow: 'Native to your desktop.', title: 'Copy. Paste. Send.',
     intro: 'The things on your screen, on your other device. A native LocalSend client, built with GPUI Kit and GPUI Omarchy.',
-    get: 'Get OmaSend', explore: 'See how it works', note: 'Local network · Open source · No account',
+    get: 'Get Omasend', explore: 'See how it works', note: 'Local network · Open source · No account',
     illustration: 'Files travel directly between devices on your local network.',
     local: 'Your local network', desktop: 'Your desktop', peer: 'Nearby device', payload: 'screenshot.png',
     workflow: 'One familiar gesture.', workflowIntro: 'A screenshot, a recording, a folder, a thought. Everything starts in the same composer.',
     steps: [
-      ['Copy something.', 'Copy an image, a file or some text. You can also drag files and folders into OmaSend.'],
+      ['Copy something.', 'Copy an image, a file or some text. You can also drag files and folders into Omasend.'],
       ['Choose a device.', 'Open LocalSend on your other device, on the same network. Nearby devices appear automatically.'],
       ['Send it over.', 'Preview what you’re sending. Your recipient accepts the transfer; received files go to Downloads.'],
     ],
@@ -30,16 +30,16 @@ export const copy = {
     footer: 'An independent community project.', built: 'Built with',
   },
   'zh-CN': {
-    description: 'OmaSend 是为 Omarchy 打造的原生 LocalSend 桌面客户端，在局域网内发送文件、截图、录屏和文字。',
+    description: 'Omasend 是为 Omarchy 打造的原生 LocalSend 桌面客户端，在局域网内发送文件、截图、录屏和文字。',
     skip: '跳转到内容', download: '下载', source: '源码', theme: '主题', language: '语言', darkMode: '深色模式', nav: '主导航',
     eyebrow: '为你的桌面而生', title: '复制 粘贴 发送',
     intro: '把屏幕上的内容，送到另一台设备。使用 GPUI Kit 与 GPUI Omarchy 构建的原生 LocalSend 客户端。',
-    get: '获取 OmaSend', explore: '了解使用方式', note: '局域网传输 · 开源 · 无需账号',
+    get: '获取 Omasend', explore: '了解使用方式', note: '局域网传输 · 开源 · 无需账号',
     illustration: '文件通过局域网直接在设备之间传输。',
     local: '你的局域网', desktop: '你的电脑', peer: '附近设备', payload: 'screenshot.png',
     workflow: '一个熟悉的动作', workflowIntro: '截图、录屏、文件夹，或一段想法。都从同一个待发送区域开始。',
     steps: [
-      ['复制内容', '复制图片、文件或文字，也可以把文件和文件夹直接拖进 OmaSend。'],
+      ['复制内容', '复制图片、文件或文字，也可以把文件和文件夹直接拖进 Omasend。'],
       ['选择设备', '在同一网络的另一台设备上打开 LocalSend。附近设备会自动出现。'],
       ['发送过去', '预览即将发送的内容。对方确认后开始传输，收到的文件直接保存到下载目录。'],
     ],

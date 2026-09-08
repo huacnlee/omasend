@@ -40,7 +40,7 @@ fn client_builder() -> localsend::reqwest::ClientBuilder {
 
 pub async fn check() -> Result<UpdateState> {
     let client = client_builder()
-        .user_agent(concat!("OmaSend/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("Omasend/", env!("CARGO_PKG_VERSION")))
         .timeout(std::time::Duration::from_secs(15))
         .build()?;
     check_at(&client, LATEST_API, env!("CARGO_PKG_VERSION")).await

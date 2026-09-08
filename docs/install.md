@@ -30,7 +30,7 @@ and icon under the prefix's `share` directory. A custom prefix also needs its
 distribution's graphics/Wayland runtime libraries and `wl-clipboard` for paste.
 The installer does not modify package-manager or shell configuration.
 
-Run the installer again to upgrade. Close OmaSend before upgrading.
+Run the installer again to upgrade. Close Omasend before upgrading.
 
 ## Windows
 
@@ -56,7 +56,7 @@ users can run `omasend` or install the bundled desktop entry and icon.
 
 To uninstall, close the app and remove its installation files. On macOS,
 remove `~/Applications/OmaSend.app`. On Windows, remove the install directory
-and the OmaSend Start menu shortcut. On Linux, remove `bin/omasend`,
+and the Omasend Start menu shortcut. On Linux, remove `bin/omasend`,
 `share/applications/omasend.desktop`, and
 `share/icons/hicolor/1024x1024/apps/omasend.png` under the chosen prefix.
 Received files in Downloads are retained.

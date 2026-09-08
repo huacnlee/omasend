@@ -1,4 +1,4 @@
-OmaSend application icon
+Omasend application icon
 
 Original generated artwork for this project. The solid central packet and
 segmented perimeter refer to local discovery and exchange, informed by the

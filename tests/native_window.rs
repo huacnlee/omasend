@@ -1,21 +1,21 @@
-//! Opt-in fixture for exercising a real OmaSend window against the official core.
+//! Opt-in fixture for exercising a real Omasend window against the official core.
 //! Run while the app is open: cargo test --no-default-features --test native_window -- --ignored --nocapture
 use omasend::localsend::{Node, NodeConfig, TransferEvent, Upload};
 use std::time::Duration;
 
 #[tokio::test]
-#[ignore = "requires a running OmaSend window and manual acceptance"]
+#[ignore = "requires a running Omasend window and manual acceptance"]
 async fn native_window_round_trip() {
     let downloads = tempfile::tempdir().unwrap();
     let peer = Node::start(NodeConfig {
-        alias: "OmaSend test peer".into(),
+        alias: "Omasend test peer".into(),
         port: 0,
         downloads: downloads.path().into(),
         discovery: true,
     })
     .await
     .unwrap();
-    let fixture = "OmaSend native window test\n";
+    let fixture = "Omasend native window test\n";
     let local_addresses: Vec<String> = if_addrs::get_if_addrs()
         .unwrap()
         .into_iter()
@@ -35,7 +35,7 @@ async fn native_window_round_trip() {
         match event {
             TransferEvent::DeviceFound(device)
                 if device.port == 53317
-                    && device.model == "OmaSend"
+                    && device.model == "Omasend"
                     && local_addresses.contains(&device.host)
                     && !offered =>
             {
