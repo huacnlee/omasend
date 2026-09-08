@@ -79,6 +79,7 @@ impl Language {
 
 const CATALOG: &[(&str, &str)] = &[
     ("Theme", "主题"),
+    ("Language", "语言"),
     ("System", "跟随系统"),
     ("Light", "浅色"),
     ("Dark", "深色"),

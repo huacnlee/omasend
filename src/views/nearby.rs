@@ -34,7 +34,7 @@ impl Home {
                 cx.processor(move |view, range: std::ops::Range<usize>, _, cx| {
                     range
                         .map(|row| {
-                            div().h(rems(4.75)).flex().gap_2().children(
+                            div().h(rems(4.125)).flex().gap_2().children(
                                 visible[row * columns..((row + 1) * columns).min(visible.len())]
                                     .iter()
                                     .map(|&index| view.device_card(index, width, cx)),
@@ -44,7 +44,7 @@ impl Home {
                 }),
             )
             .w_full()
-            .h(rems(4.75 * rows.min(3) as f32))
+            .h(rems(4.125 * rows.min(3) as f32))
             .track_scroll(&self.nearby_scroll)
             .into_any_element()
         };
@@ -140,13 +140,12 @@ impl Home {
         )
         .selected(selected)
         .w(width)
-        .h(rems(4.25))
+        .h(rems(3.625))
         .flex_shrink_0()
         .justify_start()
         .items_center()
         .gap_3()
-        .px_3()
-        .py_2()
+        .p_3()
         .border_color(edge)
         .styles(|s| s.selected(|s| s.bg(theme.normal_fill())))
         .hover(|style| style.bg(theme.hover_fill()).border_color(edge))
@@ -172,7 +171,8 @@ impl Home {
                 .flex_col()
                 .flex_1()
                 .min_w_0()
-                .gap_1()
+                .gap_0()
+                .line_height(rems(1.))
                 .child(
                     div()
                         .text_ellipsis()

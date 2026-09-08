@@ -621,30 +621,38 @@ impl Render for Home {
                             MenuItem::new(self.language.text("Add files…"))
                                 .shortcut("ctrl+o")
                                 .disabled(self.loading_input),
-                            MenuItem::new("English")
-                                .checked(self.language == omasend::i18n::Language::En)
-                                .separator_before(),
-                            MenuItem::new("简体中文")
-                                .checked(self.language == omasend::i18n::Language::ZhCn),
-                            MenuItem::new(self.language.text("Theme"))
+                            MenuItem::new(self.language.text("Language"))
                                 .separator_before()
-                                .submenu(
-                                    [
-                                        (9, "System", super::theme::ThemeMode::System),
-                                        (10, "Light", super::theme::ThemeMode::Light),
-                                        (11, "Dark", super::theme::ThemeMode::Dark),
-                                    ]
-                                    .into_iter()
-                                    .map(|(id, label, mode)| {
-                                        (
-                                            id,
-                                            MenuItem::new(self.language.text(label)).checked(
-                                                *cx.global::<super::theme::ThemeMode>() == mode,
-                                            ),
-                                        )
-                                    })
-                                    .collect(),
-                                ),
+                                .submenu(vec![
+                                    (
+                                        12,
+                                        MenuItem::new("English")
+                                            .checked(self.language == omasend::i18n::Language::En),
+                                    ),
+                                    (
+                                        13,
+                                        MenuItem::new("简体中文").checked(
+                                            self.language == omasend::i18n::Language::ZhCn,
+                                        ),
+                                    ),
+                                ]),
+                            MenuItem::new(self.language.text("Theme")).submenu(
+                                [
+                                    (9, "System", super::theme::ThemeMode::System),
+                                    (10, "Light", super::theme::ThemeMode::Light),
+                                    (11, "Dark", super::theme::ThemeMode::Dark),
+                                ]
+                                .into_iter()
+                                .map(|(id, label, mode)| {
+                                    (
+                                        id,
+                                        MenuItem::new(self.language.text(label)).checked(
+                                            *cx.global::<super::theme::ThemeMode>() == mode,
+                                        ),
+                                    )
+                                })
+                                .collect(),
+                            ),
                             MenuItem::new("OmaSend…").separator_before(),
                             MenuItem::new("GitHub…"),
                             MenuItem::new(self.language.text("Logs…")).separator_before(),
@@ -656,18 +664,18 @@ impl Render for Home {
                                 view.update(cx, |view, cx| match index {
                                     0 => view.paste(&Paste, window, cx),
                                     1 => view.open_files(&OpenFiles, window, cx),
-                                    2 | 3 => {
-                                        view.language = if index == 2 {
+                                    12 | 13 => {
+                                        view.language = if index == 12 {
                                             omasend::i18n::Language::En
                                         } else {
                                             omasend::i18n::Language::ZhCn
                                         };
                                         cx.notify();
                                     }
-                                    5 => cx.open_url("https://huacnlee.github.io/omasend/"),
-                                    6 => cx.open_url("https://github.com/huacnlee/omasend"),
-                                    7 => view.open_logs(window, cx),
-                                    8 => cx.quit(),
+                                    4 => cx.open_url("https://huacnlee.github.io/omasend/"),
+                                    5 => cx.open_url("https://github.com/huacnlee/omasend"),
+                                    6 => view.open_logs(window, cx),
+                                    7 => cx.quit(),
                                     9..=11 => {
                                         let mode = match index {
                                             10 => super::theme::ThemeMode::Light,
@@ -842,6 +850,14 @@ impl Render for Home {
                                             }),
                                         ),
                                     ),
+                            )
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .text_center()
+                                    .text_size(rems(0.625))
+                                    .text_color(theme.foreground.opacity(0.55))
+                                    .child(concat!("v", env!("CARGO_PKG_VERSION"))),
                             )
                             .child(
                                 div()
@@ -1105,7 +1121,7 @@ mod keyboard_tests {
     #[gpui::test]
     fn menu_language_can_be_changed_with_keyboard(cx: &mut TestAppContext) {
         with_home(cx, |view, cx| {
-            for key in ["tab", "enter", "down", "down", "down", "enter"] {
+            for key in ["tab", "enter", "down", "down", "right", "down", "enter"] {
                 let keystroke = Keystroke::parse(key).unwrap();
                 cx.simulate_event(KeyDownEvent {
                     keystroke: keystroke.clone(),
@@ -1125,8 +1141,8 @@ mod keyboard_tests {
     fn theme_submenu_returns_to_parent_without_activating_a_choice(cx: &mut TestAppContext) {
         with_home(cx, |view, cx| {
             for key in [
-                "tab", "enter", "down", "down", "down", "down", "right", "left", "home", "down",
-                "down", "down", "enter",
+                "tab", "enter", "down", "down", "down", "right", "left", "home", "down", "down",
+                "right", "down", "enter",
             ] {
                 let keystroke = Keystroke::parse(key).unwrap();
                 cx.simulate_event(KeyDownEvent {
