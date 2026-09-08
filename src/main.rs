@@ -27,7 +27,7 @@ fn open_or_activate_window(cx: &mut App, runtime: tokio::runtime::Handle) -> any
         WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                 None,
-                size(px(840.), px(720.)),
+                size(px(840.), px(630.)),
                 cx,
             ))),
             window_min_size: Some(size(px(640.), px(520.))),
