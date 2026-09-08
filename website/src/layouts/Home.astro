@@ -10,8 +10,7 @@ const repo = 'https://github.com/huacnlee/omasend';
 const canonical = new URL(asset(language === 'en' ? '' : 'zh-CN/'), Astro.site);
 const shellCommand = 'curl -fsSL https://github.com/huacnlee/omasend/raw/refs/heads/main/install.sh | sh';
 const commands = [
-  { id: 'macos', label: 'macOS', file: 'install.sh', command: shellCommand },
-  { id: 'linux', label: 'Linux', file: 'install.sh', command: shellCommand },
+  { id: 'linux', label: 'macOS / Linux', file: 'install.sh', command: shellCommand },
   { id: 'windows', label: 'Windows', file: 'install.ps1', command: 'irm https://github.com/huacnlee/omasend/raw/refs/heads/main/install.ps1 | iex' },
 ];
 const logoSegments = [
@@ -85,9 +84,8 @@ const logoSegments = [
                 </rect>
               </g>)}
             </svg>
-            <div class="hero-logo">{logoSegments.map(([part, path, x, y], index) => <span class:list={['logo-segment', { 'logo-center': part === 'center' }]} style={`--chase-x:${x}px;--chase-y:${y}px;--chase-delay:${index * 120 - 960}ms`}><svg aria-hidden="true" viewBox="-4 -4 40 40" fill="currentColor"><path d={path}/></svg></span>)}</div>
+            <div class="hero-logo">{logoSegments.map(([part, path, x, y], index) => <span class:list={['logo-segment', { 'logo-center': part === 'center' }]} style={`--part-x:${x}px;--part-y:${y}px;--part-delay:${index * 35}ms;--part-period:900ms`}><svg aria-hidden="true" viewBox="-4 -4 40 40" fill="currentColor"><path d={path}/></svg></span>)}</div>
           </div>
-          <figcaption><span aria-hidden="true">↗</span> {t.payload}</figcaption>
         </figure>
       </section>
       <section id="install" class="quick-install" aria-labelledby="install-title">

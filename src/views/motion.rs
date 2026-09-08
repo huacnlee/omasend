@@ -16,7 +16,7 @@ fn ease_out(t: f32) -> f32 {
 }
 
 /// Animate theme-colored segments of the shared pixel emblem.
-/// The center remains steady; the surrounding eight regions advance in steps.
+/// The center stays fixed through each quick actuation burst and shared rest.
 pub fn discovery_logo(
     color: gpui_omarchy::gpui::Hsla,
     discovering: bool,
@@ -29,13 +29,14 @@ pub fn discovery_logo(
         root = root.child(
             div().size_full().with_animation(
                 "discovery-pixels",
-                Animation::new(Duration::from_millis(960))
+                Animation::new(Duration::from_millis(900))
                     .repeat()
                     .with_max_fps(60.),
                 move |mut frame, phase| {
                     let cuts = [0., 10. / 32., 22. / 32., 1.];
-                    // Clockwise perimeter, with the center excluded from the chase.
+                    // A quick clockwise actuation burst followed by a shared rest.
                     let order = [
+                        (0, 0),
                         (1, 0),
                         (2, 0),
                         (2, 1),
@@ -43,7 +44,6 @@ pub fn discovery_logo(
                         (1, 2),
                         (0, 2),
                         (0, 1),
-                        (0, 0),
                     ];
                     for row in 0..3 {
                         for col in 0..3 {
@@ -52,7 +52,8 @@ pub fn discovery_logo(
                             } else {
                                 let index =
                                     order.iter().position(|cell| *cell == (col, row)).unwrap();
-                                ripple((phase - index as f32 / 8.).rem_euclid(1.))
+                                let local = (phase - index as f32 * 35. / 900.).rem_euclid(1.);
+                                mechanical_stroke(local)
                             };
                             let distance = size * if row != 1 && col != 1 { 0.0375 } else { 0.05 };
                             let dx = (col as f32 - 1.) * distance * lift;
@@ -114,9 +115,27 @@ pub fn logo(size: f32, color: gpui_omarchy::gpui::Hsla) -> gpui_omarchy::gpui::S
         .text_color(color)
 }
 
-// Shared with the website: adjacent segments overlap as one clockwise wave.
-fn ripple(phase: f32) -> (f32, f32) {
-    let phase = (phase * 16.).floor() / 16.;
-    let wave = ((1. + (phase * std::f32::consts::TAU).cos()) * 0.5).powi(2);
-    (0.25 + 0.75 * wave, 0.2 * wave)
+// Independent actuators extend, flash at the detent, and retract.
+fn mechanical_stroke(phase: f32) -> (f32, f32) {
+    let lift = if phase < 0.03 {
+        0.
+    } else if phase < 0.05 {
+        0.3
+    } else if phase < 0.09 {
+        0.25
+    } else if phase < 0.12 {
+        0.1
+    } else {
+        0.
+    };
+    (
+        if lift > 0.1 {
+            1.
+        } else if lift > 0. {
+            0.85
+        } else {
+            0.6
+        },
+        lift,
+    )
 }

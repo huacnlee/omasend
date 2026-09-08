@@ -70,7 +70,7 @@ test('language menu handles keyboard selection, escape and outside click', async
 test('tabs switch with mouse and keyboard and copy only the active command', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('./');
-  const linux = page.getByRole('tab', { name: 'Linux', exact: true });
+  const linux = page.getByRole('tab', { name: 'macOS / Linux', exact: true });
   await expect(linux).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
   await linux.focus();
@@ -82,11 +82,11 @@ test('tabs switch with mouse and keyboard and copy only the active command', asy
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('irm https://github.com/huacnlee/omasend/raw/refs/heads/main/install.ps1 | iex');
   await page.getByRole('tab', { name: 'Windows', exact: true }).focus();
   await page.keyboard.press('Home');
-  await expect(page.getByRole('tab', { name: 'macOS', exact: true })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'macOS / Linux', exact: true })).toBeFocused();
   await page.keyboard.press('End');
   await expect(page.getByRole('tab', { name: 'Windows', exact: true })).toBeFocused();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'macOS', exact: true })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'macOS / Linux', exact: true })).toBeFocused();
   await page.keyboard.press('ArrowLeft');
   await expect(page.getByRole('tab', { name: 'Windows', exact: true })).toBeFocused();
   await linux.click();
@@ -133,22 +133,27 @@ test('keyboard reaches skip link and installer action', async ({ page }) => {
   await expect(page).toHaveURL(/#workflow$/);
 });
 
-test('logo chases eight outer segments around a fixed center and packets travel quickly', async ({ page }) => {
+test('logo parts complete a quick actuation burst then rest together', async ({ page }) => {
   await page.goto('./');
-  await expect(page.locator('.logo-segment:not(.logo-center)')).toHaveCount(8);
+  const parts = page.locator('.logo-segment:not(.logo-center)');
+  await expect(parts).toHaveCount(8);
   await expect(page.locator('.logo-center')).toHaveCSS('animation-name', 'none');
-  await expect(page.locator('.logo-segment').first()).toHaveCSS('animation-name', 'segment-chase');
-  await expect(page.locator('.logo-segment').first()).toHaveCSS('animation-duration', '0.96s');
-  await expect(page.locator('.logo-segment').nth(1)).toHaveCSS('animation-delay', '-0.84s');
-  await page.locator('.hero-logo').evaluate(element => {
-    element.getAnimations({ subtree: true }).forEach(animation => { animation.pause(); animation.currentTime = 0; });
+  await expect(parts.first()).toHaveCSS('animation-name', 'part-actuate');
+  const periods = await parts.evaluateAll(elements => elements.map(el => getComputedStyle(el).animationDuration));
+  expect(new Set(periods)).toEqual(new Set(['0.9s']));
+  await parts.first().evaluate(element => {
+    const animation = element.getAnimations()[0];
+    animation.pause(); animation.currentTime = 50;
   });
-  await expect(page.locator('.logo-segment').first()).toHaveCSS('opacity', '1');
-  const trailOpacity = await page.locator('.logo-segment').nth(7).evaluate(el => Number(getComputedStyle(el).opacity));
-  expect(trailOpacity).toBeGreaterThan(0.75);
-  expect(trailOpacity).toBeLessThan(0.85);
+  await expect(parts.first()).toHaveCSS('opacity', '1');
+  await parts.evaluateAll(elements => elements.forEach(element => { const animation = element.getAnimations()[0]; animation.pause(); animation.currentTime = 700; }));
+  for (const part of await parts.all()) await expect(part).toHaveCSS('opacity', '0.6');
+  await expect(parts.first()).toHaveCSS('opacity', '0.6');
+  await expect(parts.first()).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
   await expect(page.locator('.logo-center')).toHaveCSS('transform', 'none');
-  await page.screenshot({ path: '/tmp/omasend-logo-chase.png' });
+  await expect(page.locator('.network figcaption')).toHaveCount(0);
+  await expect(page.getByRole('tab')).toHaveCount(2);
+  await page.screenshot({ path: '/tmp/omasend-logo-mechanical.png' });
 
   await expect(page.locator('.transfer-route')).toHaveCount(3);
   for (const motion of await page.locator('.packet animateMotion').all()) {
