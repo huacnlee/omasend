@@ -1,18 +1,6 @@
 name: Release
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/release.yml'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'src/**'
-      - 'vendor/**'
-      - 'assets/**'
-      - 'packaging/**'
-      - 'scripts/**'
-      - 'install.sh'
-      - 'install.ps1'
   push:
     tags: ['v*']
   workflow_dispatch:
