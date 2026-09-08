@@ -18,6 +18,8 @@ impl Home {
                 .position(|device| self.state.selected.as_ref() == Some(&device.fingerprint)),
         );
         let rows = visible.len().div_ceil(columns);
+        let card_height = 3.625;
+        let row_height = card_height + if rows > 1 { super::CONTROL_GAP } else { 0. };
         let list = if rows == 0 {
             div()
                 .py_3()
@@ -34,26 +36,33 @@ impl Home {
                 cx.processor(move |view, range: std::ops::Range<usize>, _, cx| {
                     range
                         .map(|row| {
-                            div().h(rems(4.125)).flex().gap_2().children(
-                                visible[row * columns..((row + 1) * columns).min(visible.len())]
-                                    .iter()
-                                    .map(|&index| view.device_card(index, width, cx)),
-                            )
+                            div()
+                                .h(rems(row_height))
+                                .flex()
+                                .gap(rems(super::CONTROL_GAP))
+                                .children(
+                                    visible
+                                        [row * columns..((row + 1) * columns).min(visible.len())]
+                                        .iter()
+                                        .map(|&index| view.device_card(index, width, cx)),
+                                )
                         })
                         .collect::<Vec<_>>()
                 }),
             )
             .w_full()
-            .h(rems(4.125 * rows.min(3) as f32))
+            .h(rems(row_height * rows.min(3) as f32))
             .track_scroll(&self.nearby_scroll)
             .into_any_element()
         };
         div()
             .flex()
             .flex_col()
-            .gap_2()
-            .px_4()
-            .py_3()
+            .gap(rems(super::PANEL_GAP))
+            .px(rems(super::PANEL_PADDING))
+            .pt(rems(super::PANEL_PADDING))
+            // Multi-row lists already reserve the control gap after the last card.
+            .pb(rems(super::PANEL_PADDING - (row_height - card_height)))
             .border_b_1()
             .border_color(theme.divider())
             .child(
@@ -233,8 +242,9 @@ impl Home {
 }
 
 fn nearby_layout(window: &Window) -> (usize, Pixels) {
-    let gap = rems(0.5).to_pixels(window.rem_size());
-    let available = window.viewport_size().width - rems(2.).to_pixels(window.rem_size());
+    let gap = rems(super::CONTROL_GAP).to_pixels(window.rem_size());
+    let available =
+        window.viewport_size().width - rems(super::PANEL_PADDING * 2.).to_pixels(window.rem_size());
     let columns =
         (((available + gap) / rems(15.).to_pixels(window.rem_size())).floor() as usize).max(1);
     (

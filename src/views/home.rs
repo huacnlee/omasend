@@ -475,7 +475,7 @@ impl Home {
             .items_center()
             .flex_shrink_0()
             .gap_3()
-            .px_4()
+            .px(rems(PANEL_PADDING))
             .h(rems(1.75))
             .border_t_1()
             .border_color(theme.divider())
@@ -652,7 +652,7 @@ impl Render for Home {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .px_4()
+                    .px(rems(PANEL_PADDING))
                     .py_2()
                     .child(
                         div()
@@ -798,9 +798,10 @@ impl Render for Home {
                     .flex_col()
                     .flex_1()
                     .min_h_0()
-                    .px_4()
-                    .py_3()
-                    .gap_2()
+                    .px(rems(PANEL_PADDING))
+                    .pt(rems(PANEL_PADDING))
+                    .pb(rems(PANEL_GAP))
+                    .gap(rems(PANEL_GAP))
                     .child(
                         div()
                             .flex()
@@ -888,6 +889,7 @@ impl Render for Home {
                             .child(
                                 div()
                                     .flex()
+                                    .items_center()
                                     .gap_2()
                                     .child(
                                         button(

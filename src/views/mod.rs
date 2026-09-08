@@ -11,6 +11,12 @@ mod updates;
 use gpui_omarchy::gpui::{App, KeyBinding, actions};
 pub use home::Home;
 
+// Omarchy panel padding (18), panel gap (14), and control gap (8),
+// expressed in rems so the application spacing follows its text scale.
+const PANEL_PADDING: f32 = 18. / 16.;
+const PANEL_GAP: f32 = 14. / 16.;
+const CONTROL_GAP: f32 = 8. / 16.;
+
 actions!(
     omasend,
     [
