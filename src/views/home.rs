@@ -666,96 +666,100 @@ impl Render for Home {
                                     .child("Omasend"),
                             ),
                     )
-                    .child(menu(
-                        "app-menu",
-                        button("menu-trigger", "", ButtonVariant::Secondary, cx)
-                            .accessibility_label(self.language.text("Menu"))
-                            .map(|button| {
-                                gpui_omarchy::with_tooltip(button, self.language.text("Menu"))
-                            })
-                            .p_1()
-                            .child(icon(IconName::Menu).size(rems(0.875))),
-                        vec![
-                            MenuItem::new(self.language.text("Paste"))
-                                .shortcut("ctrl+v")
-                                .disabled(self.loading_input),
-                            MenuItem::new(self.language.text("Add files…"))
-                                .shortcut("ctrl+o")
-                                .disabled(self.loading_input),
-                            MenuItem::new(self.language.text("Language"))
-                                .separator_before()
-                                .submenu(vec![
-                                    (
-                                        12,
-                                        MenuItem::new("English")
-                                            .checked(self.language == omasend::i18n::Language::En),
-                                    ),
-                                    (
-                                        13,
-                                        MenuItem::new("简体中文").checked(
-                                            self.language == omasend::i18n::Language::ZhCn,
-                                        ),
-                                    ),
-                                ]),
-                            MenuItem::new(self.language.text("Theme")).submenu(
-                                [
-                                    (20, "System", super::theme::ThemeMode::System),
-                                    (21, "Light", super::theme::ThemeMode::Light),
-                                    (22, "Dark", super::theme::ThemeMode::Dark),
-                                ]
-                                .into_iter()
-                                .map(|(id, label, mode)| {
-                                    (
-                                        id,
-                                        MenuItem::new(self.language.text(label)).checked(
-                                            *cx.global::<super::theme::ThemeMode>() == mode,
-                                        ),
-                                    )
+                    .child(
+                        menu(
+                            "app-menu",
+                            button("menu-trigger", "", ButtonVariant::Secondary, cx)
+                                .accessibility_label(self.language.text("Menu"))
+                                .map(|button| {
+                                    gpui_omarchy::with_tooltip(button, self.language.text("Menu"))
                                 })
-                                .collect(),
-                            ),
-                            MenuItem::new(self.language.text("Check for update"))
-                                .separator_before(),
-                            MenuItem::new(self.language.text("About…")).separator_before(),
-                            MenuItem::new("Omasend…"),
-                            MenuItem::new("GitHub…"),
-                            MenuItem::new(self.language.text("Logs…")).separator_before(),
-                            MenuItem::new(self.language.text("Exit")).separator_before(),
-                        ],
-                        {
-                            let view = cx.entity();
-                            move |index, window, cx| {
-                                view.update(cx, |view, cx| match index {
-                                    0 => view.paste(&Paste, window, cx),
-                                    1 => view.open_files(&OpenFiles, window, cx),
-                                    12 | 13 => {
-                                        view.language = if index == 12 {
-                                            omasend::i18n::Language::En
-                                        } else {
-                                            omasend::i18n::Language::ZhCn
-                                        };
-                                        cx.notify();
-                                    }
-                                    6 => cx.open_url("https://huacnlee.github.io/omasend/"),
-                                    7 => cx.open_url("https://github.com/huacnlee/omasend"),
-                                    8 => view.open_logs(window, cx),
-                                    9 => cx.quit(),
-                                    5 => view.open_about(window, cx),
-                                    4 => view.check_updates_manually(cx),
-                                    20..=22 => {
-                                        let mode = match index {
-                                            21 => super::theme::ThemeMode::Light,
-                                            22 => super::theme::ThemeMode::Dark,
-                                            _ => super::theme::ThemeMode::System,
-                                        };
-                                        mode.select(window, cx);
-                                        cx.notify();
-                                    }
-                                    _ => {}
-                                });
-                            }
-                        },
-                    )),
+                                .p_1()
+                                .child(icon(IconName::Menu).size(rems(0.875))),
+                            vec![
+                                MenuItem::new(self.language.text("Paste"))
+                                    .shortcut("ctrl+v")
+                                    .disabled(self.loading_input),
+                                MenuItem::new(self.language.text("Add files…"))
+                                    .shortcut("ctrl+o")
+                                    .disabled(self.loading_input),
+                                MenuItem::new(self.language.text("Language"))
+                                    .separator_before()
+                                    .submenu(vec![
+                                        (
+                                            12,
+                                            MenuItem::new("English").checked(
+                                                self.language == omasend::i18n::Language::En,
+                                            ),
+                                        ),
+                                        (
+                                            13,
+                                            MenuItem::new("简体中文").checked(
+                                                self.language == omasend::i18n::Language::ZhCn,
+                                            ),
+                                        ),
+                                    ]),
+                                MenuItem::new(self.language.text("Theme")).submenu(
+                                    [
+                                        (20, "System", super::theme::ThemeMode::System),
+                                        (21, "Light", super::theme::ThemeMode::Light),
+                                        (22, "Dark", super::theme::ThemeMode::Dark),
+                                    ]
+                                    .into_iter()
+                                    .map(|(id, label, mode)| {
+                                        (
+                                            id,
+                                            MenuItem::new(self.language.text(label)).checked(
+                                                *cx.global::<super::theme::ThemeMode>() == mode,
+                                            ),
+                                        )
+                                    })
+                                    .collect(),
+                                ),
+                                MenuItem::new(self.language.text("Check for update"))
+                                    .separator_before(),
+                                MenuItem::new(self.language.text("About…")).separator_before(),
+                                MenuItem::new("Omasend…"),
+                                MenuItem::new("GitHub…"),
+                                MenuItem::new(self.language.text("Logs…")).separator_before(),
+                                MenuItem::new(self.language.text("Exit")).separator_before(),
+                            ],
+                            {
+                                let view = cx.entity();
+                                move |index, window, cx| {
+                                    view.update(cx, |view, cx| match index {
+                                        0 => view.paste(&Paste, window, cx),
+                                        1 => view.open_files(&OpenFiles, window, cx),
+                                        12 | 13 => {
+                                            view.language = if index == 12 {
+                                                omasend::i18n::Language::En
+                                            } else {
+                                                omasend::i18n::Language::ZhCn
+                                            };
+                                            cx.notify();
+                                        }
+                                        6 => cx.open_url("https://huacnlee.github.io/omasend/"),
+                                        7 => cx.open_url("https://github.com/huacnlee/omasend"),
+                                        8 => view.open_logs(window, cx),
+                                        9 => cx.quit(),
+                                        5 => view.open_about(window, cx),
+                                        4 => view.check_updates_manually(cx),
+                                        20..=22 => {
+                                            let mode = match index {
+                                                21 => super::theme::ThemeMode::Light,
+                                                22 => super::theme::ThemeMode::Dark,
+                                                _ => super::theme::ThemeMode::System,
+                                            };
+                                            mode.select(window, cx);
+                                            cx.notify();
+                                        }
+                                        _ => {}
+                                    });
+                                }
+                            },
+                        )
+                        .anchor(gpui_kit::Anchor::TopRight),
+                    ),
             )
             .child(separator(cx));
         if let Some(error) = &self.state.error {
@@ -1224,6 +1228,13 @@ mod keyboard_tests {
                 cx.notify();
             });
             cx.update(|window, cx| window.draw(cx).clear(cx));
+            if incoming {
+                let popup = cx.debug_bounds("receive-popup").unwrap();
+                let viewport = cx.update(|window, _| window.viewport_size());
+                assert!((popup.center().x - viewport.width / 2.).abs() < gpui_kit::px(1.));
+                // The entrance animation adds up to 4px of vertical offset.
+                assert!((popup.center().y - viewport.height / 2.).abs() <= gpui_kit::px(4.));
+            }
             for key in ["tab", "tab", "shift-tab", "right", "left", "down", "up"] {
                 cx.simulate_keystrokes(key);
                 view.read_with(cx, |view, _| {
@@ -1248,6 +1259,19 @@ mod keyboard_tests {
             });
         });
     }
+    #[gpui::test]
+    fn app_menu_aligns_with_header_trigger(cx: &mut TestAppContext) {
+        with_home(cx, |_, cx| {
+            cx.simulate_keystrokes("tab enter");
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            let menu = cx.debug_bounds("omarchy-menu-content").unwrap();
+            let right = cx.update(|window, _| {
+                window.viewport_size().width - window.rem_size() * super::super::PANEL_PADDING
+            });
+            assert!((menu.right() - right).abs() < gpui_kit::px(1.));
+        });
+    }
+
     #[gpui::test]
     fn menu_language_can_be_changed_with_keyboard(cx: &mut TestAppContext) {
         with_home(cx, |view, cx| {

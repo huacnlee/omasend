@@ -284,11 +284,24 @@ impl Home {
             );
         let ok = cx.listener(|view: &mut Self, _, window, cx| view.decide(true, window, cx));
         alert_dialog(&self.modal_focus, cx)
-            .popup(popup.with_animation(
-                "popup-enter",
-                super::motion::popup_enter(),
-                |popup, phase| popup.opacity(phase).top(px(4. * (1. - phase))),
-            ))
+            .popup(
+                div()
+                    .size_full()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        div()
+                            .id("receive-popup")
+                            .debug_selector(|| "receive-popup".into())
+                            .max_w_full()
+                            .child(popup.with_animation(
+                                "popup-enter",
+                                super::motion::popup_enter(),
+                                |popup, phase| popup.opacity(phase).top(px(4. * (1. - phase))),
+                            )),
+                    ),
+            )
             .on_ok(move |event, window, cx| {
                 ok(event, window, cx);
                 false
