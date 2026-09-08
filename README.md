@@ -17,7 +17,7 @@ identity comes from the operating system, rather than the interface language.
 
 See [installation instructions](docs/install.md) for macOS, Linux and Windows
 installers. Releases provide macOS Apple Silicon/Intel `.tar.gz` bundles,
-Linux x86_64 `.tar.gz`, Windows x86_64 `.zip`, and SHA-256 checksums.
+Linux x86_64/ARM64 `.tar.gz`, Windows x86_64 `.zip`, and SHA-256 checksums.
 The installers require a published GitHub release.
 
 macOS / Linux:
@@ -32,8 +32,8 @@ Windows PowerShell:
 irm https://github.com/huacnlee/omasend/raw/refs/heads/main/install.ps1 | iex
 ```
 
-`.github/workflows/release.yml` builds and packages all platforms for pull
-requests; a tag matching `v<Cargo.toml version>` publishes the release after
+`.github/workflows/release.yml` builds and packages all platforms when run
+manually or for version tags; a tag matching `v<Cargo.toml version>` publishes the release after
 all builds pass. Modern macOS icon compilation requires Xcode 26 or newer.
 
 The [website](website/README.md) uses Astro + Bun and GitHub Pages, following

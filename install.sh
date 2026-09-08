@@ -30,9 +30,6 @@ case "$(uname -m)" in
   arm64|aarch64) arch=aarch64 ;;
   *) die 'Unsupported CPU architecture (requires x86_64 or arm64).' ;;
 esac
-if [ "$platform" = linux ] && [ "$arch" != x86_64 ]; then
-  die 'Linux releases currently support x86_64 only. Build from source on ARM64.'
-fi
 download() { curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location "$@"; }
 repo=https://github.com/huacnlee/omasend
 if [ "$version" = latest ]; then
