@@ -68,6 +68,7 @@ cargo fmt --all -- --check
 cargo check --all-targets --locked
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --no-default-features --locked
+cargo test --features ui-tests --bin omasend --locked
 ```
 
 The default feature is the desktop app. Disabling it exposes no separate CLI;
@@ -86,8 +87,9 @@ exposed in the interface. Language selection and history are session-only.
 
 `vendor/localsend` is the unmodified official Rust core, pinned to the commit
 recorded in its `UPSTREAM.md`; WebRTC and web sharing are disabled.
-`vendor/gpui-omarchy` pins version 0.1.0 with one presentation patch: menu
-shortcuts render with its existing `keycap` component. See its `UPSTREAM.txt`.
+`vendor/gpui-omarchy` pins version 0.1.0 with menu shortcuts rendered by its
+existing `keycap` component and keyboard traversal respecting modal focus traps.
+See its `UPSTREAM.txt`.
 
 The original OmaSend emblem is inspired by LocalSend's local-discovery shape
 and Omarchy's pixel geometry; it is not either project's official mark. Linux

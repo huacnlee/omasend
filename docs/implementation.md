@@ -37,7 +37,11 @@ Run `cargo test --no-default-features`, `cargo fmt --check`, `cargo check --all-
   name, titlebar emblem, and different frames of pixel discovery feedback.
   User-provided screenshot confirms sent and received transfers with a LocalSend
   desktop peer. iPhone interoperability remains unverified.
-- Small reusable menu presentation gap: gpui-omarchy 0.1.0 is pinned locally with
-  only its shortcut renderer changed to use the existing keycap component.
+- GPUI keyboard regressions: `cargo test --features ui-tests --bin omasend`
+  covers focused button Enter/Space activation, four-arrow device navigation,
+  keyboard menu language selection, modal Tab/Shift+Tab containment, arrow
+  isolation, and Escape restoration to the previous control.
+- gpui-omarchy 0.1.0 is pinned locally with its menu shortcut renderer using the
+  existing keycap component and focus traversal respecting gpui-base modal traps.
 - Remaining acceptance work: real Wayland clipboard/drag-drop/portal behavior,
   the complete keyboard/modal matrix, mobile peers, and PIN entry UX.

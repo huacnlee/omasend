@@ -383,11 +383,25 @@ impl Render for Home {
                 }
             }))
             .on_action(cx.listener(|view, _: &PreviousDevice, window, cx| {
+                if view.preview.is_some() || view.state.incoming.is_some() {
+                    return;
+                }
+                if !view.focus.is_focused(window) {
+                    cx.propagate();
+                    return;
+                }
                 view.state.navigate(-1);
                 view.focus.focus(window, cx);
                 cx.notify();
             }))
             .on_action(cx.listener(|view, _: &NextDevice, window, cx| {
+                if view.preview.is_some() || view.state.incoming.is_some() {
+                    return;
+                }
+                if !view.focus.is_focused(window) {
+                    cx.propagate();
+                    return;
+                }
                 view.state.navigate(1);
                 view.focus.focus(window, cx);
                 cx.notify();
@@ -634,7 +648,10 @@ mod keyboard_tests {
     fn tab_then_space_can_remove_a_composer_item(cx: &mut TestAppContext) {
         remove_with_key(cx, "space");
     }
-    fn remove_with_key(cx: &mut TestAppContext, activation: &str) {
+    fn with_home(
+        cx: &mut TestAppContext,
+        test: impl FnOnce(gpui::Entity<Home>, &mut gpui::VisualTestContext),
+    ) {
         cx.update(|cx| {
             gpui_omarchy::init(cx);
             super::super::init(cx);
@@ -669,21 +686,141 @@ mod keyboard_tests {
             }
         });
         cx.update(|window, cx| window.draw(cx).clear(cx));
-        // Tab walks to the menu and then the item's Remove button.
-        cx.simulate_keystrokes("tab tab");
-        cx.update(|window, cx| window.draw(cx).clear(cx));
-        let key = Keystroke::parse(activation).unwrap();
-        cx.simulate_event(KeyDownEvent {
-            keystroke: key.clone(),
-            is_held: false,
-            prefer_character_input: false,
+        test(view, cx);
+    }
+
+    fn remove_with_key(cx: &mut TestAppContext, activation: &str) {
+        with_home(cx, |view, cx| {
+            // Tab walks to the menu and then the item's Remove button.
+            cx.simulate_keystrokes("tab tab");
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            let key = Keystroke::parse(activation).unwrap();
+            cx.simulate_event(KeyDownEvent {
+                keystroke: key.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            });
+            cx.simulate_event(KeyUpEvent { keystroke: key });
+            view.read_with(cx, |view, _| {
+                assert!(
+                    view.state.composer.is_empty(),
+                    "The focused Remove button must handle activation"
+                )
+            });
         });
-        cx.simulate_event(KeyUpEvent { keystroke: key });
-        view.read_with(cx, |view, _| {
-            assert!(
-                view.state.composer.is_empty(),
-                "Enter must activate Remove rather than the background send action"
-            )
+    }
+
+    #[gpui::test]
+    fn preview_keeps_arrow_keys_and_restores_focus(cx: &mut TestAppContext) {
+        modal_keeps_arrow_keys(cx, false);
+    }
+
+    #[gpui::test]
+    fn receive_dialog_keeps_arrow_keys_and_restores_focus(cx: &mut TestAppContext) {
+        modal_keeps_arrow_keys(cx, true);
+    }
+
+    fn modal_keeps_arrow_keys(cx: &mut TestAppContext, incoming: bool) {
+        with_home(cx, |view, cx| {
+            cx.simulate_keystrokes("tab tab");
+            let trigger = cx.update(|window, cx| window.focused(cx).unwrap());
+            view.update_in(cx, |view, window, cx| {
+                for name in ["a", "b"] {
+                    view.state
+                        .apply(TransferEvent::DeviceFound(omasend::localsend::Device {
+                            fingerprint: name.into(),
+                            alias: name.into(),
+                            model: "test".into(),
+                            host: "127.0.0.1".into(),
+                            port: 53317,
+                        }));
+                }
+                view.state.selected = Some("a".into());
+                if incoming {
+                    view.state.apply(TransferEvent::IncomingRequest {
+                        id: "incoming".into(),
+                        peer: view.state.devices[0].clone(),
+                        files: vec![omasend::localsend::OfferedFile {
+                            name: "test.txt".into(),
+                            size: 4,
+                            mime: "text/plain".into(),
+                        }],
+                    });
+                } else {
+                    view.preview = Some(view.state.composer[0].id.clone());
+                }
+                view.restore_focus = window.focused(cx);
+                view.modal_focus.focus(window, cx);
+                cx.notify();
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            for key in ["tab", "tab", "shift-tab", "right", "left", "down", "up"] {
+                cx.simulate_keystrokes(key);
+                view.read_with(cx, |view, _| {
+                    assert_eq!(
+                        view.state.selected.as_deref(),
+                        Some("a"),
+                        "{key} changed a device behind the preview"
+                    );
+                });
+                cx.update(|window, cx| {
+                    assert!(
+                        view.read(cx).modal_focus.contains_focused(window, cx),
+                        "{key} escaped the modal"
+                    );
+                });
+            }
+            cx.simulate_keystrokes("escape");
+            cx.update(|window, cx| {
+                assert!(view.read(cx).preview.is_none());
+                assert!(view.read(cx).state.incoming.is_none());
+                assert_eq!(window.focused(cx), Some(trigger.clone()));
+            });
+        });
+    }
+    #[gpui::test]
+    fn menu_language_can_be_changed_with_keyboard(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            for key in ["tab", "enter", "down", "down", "down", "enter"] {
+                let keystroke = Keystroke::parse(key).unwrap();
+                cx.simulate_event(KeyDownEvent {
+                    keystroke: keystroke.clone(),
+                    is_held: false,
+                    prefer_character_input: false,
+                });
+                cx.simulate_event(KeyUpEvent { keystroke });
+                cx.update(|window, cx| window.draw(cx).clear(cx));
+            }
+            view.read_with(cx, |view, _| {
+                assert_eq!(view.language, omasend::i18n::Language::ZhCn);
+                assert_eq!(view.state.composer.len(), 1);
+            });
+        });
+    }
+    #[gpui::test]
+    fn home_arrows_select_devices(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            view.update_in(cx, |view, _, cx| {
+                for name in ["a", "b"] {
+                    view.state
+                        .apply(TransferEvent::DeviceFound(omasend::localsend::Device {
+                            fingerprint: name.into(),
+                            alias: name.into(),
+                            model: "test".into(),
+                            host: "127.0.0.1".into(),
+                            port: 53317,
+                        }));
+                }
+                view.state.selected = Some("a".into());
+                cx.notify();
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            for (key, selected) in [("right", "b"), ("left", "a"), ("down", "b"), ("up", "a")] {
+                cx.simulate_keystrokes(key);
+                view.read_with(cx, |view, _| {
+                    assert_eq!(view.state.selected.as_deref(), Some(selected))
+                });
+            }
         });
     }
 }
