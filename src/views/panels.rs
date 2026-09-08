@@ -122,16 +122,26 @@ impl Home {
                             .flex_1()
                             .min_w_0()
                             .gap_1()
-                            .child(div().overflow_hidden().text_ellipsis().child(item.name()))
-                            .child(div().text_color(theme.secondary).child(format!(
-                                "{} · {}",
-                                size_label(item.size()),
-                                self.language.count(
-                                    item.uploads.len(),
-                                    "{count} file",
-                                    "{count} files"
+                            .when(!matches!(item.item, SendItem::Text(_)), |details| {
+                                details.child(
+                                    div().overflow_hidden().text_ellipsis().child(item.name()),
                                 )
-                            ))),
+                            })
+                            .child(div().text_color(theme.secondary).child(
+                                if matches!(item.item, SendItem::Text(_)) {
+                                    size_label(item.size())
+                                } else {
+                                    format!(
+                                        "{} · {}",
+                                        size_label(item.size()),
+                                        self.language.count(
+                                            item.uploads.len(),
+                                            "{count} file",
+                                            "{count} files"
+                                        )
+                                    )
+                                },
+                            )),
                     )
                     .when(item.is_image(), |row| {
                         row.child(
