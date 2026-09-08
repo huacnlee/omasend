@@ -130,6 +130,7 @@ mod lifecycle_tests {
                 logs: None,
                 about_open: false,
                 update_state: Default::default(),
+                show_update_status: false,
                 restore_focus: None,
                 preview: None,
                 loading_input: false,

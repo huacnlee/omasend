@@ -79,11 +79,11 @@ impl Language {
 
 const CATALOG: &[(&str, &str)] = &[
     ("Download {name}…", "下载 {name}…"),
-    ("Check for updates…", "检查更新…"),
+    ("Check for update", "检查更新"),
     ("Checking for updates…", "正在检查更新…"),
-    ("Up to date · Check again", "已是最新版本 · 再次检查"),
-    ("No releases yet · Check again", "暂无发布版本 · 再次检查"),
-    ("Update check failed · Retry", "检查更新失败 · 重试"),
+    ("Up to date", "已是最新版本"),
+    ("No releases yet", "暂无发布版本"),
+    ("Update check failed", "检查更新失败"),
     ("About OmaSend…", "关于 OmaSend…"),
     ("Theme", "主题"),
     ("Language", "语言"),

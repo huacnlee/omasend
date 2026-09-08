@@ -28,6 +28,7 @@ pub struct Home {
     pub logs: Option<super::logs::LogsPanel>,
     pub about_open: bool,
     pub update_state: omasend::updates::UpdateState,
+    pub show_update_status: bool,
     pub restore_focus: Option<FocusHandle>,
     pub preview: Option<String>,
     pub loading_input: bool,
@@ -57,6 +58,7 @@ impl Home {
             logs: None,
             about_open: false,
             update_state: Default::default(),
+            show_update_status: false,
             restore_focus: None,
             preview: None,
             loading_input: false,
@@ -496,7 +498,7 @@ impl Home {
                     bar.child(
                         button(
                             "available-update",
-                            self.update_menu_label(),
+                            self.update_status_label(),
                             ButtonVariant::Secondary,
                             cx,
                         )
@@ -505,6 +507,29 @@ impl Home {
                         .on_click(
                             cx.listener(|view, _, window, cx| view.activate_update(window, cx)),
                         ),
+                    )
+                },
+            )
+            .when(
+                self.show_update_status
+                    && !matches!(
+                        self.update_state,
+                        omasend::updates::UpdateState::Available { .. }
+                    ),
+                |bar| {
+                    bar.child(
+                        div()
+                            .id("update-status")
+                            .min_w_0()
+                            .truncate()
+                            .text_color(
+                                if self.update_state == omasend::updates::UpdateState::Failed {
+                                    theme.danger
+                                } else {
+                                    theme.secondary
+                                },
+                            )
+                            .child(self.update_status_label()),
                     )
                 },
             )
@@ -690,11 +715,8 @@ impl Render for Home {
                                 })
                                 .collect(),
                             ),
-                            MenuItem::new(self.update_menu_label())
-                                .separator_before()
-                                .disabled(
-                                    self.update_state == omasend::updates::UpdateState::Checking,
-                                ),
+                            MenuItem::new(self.language.text("Check for update"))
+                                .separator_before(),
                             MenuItem::new(self.language.text("About OmaSend…")).separator_before(),
                             MenuItem::new("OmaSend…"),
                             MenuItem::new("GitHub…"),
@@ -720,7 +742,7 @@ impl Render for Home {
                                     8 => view.open_logs(window, cx),
                                     9 => cx.quit(),
                                     5 => view.open_about(window, cx),
-                                    4 => view.activate_update(window, cx),
+                                    4 => view.check_updates_manually(cx),
                                     20..=22 => {
                                         let mode = match index {
                                             21 => super::theme::ThemeMode::Light,
@@ -980,6 +1002,7 @@ mod keyboard_tests {
                 logs: None,
                 about_open: false,
                 update_state: Default::default(),
+                show_update_status: false,
                 restore_focus: None,
                 preview: None,
                 loading_input: false,

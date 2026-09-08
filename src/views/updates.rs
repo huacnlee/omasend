@@ -17,6 +17,11 @@ impl Home {
         })
         .detach();
     }
+    pub fn check_updates_manually(&mut self, cx: &mut Context<Self>) {
+        self.show_update_status = true;
+        self.check_updates(cx);
+        cx.notify();
+    }
     pub fn check_updates(&mut self, cx: &mut Context<Self>) {
         if self.update_state == UpdateState::Checking {
             return;
@@ -39,21 +44,16 @@ impl Home {
         .detach();
         cx.notify();
     }
-    pub fn update_menu_label(&self) -> String {
+    pub fn update_status_label(&self) -> String {
         match &self.update_state {
             UpdateState::Available { version, .. } => {
                 self.language.named("Download {name}…", version)
             }
-            state => self
-                .language
-                .text(match state {
-                    UpdateState::Checking => "Checking for updates…",
-                    UpdateState::Current => "Up to date · Check again",
-                    UpdateState::NoRelease => "No releases yet · Check again",
-                    UpdateState::Failed => "Update check failed · Retry",
-                    _ => "Check for updates…",
-                })
-                .into(),
+            UpdateState::Checking => self.language.text("Checking for updates…").into(),
+            UpdateState::Current => self.language.text("Up to date").into(),
+            UpdateState::NoRelease => self.language.text("No releases yet").into(),
+            UpdateState::Failed => self.language.text("Update check failed").into(),
+            UpdateState::Idle => String::new(),
         }
     }
     pub fn activate_update(&mut self, _: &mut Window, cx: &mut Context<Self>) {
