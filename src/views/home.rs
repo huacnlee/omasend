@@ -958,6 +958,61 @@ mod keyboard_tests {
         });
     }
 
+    #[gpui::test]
+    fn theme_flyout_pointer_selection_keeps_parent_and_dispatches_choice(cx: &mut TestAppContext) {
+        struct MenuHarness {
+            selected: Option<usize>,
+        }
+        impl Render for MenuHarness {
+            fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+                let view = cx.entity();
+                menu(
+                    "theme-test",
+                    button("trigger", "Menu", ButtonVariant::Secondary, cx),
+                    vec![MenuItem::new("Theme").submenu(vec![
+                        (9, MenuItem::new("System").checked(true)),
+                        (10, MenuItem::new("Light").checked(false)),
+                        (11, MenuItem::new("Dark").checked(false)),
+                    ])],
+                    move |index, _, cx| {
+                        view.update(cx, |view, cx| {
+                            view.selected = Some(index);
+                            cx.notify();
+                        })
+                    },
+                )
+            }
+        }
+        cx.update(gpui_omarchy::init);
+        let (view, cx) = cx.add_window_view(|_, _| MenuHarness { selected: None });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        cx.simulate_click(
+            gpui::point(gpui::px(15.), gpui::px(12.)),
+            Default::default(),
+        );
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let parent = cx.debug_bounds("omarchy-menu-content").unwrap();
+        cx.simulate_click(
+            parent.origin + gpui::point(gpui::px(24.), gpui::px(20.)),
+            Default::default(),
+        );
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        assert!(
+            cx.debug_bounds("omarchy-menu-content").is_some(),
+            "parent menu stays visible"
+        );
+        let child = cx
+            .debug_bounds("omarchy-submenu-content")
+            .expect("Theme must open its flyout");
+        cx.simulate_click(
+            child.origin + gpui::point(gpui::px(24.), gpui::px(50.)),
+            Default::default(),
+        );
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        assert_eq!(view.read_with(cx, |view, _| view.selected), Some(10));
+        assert!(cx.debug_bounds("omarchy-menu-content").is_none());
+    }
+
     fn remove_with_key(cx: &mut TestAppContext, activation: &str) {
         with_home(cx, |view, cx| {
             // Tab walks to the menu and then the item's Remove button.
