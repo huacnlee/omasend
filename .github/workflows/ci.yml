@@ -14,6 +14,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  website:
+    name: Website build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.0'
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+        env:
+          SITE_URL: https://huacnlee.github.io
+          BASE_PATH: /omasend
+
   quality:
     name: Formatting and Clippy
     runs-on: ubuntu-22.04
