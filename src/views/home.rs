@@ -13,12 +13,17 @@ use omasend::{
 
 pub struct Home {
     pub state: AppState,
-    pub logo: std::sync::Arc<gpui::Image>,
+
     pub language: omasend::i18n::Language,
     pub node: Option<Node>,
     pub runtime: tokio::runtime::Handle,
     pub focus: FocusHandle,
+    pub window_handle: Option<gpui::AnyWindowHandle>,
     pub modal_focus: FocusHandle,
+    pub nearby_expanded: bool,
+    pub nearby_scroll: gpui::UniformListScrollHandle,
+    pub history_expanded: bool,
+    pub history_scroll: gpui::ScrollHandle,
     pub restore_focus: Option<FocusHandle>,
     pub preview: Option<String>,
     pub loading_input: bool,
@@ -35,15 +40,16 @@ impl Home {
         focus.focus(window, cx);
         let mut view = Self {
             state: AppState::default(),
-            logo: std::sync::Arc::new(gpui::Image::from_bytes(
-                gpui::ImageFormat::Png,
-                include_bytes!("../../assets/omasend.png").to_vec(),
-            )),
             language: omasend::i18n::Language::system(),
             node: None,
             runtime,
             focus,
+            window_handle: Some(window.window_handle()),
             modal_focus: cx.focus_handle(),
+            nearby_expanded: false,
+            nearby_scroll: gpui::UniformListScrollHandle::new(),
+            history_expanded: false,
+            history_scroll: gpui::ScrollHandle::new(),
             restore_focus: None,
             preview: None,
             loading_input: false,
@@ -53,7 +59,42 @@ impl Home {
         view
     }
 
-    fn connect(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub fn attach_window(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.window_handle = Some(window.window_handle());
+        if self.state.incoming.is_some() {
+            self.modal_focus.focus(window, cx);
+        } else {
+            self.focus.focus(window, cx);
+        }
+    }
+
+    pub fn close_window(&mut self, window: &mut Window, _: &mut Context<Self>) {
+        self.window_handle = None;
+        self.restore_focus = None;
+        self.history_expanded = false;
+        self.preview = None;
+        window.remove_window();
+    }
+
+    // State updates outlive the native window. Focus changes apply only to the
+    // currently attached window, after the entity's update borrow has ended.
+    fn with_window(
+        &self,
+        cx: &mut Context<Self>,
+        update: impl FnOnce(&mut Self, &mut Window, &mut Context<Self>) + 'static,
+    ) {
+        let Some(handle) = self.window_handle else {
+            return;
+        };
+        let entity = cx.entity().downgrade();
+        cx.defer(move |cx| {
+            let _ = handle.update(cx, |_, window, cx| {
+                let _ = entity.update(cx, |view, cx| update(view, window, cx));
+            });
+        });
+    }
+
+    fn connect(&mut self, _: &mut Window, cx: &mut Context<Self>) {
         if self.starting || self.node.is_some() {
             return;
         }
@@ -61,7 +102,7 @@ impl Home {
         let task = self
             .runtime
             .spawn(async { Node::start(NodeConfig::desktop()?).await });
-        cx.spawn_in(window, async move |this, cx| {
+        cx.spawn(async move |this, cx| {
             let result = task
                 .await
                 .context("Network task stopped")
@@ -70,7 +111,7 @@ impl Home {
                 Ok(node) => {
                     let events = node.events.clone();
                     if this
-                        .update_in(cx, |view, _, cx| {
+                        .update(cx, |view, cx| {
                             view.node = Some(node);
                             view.starting = false;
                             cx.notify();
@@ -81,16 +122,29 @@ impl Home {
                     }
                     while let Ok(event) = events.recv().await {
                         if this
-                            .update_in(cx, |view, window, cx| {
+                            .update(cx, |view, cx| {
                                 let was_incoming = view.state.incoming.is_some();
-                                if matches!(&event, TransferEvent::IncomingRequest { .. }) {
+                                let incoming =
+                                    matches!(&event, TransferEvent::IncomingRequest { .. });
+                                let preserve_focus =
+                                    view.history_expanded || view.preview.is_some();
+                                if incoming {
+                                    view.history_expanded = false;
                                     view.preview = None;
-                                    view.restore_focus = window.focused(cx);
-                                    view.modal_focus.focus(window, cx);
                                 }
                                 view.state.apply(event);
-                                if was_incoming && view.state.incoming.is_none() {
-                                    view.restore(window, cx);
+                                let restore = was_incoming && view.state.incoming.is_none();
+                                if incoming || restore {
+                                    view.with_window(cx, move |view, window, cx| {
+                                        if incoming && view.state.incoming.is_some() {
+                                            if !preserve_focus {
+                                                view.restore_focus = window.focused(cx);
+                                            }
+                                            view.modal_focus.focus(window, cx);
+                                        } else if restore && view.state.incoming.is_none() {
+                                            view.restore(window, cx);
+                                        }
+                                    });
                                 }
                                 cx.notify();
                             })
@@ -101,7 +155,7 @@ impl Home {
                     }
                 }
                 Err(error) => {
-                    let _ = this.update_in(cx, |view, _, cx| {
+                    let _ = this.update(cx, |view, cx| {
                         view.starting = false;
                         view.state.error = Some(format!("{error:#}"));
                         cx.notify();
@@ -119,10 +173,18 @@ impl Home {
             .focus(window, cx);
     }
 
-    pub fn add_items(&mut self, items: Vec<SendItem>, window: &mut Window, cx: &mut Context<Self>) {
-        if self.loading_input {
+    pub fn add_items(&mut self, items: Vec<SendItem>, _: &mut Window, cx: &mut Context<Self>) {
+        if self.loading_input
+            || self.history_expanded
+            || self.preview.is_some()
+            || self.state.incoming.is_some()
+        {
             return;
         }
+        self.prepare_items(items, cx);
+    }
+
+    fn prepare_items(&mut self, items: Vec<SendItem>, cx: &mut Context<Self>) {
         self.loading_input = true;
         let task = self.runtime.spawn_blocking(move || {
             items
@@ -130,12 +192,12 @@ impl Home {
                 .map(ComposerItem::new)
                 .collect::<Result<Vec<_>>>()
         });
-        cx.spawn_in(window, async move |this, cx| {
+        cx.spawn(async move |this, cx| {
             let result = task
                 .await
                 .context("File preparation stopped")
                 .and_then(|result| result);
-            let _ = this.update_in(cx, |view, window, cx| {
+            let _ = this.update(cx, |view, cx| {
                 view.loading_input = false;
                 match result {
                     Ok(items) => {
@@ -144,30 +206,41 @@ impl Home {
                     }
                     Err(error) => view.state.error = Some(format!("{error:#}")),
                 }
-                view.focus.focus(window, cx);
+                view.with_window(cx, |view, window, cx| {
+                    if !view.history_expanded
+                        && view.preview.is_none()
+                        && view.state.incoming.is_none()
+                    {
+                        view.focus.focus(window, cx);
+                    }
+                });
                 cx.notify();
             });
         })
         .detach();
     }
 
-    pub(super) fn paste(&mut self, _: &Paste, window: &mut Window, cx: &mut Context<Self>) {
-        if self.loading_input {
+    pub(super) fn paste(&mut self, _: &Paste, _window: &mut Window, cx: &mut Context<Self>) {
+        if self.loading_input
+            || self.history_expanded
+            || self.preview.is_some()
+            || self.state.incoming.is_some()
+        {
             return;
         }
         #[cfg(target_os = "linux")]
         {
             self.loading_input = true;
             let task = self.runtime.spawn(omasend::clipboard::wayland::paste());
-            cx.spawn_in(window, async move |this, cx| {
+            cx.spawn(async move |this, cx| {
                 let result = task
                     .await
                     .context("Clipboard task stopped")
                     .and_then(|result| result);
-                let _ = this.update_in(cx, |view, window, cx| {
+                let _ = this.update(cx, |view, cx| {
                     view.loading_input = false;
                     match result {
-                        Ok(items) => view.add_items(items, window, cx),
+                        Ok(items) => view.prepare_items(items, cx),
                         Err(error) => view.state.error = Some(format!("{error:#}")),
                     }
                     cx.notify();
@@ -198,7 +271,7 @@ impl Home {
                 .map(SendItem::File)
                 .collect();
             if !paths.is_empty() {
-                self.add_items(paths, window, cx);
+                self.add_items(paths, _window, cx);
                 return;
             }
             if let Some(image) = entries.iter().find_map(|entry| {
@@ -227,7 +300,7 @@ impl Home {
                     &std::env::temp_dir(),
                 );
                 match result {
-                    Ok(items) => self.add_items(items, window, cx),
+                    Ok(items) => self.add_items(items, _window, cx),
                     Err(error) => self.state.error = Some(error.to_string()),
                 }
             } else {
@@ -241,19 +314,18 @@ impl Home {
                         }
                     })
                     .collect();
-                self.add_items(items, window, cx);
+                self.add_items(items, _window, cx);
             }
         }
         cx.notify();
     }
 
-    pub(super) fn open_files(
-        &mut self,
-        _: &OpenFiles,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if self.loading_input {
+    pub(super) fn open_files(&mut self, _: &OpenFiles, _: &mut Window, cx: &mut Context<Self>) {
+        if self.loading_input
+            || self.history_expanded
+            || self.preview.is_some()
+            || self.state.incoming.is_some()
+        {
             return;
         }
         let prompt = cx.prompt_for_paths(PathPromptOptions {
@@ -262,12 +334,12 @@ impl Home {
             multiple: true,
             prompt: Some(self.language.text("Add to OmaSend").into()),
         });
-        cx.spawn_in(window, async move |this, cx| {
+        cx.spawn(async move |this, cx| {
             let result = prompt.await;
-            let _ = this.update_in(cx, |view, window, cx| {
+            let _ = this.update(cx, |view, cx| {
                 match result {
                     Ok(Ok(Some(paths))) => {
-                        view.add_items(paths.into_iter().map(SendItem::File).collect(), window, cx)
+                        view.prepare_items(paths.into_iter().map(SendItem::File).collect(), cx)
                     }
                     Ok(Ok(None)) => {}
                     Ok(Err(error)) => view.state.error = Some(error.to_string()),
@@ -312,7 +384,9 @@ impl Home {
     }
 
     fn back(&mut self, _: &Back, window: &mut Window, cx: &mut Context<Self>) {
-        if self.preview.take().is_some() {
+        if self.history_expanded {
+            self.close_history(window, cx);
+        } else if self.preview.take().is_some() {
             self.restore(window, cx);
         } else if self.state.incoming.is_some() {
             self.decide(false, window, cx);
@@ -337,7 +411,7 @@ impl Home {
 }
 
 impl Render for Home {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // Keep the application and popup controls in the same mono face.
         // Published gpui-omarchy defaults to the platform sans face; preserve
         // any explicit theme font while adapting that fallback for OmaSend.
@@ -355,11 +429,19 @@ impl Render for Home {
             && !self.state.composer.is_empty()
             && !self.state.sending()
             && !self.loading_input;
-        let send_label = self.language.text(if self.state.sending() {
-            "Sending"
-        } else {
-            "Send"
-        });
+        let send_label = self.language.text(
+            if self.state.transfers.iter().any(|transfer| {
+                transfer.sending
+                    && transfer.status == TransferStatus::Active
+                    && transfer.awaiting_acceptance
+            }) {
+                "Waiting for receiver"
+            } else if self.state.sending() {
+                "Sending"
+            } else {
+                "Send"
+            },
+        );
         let mut root = focus_scope("omasend")
             .key_context("OmaSend OmarchyFocusScope")
             .track_focus(&self.focus)
@@ -383,7 +465,8 @@ impl Render for Home {
                 }
             }))
             .on_action(cx.listener(|view, _: &PreviousDevice, window, cx| {
-                if view.preview.is_some() || view.state.incoming.is_some() {
+                if view.preview.is_some() || view.state.incoming.is_some() || view.history_expanded
+                {
                     return;
                 }
                 if !view.focus.is_focused(window) {
@@ -391,11 +474,13 @@ impl Render for Home {
                     return;
                 }
                 view.state.navigate(-1);
+                view.reveal_selected_device(window);
                 view.focus.focus(window, cx);
                 cx.notify();
             }))
             .on_action(cx.listener(|view, _: &NextDevice, window, cx| {
-                if view.preview.is_some() || view.state.incoming.is_some() {
+                if view.preview.is_some() || view.state.incoming.is_some() || view.history_expanded
+                {
                     return;
                 }
                 if !view.focus.is_focused(window) {
@@ -403,8 +488,12 @@ impl Render for Home {
                     return;
                 }
                 view.state.navigate(1);
+                view.reveal_selected_device(window);
                 view.focus.focus(window, cx);
                 cx.notify();
+            }))
+            .on_action(cx.listener(|view, _: &CloseWindow, window, cx| {
+                view.close_window(window, cx);
             }))
             .on_action(|_: &Quit, _, cx| cx.quit())
             .on_drop(cx.listener(|view, paths: &ExternalPaths, window, cx| {
@@ -426,11 +515,7 @@ impl Render for Home {
                             .flex()
                             .items_center()
                             .gap_2()
-                            .child(super::motion::discovery_logo(
-                                self.logo.clone(),
-                                self.state.discovering && !cx.reduce_motion(),
-                                self.state.discovery_revision,
-                            ))
+                            .child(super::motion::logo(24., theme.accent))
                             .child(
                                 div()
                                     .text_color(theme.bright)
@@ -442,6 +527,9 @@ impl Render for Home {
                         "app-menu",
                         button("menu-trigger", "", ButtonVariant::Secondary, cx)
                             .accessibility_label(self.language.text("Menu"))
+                            .map(|button| {
+                                gpui_omarchy::with_tooltip(button, self.language.text("Menu"))
+                            })
                             .p_1()
                             .child(icon(IconName::Menu).size(rems(0.875))),
                         vec![
@@ -456,6 +544,8 @@ impl Render for Home {
                                 .separator_before(),
                             MenuItem::new("简体中文")
                                 .checked(self.language == omasend::i18n::Language::ZhCn),
+                            MenuItem::new("OmaSend").separator_before(),
+                            MenuItem::new("GitHub"),
                             MenuItem::new(self.language.text("Exit")).separator_before(),
                         ],
                         {
@@ -472,7 +562,9 @@ impl Render for Home {
                                         };
                                         cx.notify();
                                     }
-                                    4 => cx.quit(),
+                                    4 => cx.open_url("https://huacnlee.github.io/omasend/"),
+                                    5 => cx.open_url("https://github.com/huacnlee/omasend"),
+                                    6 => cx.quit(),
                                     _ => {}
                                 });
                             }
@@ -522,7 +614,7 @@ impl Render for Home {
             );
         }
         root = root
-            .child(self.nearby(cx))
+            .child(self.nearby(window, cx))
             .child(
                 div()
                     .flex()
@@ -531,50 +623,62 @@ impl Render for Home {
                     .min_h_0()
                     .px_4()
                     .py_3()
-                    .gap_3()
+                    .gap_2()
                     .child(
                         div()
                             .flex()
-                            .items_center()
-                            .justify_between()
+                            .flex_col()
+                            .gap_1()
                             .child(
                                 div()
-                                    .font_weight(gpui::FontWeight::BOLD)
-                                    .child(self.language.text("Outbox")),
-                            )
-                            .child(div().text_color(theme.secondary).child(
-                                if self.loading_input {
-                                    self.language.text("Preparing…").into()
-                                } else if self.state.composer.is_empty() {
-                                    self.language.text("Nothing added yet").into()
-                                } else {
-                                    format!(
-                                        "{} / {}",
-                                        self.language.count(
-                                            self.state.composer.len(),
-                                            "{count} item",
-                                            "{count} items"
-                                        ),
-                                        size_label(
-                                            self.state
-                                                .composer
-                                                .iter()
-                                                .map(|item| item.size())
-                                                .sum()
-                                        )
+                                    .flex()
+                                    .items_center()
+                                    .justify_between()
+                                    .child(
+                                        div()
+                                            .font_weight(gpui::FontWeight::BOLD)
+                                            .text_color(theme.bright)
+                                            .child(self.language.text("Outbox")),
                                     )
-                                },
-                            )),
-                    )
-                    .child(
-                        div().text_color(theme.secondary).child(
-                            self.state
-                                .selected_device()
-                                .map(|device| self.language.named("To {name}", &device.alias))
-                                .unwrap_or_else(|| {
-                                    self.language.text("Choose a nearby device").into()
-                                }),
-                        ),
+                                    .child(div().text_color(theme.secondary).child(
+                                        if self.loading_input {
+                                            self.language.text("Preparing…").into()
+                                        } else if self.state.composer.is_empty() {
+                                            String::new()
+                                        } else {
+                                            format!(
+                                                "{} / {}",
+                                                self.language.count(
+                                                    self.state.composer.len(),
+                                                    "{count} item",
+                                                    "{count} items"
+                                                ),
+                                                size_label(
+                                                    self.state
+                                                        .composer
+                                                        .iter()
+                                                        .map(|item| item.size())
+                                                        .sum()
+                                                )
+                                            )
+                                        },
+                                    )),
+                            )
+                            .child(
+                                div()
+                                    .text_size(rems(0.75))
+                                    .text_color(theme.secondary)
+                                    .child(
+                                        self.state
+                                            .selected_device()
+                                            .map(|device| {
+                                                self.language.named("To {name}", &device.alias)
+                                            })
+                                            .unwrap_or_else(|| {
+                                                self.language.text("Choose a nearby device").into()
+                                            }),
+                                    ),
+                            ),
                     )
                     .child(self.composer(cx))
                     .child(
@@ -590,7 +694,7 @@ impl Render for Home {
                                     .child(
                                         button(
                                             "add-files",
-                                            self.language.text("Add files"),
+                                            self.language.text("Add files…"),
                                             ButtonVariant::Outline,
                                             cx,
                                         )
@@ -617,7 +721,10 @@ impl Render for Home {
                                     ),
                             )
                             .child(
-                                button("send", send_label, ButtonVariant::Primary, cx)
+                                button("send", "", ButtonVariant::Primary, cx)
+                                    .accessibility_label(send_label)
+                                    .child(icon(IconName::Send).size(rems(0.875)))
+                                    .child(send_label)
                                     .disabled(!can_send)
                                     .on_click(cx.listener(|view, _, window, cx| {
                                         view.send(&Confirm, window, cx)
@@ -626,6 +733,9 @@ impl Render for Home {
                     ),
             )
             .child(self.transfers(cx));
+        if self.history_expanded && self.state.incoming.is_none() && self.preview.is_none() {
+            root = root.child(self.history_overlay(window, cx));
+        }
         if self.state.incoming.is_some() {
             root = root.child(self.receive_dialog(cx));
         } else if self.preview.is_some() {
@@ -670,15 +780,16 @@ mod keyboard_tests {
                 .push(ComposerItem::new(SendItem::Text("test".into())).unwrap());
             Home {
                 state,
-                logo: std::sync::Arc::new(gpui::Image::from_bytes(
-                    gpui::ImageFormat::Png,
-                    include_bytes!("../../assets/omasend.png").to_vec(),
-                )),
                 language: omasend::i18n::Language::En,
                 node: None,
                 runtime: handle,
+                window_handle: Some(window.window_handle()),
                 focus,
                 modal_focus: cx.focus_handle(),
+                nearby_expanded: false,
+                nearby_scroll: gpui::UniformListScrollHandle::new(),
+                history_expanded: false,
+                history_scroll: gpui::ScrollHandle::new(),
                 restore_focus: None,
                 preview: None,
                 loading_input: false,
@@ -821,6 +932,151 @@ mod keyboard_tests {
                     assert_eq!(view.state.selected.as_deref(), Some(selected))
                 });
             }
+        });
+    }
+    #[gpui::test]
+    fn expanded_devices_scroll_to_keyboard_selection(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            view.update_in(cx, |view, _, cx| {
+                view.nearby_expanded = true;
+                for index in 0..40 {
+                    view.state
+                        .apply(TransferEvent::DeviceFound(omasend::localsend::Device {
+                            fingerprint: format!("{index:02}"),
+                            alias: format!("Device {index:02}"),
+                            model: "test".into(),
+                            host: "127.0.0.1".into(),
+                            port: 53317,
+                        }));
+                }
+                cx.notify();
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            for _ in 0..39 {
+                cx.simulate_keystrokes("right");
+                cx.update(|window, cx| window.draw(cx).clear(cx));
+            }
+            view.read_with(cx, |view, _| {
+                assert_eq!(view.state.selected.as_deref(), Some("39"));
+                assert_eq!(
+                    view.nearby_scroll.is_scrolled_to_end(),
+                    Some(true),
+                    "scroll state: {:?}",
+                    view.nearby_scroll.0.borrow()
+                );
+            });
+        });
+    }
+    #[gpui::test]
+    fn history_dock_scrolls_all_records_and_restores_keyboard_focus(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            // Use a real focusable control as the restoration target.
+            cx.simulate_keystrokes("tab tab");
+            let trigger = cx.update(|window, cx| window.focused(cx).unwrap());
+            view.update_in(cx, |view, window, cx| {
+                for index in 0..12 {
+                    let id = format!("history-{index}");
+                    view.state.apply(TransferEvent::Started {
+                        id: id.clone(),
+                        peer: "Nearby peer".into(),
+                        sending: false,
+                        files: vec![omasend::localsend::OfferedFile {
+                            name: format!("record-{index}.txt"),
+                            size: 4,
+                            mime: "text/plain".into(),
+                        }],
+                        total: 4,
+                    });
+                    if index % 2 == 0 {
+                        view.state.apply(TransferEvent::Failed {
+                            id,
+                            error: "Transfer failed".into(),
+                        });
+                    } else {
+                        view.state.apply(TransferEvent::Completed {
+                            id,
+                            paths: vec![std::path::PathBuf::from(format!(
+                                "/tmp/record-{index}.txt"
+                            ))],
+                        });
+                    }
+                }
+                for name in ["a", "b"] {
+                    view.state
+                        .apply(TransferEvent::DeviceFound(omasend::localsend::Device {
+                            fingerprint: name.into(),
+                            alias: name.into(),
+                            model: "test".into(),
+                            host: "127.0.0.1".into(),
+                            port: 53317,
+                        }));
+                }
+                view.state.selected = Some("a".into());
+                view.open_history(window, cx);
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            view.read_with(cx, |view, _| {
+                let scroll = &view.history_scroll;
+                assert!(
+                    scroll.max_offset().y > gpui::px(0.),
+                    "fixture must overflow the dock"
+                );
+                assert_eq!(
+                    scroll.bottom_item(),
+                    11,
+                    "the newest record belongs inside the common scroller"
+                );
+                assert!(
+                    scroll.bounds_for_item(12).is_none(),
+                    "each transfer renders exactly once in the dock"
+                );
+                assert_eq!(
+                    scroll.offset().y,
+                    -scroll.max_offset().y,
+                    "opening starts at the bottom"
+                );
+                for index in 0..11 {
+                    let current = scroll.bounds_for_item(index).unwrap();
+                    let next = scroll.bounds_for_item(index + 1).unwrap();
+                    assert!(
+                        current.bottom() <= next.top(),
+                        "records must retain chronological layout order"
+                    );
+                }
+            });
+            for key in ["tab", "tab", "shift-tab", "right", "left", "down", "up"] {
+                cx.simulate_keystrokes(key);
+                cx.update(|window, cx| {
+                    assert!(
+                        view.read(cx).modal_focus.contains_focused(window, cx),
+                        "{key} escaped history focus"
+                    );
+                    assert_eq!(
+                        view.read(cx).state.selected.as_deref(),
+                        Some("a"),
+                        "{key} changed the device behind history"
+                    );
+                    assert_eq!(view.read(cx).state.composer.len(), 1);
+                });
+            }
+            cx.simulate_keystrokes("escape");
+            cx.update(|window, cx| {
+                assert!(!view.read(cx).history_expanded);
+                assert_eq!(window.focused(cx), Some(trigger.clone()));
+            });
+            view.update_in(cx, |view, window, cx| view.open_history(window, cx));
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            cx.simulate_click(
+                gpui::point(gpui::px(10.), gpui::px(10.)),
+                Default::default(),
+            );
+            cx.update(|window, cx| {
+                assert!(
+                    !view.read(cx).history_expanded,
+                    "backdrop click closes the sheet"
+                );
+                assert_eq!(window.focused(cx), Some(trigger.clone()));
+            });
         });
     }
 }

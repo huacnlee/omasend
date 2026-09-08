@@ -1,0 +1,347 @@
+use super::{Home, size_label};
+use gpui_omarchy::gpui::{
+    AnimationExt, AnyElement, Context, SharedString, Window, div, prelude::*, rems,
+};
+use gpui_omarchy::{ActiveTheme, ButtonVariant, IconName, button, icon, progress, sheet};
+use omasend::model::{Transfer, TransferStatus};
+
+impl Home {
+    pub fn transfers(&self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.omarchy().clone();
+        let mut footer = div()
+            .flex()
+            .items_center()
+            .flex_shrink_0()
+            .gap_2()
+            .px_4()
+            .border_t_1()
+            .border_color(theme.divider());
+        let Some(latest) = self.state.transfers.last() else {
+            return footer
+                .py_3()
+                .text_color(theme.secondary)
+                .child(self.language.text("No transfers yet"))
+                .into_any_element();
+        };
+        footer = footer
+            .child(
+                div()
+                    .id("latest-transfer")
+                    .flex_1()
+                    .min_w_0()
+                    .max_h(rems(8.))
+                    .overflow_y_scroll()
+                    .child(self.transfer_row(latest, false, cx)),
+            )
+            .child(self.transfer_status(latest, cx))
+            .child(
+                button("toggle-transfer-history", "", ButtonVariant::Secondary, cx)
+                    .accessibility_label(self.language.text("Transfer history"))
+                    .map(|button| {
+                        gpui_omarchy::with_tooltip(button, self.language.text("Transfer history"))
+                    })
+                    .flex_shrink_0()
+                    .p_1()
+                    .child(icon(IconName::ChevronUp).size(rems(0.875)))
+                    .on_click(cx.listener(|view, _, window, cx| {
+                        view.open_history(window, cx);
+                    })),
+            );
+        footer.into_any_element()
+    }
+
+    pub fn open_history(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.history_expanded = true;
+        self.restore_focus = window.focused(cx);
+        self.history_scroll.scroll_to_bottom();
+        self.modal_focus.focus(window, cx);
+        cx.notify();
+    }
+
+    pub fn close_history(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.history_expanded = false;
+        self.restore(window, cx);
+        cx.notify();
+    }
+
+    /// An edge-attached sheet covers the composer; it never participates in its layout.
+    /// The single variable-height scroller includes the newest transfer at the bottom.
+    pub fn history_overlay(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.omarchy().clone();
+        let mut records = div()
+            .id("history-records")
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
+            .track_scroll(&self.history_scroll)
+            .px_4();
+        for transfer in &self.state.transfers {
+            records = records.child(self.transfer_row(transfer, true, cx));
+        }
+        let surface = div()
+            .id("history-dock")
+            .absolute()
+            .bottom_0()
+            .left_0()
+            .w_full()
+            .h(window.viewport_size().height * 0.55)
+            .flex()
+            .flex_col()
+            .border_t_1()
+            .border_color(theme.border)
+            .bg(theme.background)
+            .text_color(theme.foreground)
+            .occlude()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .flex_shrink_0()
+                    .px_4()
+                    .py_2()
+                    .border_b_1()
+                    .border_color(theme.divider())
+                    .child(self.language.text("Transfer history"))
+                    .child(
+                        button("close-transfer-history", "", ButtonVariant::Secondary, cx)
+                            .accessibility_label(self.language.text("Close"))
+                            .map(|button| {
+                                gpui_omarchy::with_tooltip(button, self.language.text("Close"))
+                            })
+                            .p_1()
+                            .child(icon(IconName::Close).size(rems(0.875)))
+                            .on_click(cx.listener(|view, _, window, cx| {
+                                view.close_history(window, cx);
+                            })),
+                    ),
+            )
+            .child(records)
+            .with_animation(
+                "history-dock-enter",
+                super::motion::popup_enter(),
+                |surface, phase| surface.bottom(rems(-0.75 * (1. - phase))).opacity(phase),
+            );
+        let view = cx.entity();
+        sheet(&self.modal_focus, cx)
+            .overlay(
+                div()
+                    .absolute()
+                    .inset_0()
+                    .bg(theme.background.opacity(0.18)),
+            )
+            .surface(surface)
+            .request_close(move |window, cx| {
+                // Sheet propagates its Cancel action by default. Consume this
+                // dismissal so Home's Escape fallback cannot overwrite focus.
+                cx.stop_propagation();
+                view.update(cx, |view, cx| view.close_history(window, cx));
+            })
+            .into_any_element()
+    }
+
+    fn transfer_status(&self, transfer: &Transfer, cx: &Context<Self>) -> AnyElement {
+        let theme = cx.omarchy();
+        let (status, color) = match &transfer.status {
+            TransferStatus::Active if transfer.awaiting_acceptance => {
+                ("Waiting for receiver", theme.secondary)
+            }
+            TransferStatus::Active if transfer.sending => ("Sending", theme.accent),
+            TransferStatus::Active => ("Receiving", theme.accent),
+            TransferStatus::Completed if transfer.sending => ("Sent", theme.success),
+            TransferStatus::Completed => ("Received", theme.success),
+            TransferStatus::Cancelled => ("Cancelled", theme.secondary),
+            TransferStatus::Failed(_) => ("Failed", theme.danger),
+        };
+        let clock: chrono::DateTime<chrono::Local> = transfer.when.into();
+        div()
+            .flex()
+            .items_center()
+            .flex_shrink_0()
+            .gap_3()
+            .child(div().text_color(color).child(self.language.text(status)))
+            .child(
+                div()
+                    .text_size(rems(0.6875))
+                    .text_color(theme.secondary)
+                    .child(clock.format("%H:%M").to_string()),
+            )
+            .into_any_element()
+    }
+
+    fn transfer_row(
+        &self,
+        transfer: &Transfer,
+        show_status: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let theme = cx.omarchy().clone();
+        let id = transfer.id.clone();
+        let active = transfer.status == TransferStatus::Active;
+        let mut row = div()
+            .flex_shrink_0()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .py_3()
+            .border_b_1()
+            .border_color(theme.divider())
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .overflow_hidden()
+                            .text_ellipsis()
+                            .text_color(theme.bright)
+                            .child(
+                                transfer
+                                    .files
+                                    .iter()
+                                    .map(|file| file.name.as_str())
+                                    .collect::<Vec<_>>()
+                                    .join(", "),
+                            ),
+                    )
+                    .when(show_status, |row| {
+                        row.child(self.transfer_status(transfer, cx))
+                    }),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .text_color(theme.secondary)
+                            .child(format!(
+                                "{} · {}",
+                                self.language.named(
+                                    if transfer.sending {
+                                        "To {name}"
+                                    } else {
+                                        "From {name}"
+                                    },
+                                    &transfer.peer
+                                ),
+                                size_label(transfer.total)
+                            )),
+                    )
+                    .when(active, |row| {
+                        row.child(
+                            button(
+                                SharedString::from(format!("cancel-{id}")),
+                                self.language.text("Cancel"),
+                                ButtonVariant::Secondary,
+                                cx,
+                            )
+                            .on_click(cx.listener(
+                                move |view, _, _, cx| {
+                                    if let Some(node) = &view.node
+                                        && let Err(error) = node.handle.cancel(&id)
+                                    {
+                                        view.state.error = Some(error.to_string());
+                                    }
+                                    cx.notify();
+                                },
+                            )),
+                        )
+                    }),
+            );
+        if active && !transfer.awaiting_acceptance {
+            let percentage = if transfer.total == 0 {
+                0.
+            } else {
+                transfer.transferred as f32 / transfer.total as f32 * 100.
+            };
+            row = row
+                .child(progress(
+                    SharedString::from(format!("progress-{}", transfer.id)),
+                    percentage,
+                    cx,
+                ))
+                .child(
+                    div()
+                        .text_size(rems(0.6875))
+                        .text_color(theme.secondary)
+                        .child(format!(
+                            "{} / {} · {:.0}%",
+                            size_label(transfer.transferred),
+                            size_label(transfer.total),
+                            percentage
+                        )),
+                );
+        }
+        if let TransferStatus::Failed(error) = &transfer.status {
+            row = row.child(
+                div()
+                    .text_color(theme.danger)
+                    .child(self.language.error(error)),
+            );
+        }
+        for (index, path) in transfer.paths.iter().enumerate() {
+            let open_path = path.clone();
+            let reveal_path = path.clone();
+            row = row.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .when(
+                        transfer.paths.len() > 1
+                            || transfer.files.first().is_some_and(|file| {
+                                path.file_name().unwrap_or_default().to_string_lossy() != file.name
+                            }),
+                        |row| {
+                            row.child(
+                                div()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .text_ellipsis()
+                                    .overflow_hidden()
+                                    .child(
+                                        path.file_name()
+                                            .unwrap_or_default()
+                                            .to_string_lossy()
+                                            .into_owned(),
+                                    ),
+                            )
+                        },
+                    )
+                    .child(
+                        button(
+                            SharedString::from(format!("open-{}-{index}", transfer.id)),
+                            self.language.text("Open"),
+                            ButtonVariant::Secondary,
+                            cx,
+                        )
+                        .on_click(move |_, _, cx| cx.open_with_system(&open_path)),
+                    )
+                    .child(
+                        button(
+                            SharedString::from(format!("reveal-{}-{index}", transfer.id)),
+                            self.language.text("Show in Files"),
+                            ButtonVariant::Secondary,
+                            cx,
+                        )
+                        .on_click(move |_, _, cx| cx.reveal_path(&reveal_path)),
+                    ),
+            );
+        }
+        row.with_animation(
+            SharedString::from(format!("transfer-enter-{}", transfer.id)),
+            super::motion::content_enter(),
+            |row, phase| row.opacity(phase),
+        )
+        .into_any_element()
+    }
+}

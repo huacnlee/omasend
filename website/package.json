@@ -1,0 +1,22 @@
+{
+  "name": "omasend-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --bun astro dev --host 127.0.0.1",
+    "build": "bun --bun astro check && bun --bun astro build",
+    "preview": "bun --bun astro preview --host 127.0.0.1",
+    "test": "bun --bun x playwright test"
+  },
+  "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "astro": "^7.3.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.4.1",
+    "typescript": "^5.9.3"
+  }
+}

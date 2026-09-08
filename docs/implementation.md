@@ -40,7 +40,16 @@ Run `cargo test --no-default-features`, `cargo fmt --check`, `cargo check --all-
 - GPUI keyboard regressions: `cargo test --features ui-tests --bin omasend`
   covers focused button Enter/Space activation, four-arrow device navigation,
   keyboard menu language selection, modal Tab/Shift+Tab containment, arrow
-  isolation, and Escape restoration to the previous control.
+  isolation, and Escape restoration to the previous control. Nine UI tests now
+  also cover virtual device-list scrolling, the chronological history sheet,
+  and closing/reopening a retained session while input preparation finishes.
+- Root POSIX installers pass eight mocked install/upgrade/rollback tests under
+  sh and dash. Release workflow passes actionlint; macOS packaging includes
+  Icon Composer assets and passes strict signature verification. Linux/Windows
+  archive layout checks are not substitutes for builds on their CI runners.
+- The bilingual website passes its production build and twelve browser tests,
+  including installation tabs, first-viewport commands, theme and language
+  controls, and reduced-motion behavior.
 - gpui-omarchy 0.1.0 is pinned locally with its menu shortcut renderer using the
   existing keycap component and focus traversal respecting gpui-base modal traps.
 - Remaining acceptance work: real Wayland clipboard/drag-drop/portal behavior,

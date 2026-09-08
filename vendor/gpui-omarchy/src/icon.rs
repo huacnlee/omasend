@@ -5,9 +5,11 @@ use gpui_base::StyledExt;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IconName {
     Check,
+    Send,
     Minus,
     Plus,
     ChevronDown,
+    ChevronUp,
     ChevronRight,
     ChevronLeft,
     Calendar,
@@ -22,9 +24,11 @@ pub enum IconName {
 impl IconName {
     pub fn path(self) -> &'static str {
         match self {
+            Self::Send => "icons/send.svg",
             Self::Check => "icons/check.svg",
             Self::Minus => "icons/minus.svg",
             Self::Plus => "icons/plus.svg",
+            Self::ChevronUp => "icons/chevron-up.svg",
             Self::ChevronDown => "icons/chevron-down.svg",
             Self::Calendar => "icons/calendar.svg",
             Self::ChevronLeft => "icons/chevron-left.svg",
@@ -62,6 +66,9 @@ impl RenderOnce for Icon {
 }
 #[cfg(not(target_family = "wasm"))]
 fn icon_data(name: IconName) -> std::borrow::Cow<'static, [u8]> {
+    if name == IconName::Send {
+        return std::borrow::Cow::Borrowed(include_bytes!("../assets/icons/send.svg"));
+    }
     gpui_kit_assets::Assets::get(name.path())
         .expect("bundled icon exists")
         .data
@@ -72,9 +79,11 @@ fn icon_data(name: IconName) -> std::borrow::Cow<'static, [u8]> {
 #[cfg(target_family = "wasm")]
 fn icon_data(name: IconName) -> &'static [u8] {
     match name {
+        IconName::Send => include_bytes!("../assets/icons/send.svg"),
         IconName::Check => include_bytes!("../assets/icons/check.svg"),
         IconName::Minus => include_bytes!("../assets/icons/minus.svg"),
         IconName::Plus => include_bytes!("../assets/icons/plus.svg"),
+        IconName::ChevronUp => include_bytes!("../assets/icons/chevron-up.svg"),
         IconName::ChevronDown => include_bytes!("../assets/icons/chevron-down.svg"),
         IconName::Calendar => include_bytes!("../assets/icons/calendar.svg"),
         IconName::ChevronLeft => include_bytes!("../assets/icons/chevron-left.svg"),
@@ -104,10 +113,12 @@ mod tests {
     #[test]
     fn all_named_icons_exist_in_kit_assets() {
         for name in [
+            IconName::Send,
             IconName::Check,
             IconName::Minus,
             IconName::Plus,
             IconName::ChevronDown,
+            IconName::ChevronUp,
             IconName::ChevronRight,
             IconName::ChevronLeft,
             IconName::Calendar,
@@ -119,11 +130,7 @@ mod tests {
             IconName::Settings,
             IconName::TriangleAlert,
         ] {
-            assert!(
-                gpui_kit_assets::Assets::get(name.path()).is_some(),
-                "{}",
-                name.path()
-            );
+            assert!(!icon_data(name).is_empty(), "{}", name.path());
         }
     }
 }

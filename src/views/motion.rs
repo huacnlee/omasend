@@ -15,27 +15,25 @@ fn ease_out(t: f32) -> f32 {
     1. - (1. - t).powi(3)
 }
 
-/// Animate crops of the real app icon so the emblem never drifts from its asset.
+/// Animate theme-colored segments of the shared pixel emblem.
 /// The center remains steady; the surrounding eight regions advance in steps.
 pub fn discovery_logo(
-    logo: std::sync::Arc<gpui_omarchy::gpui::Image>,
+    color: gpui_omarchy::gpui::Hsla,
     discovering: bool,
     revision: u64,
+    size: f32,
 ) -> gpui_omarchy::gpui::AnyElement {
-    use gpui_omarchy::gpui::{AnimationExt, SharedString, div, img, prelude::*, px};
-    let size = 24.;
+    use gpui_omarchy::gpui::{AnimationExt, SharedString, div, prelude::*, px};
     let mut root = div().relative().size(px(size)).flex_shrink_0();
     if discovering {
-        let animated_logo = logo.clone();
         root = root.child(
             div().size_full().with_animation(
                 "discovery-pixels",
                 Animation::new(Duration::from_millis(960))
                     .repeat()
-                    .with_max_fps(16.),
+                    .with_max_fps(60.),
                 move |mut frame, phase| {
-                    let step = ((phase * 8.) as usize).min(7);
-                    let cuts = [0., 0.35, 0.65, 1.];
+                    let cuts = [0., 10. / 32., 22. / 32., 1.];
                     // Clockwise perimeter, with the center excluded from the chase.
                     let order = [
                         (1, 0),
@@ -49,28 +47,27 @@ pub fn discovery_logo(
                     ];
                     for row in 0..3 {
                         for col in 0..3 {
-                            let alpha = if row == 1 && col == 1 {
-                                1.
+                            let (alpha, lift) = if row == 1 && col == 1 {
+                                (1., 0.)
                             } else {
                                 let index =
                                     order.iter().position(|cell| *cell == (col, row)).unwrap();
-                                match (step + 8 - index) % 8 {
-                                    0 => 1.,
-                                    1 => 0.65,
-                                    _ => 0.25,
-                                }
+                                ripple((phase - index as f32 / 8.).rem_euclid(1.))
                             };
+                            let distance = size * if row != 1 && col != 1 { 0.0375 } else { 0.05 };
+                            let dx = (col as f32 - 1.) * distance * lift;
+                            let dy = (row as f32 - 1.) * distance * lift;
                             frame = frame.child(
                                 div()
                                     .absolute()
-                                    .left(px(cuts[col] * size))
-                                    .top(px(cuts[row] * size))
+                                    .left(px(cuts[col] * size + dx))
+                                    .top(px(cuts[row] * size + dy))
                                     .w(px((cuts[col + 1] - cuts[col]) * size))
                                     .h(px((cuts[row + 1] - cuts[row]) * size))
                                     .overflow_hidden()
                                     .opacity(alpha)
                                     .child(
-                                        img(animated_logo.clone())
+                                        logo(size, color)
                                             .absolute()
                                             .left(px(-cuts[col] * size))
                                             .top(px(-cuts[row] * size))
@@ -84,14 +81,14 @@ pub fn discovery_logo(
             ),
         );
     } else {
-        root = root.child(img(logo.clone()).size(px(size)));
+        root = root.child(logo(size, color));
     }
     if revision > 0 {
         root = root.child(
             div()
                 .absolute()
                 .inset_0()
-                .child(img(logo).size(px(size)))
+                .child(logo(size, color))
                 .with_animation(
                     SharedString::from(format!("device-confirmed-{revision}")),
                     Animation::new(Duration::from_millis(420)),
@@ -106,4 +103,36 @@ pub fn discovery_logo(
         );
     }
     root.into_any_element()
+}
+
+/// Transparent vector emblem, tinted by the active Omarchy theme.
+pub fn logo(size: f32, color: gpui_omarchy::gpui::Hsla) -> gpui_omarchy::gpui::Svg {
+    use gpui_omarchy::gpui::{Styled, px, svg};
+    svg()
+        .data(include_bytes!("../../assets/logo.svg"))
+        .size(px(size))
+        .text_color(color)
+}
+
+// Shared with the website: adjacent segments overlap as one clockwise wave.
+fn ripple(phase: f32) -> (f32, f32) {
+    let points = [
+        (0., 1., 1.),
+        (0.125, 0.65, 0.25),
+        (0.25, 0.25, 0.),
+        (0.875, 0.25, 0.),
+        (1., 1., 1.),
+    ];
+    for pair in points.windows(2) {
+        let (start, alpha, lift) = pair[0];
+        let (end, next_alpha, next_lift) = pair[1];
+        if phase <= end {
+            let t = (phase - start) / (end - start);
+            return (
+                alpha + (next_alpha - alpha) * t,
+                lift + (next_lift - lift) * t,
+            );
+        }
+    }
+    (1., 1.)
 }

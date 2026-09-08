@@ -12,3 +12,14 @@ omasend.png: normalized 1024px launcher asset.
 omasend-macos.png: rounded macOS tile with transparent outer margins.
 omasend.icns: macOS development bundle export from omasend-macos.png.
 Linux desktop integration: packaging/omasend.desktop, Icon=omasend.
+
+OmaSend.icon: native Icon Composer metadata for macOS 26 and later. Its PNG
+layer is a byte-identical copy of omasend-macos.png, preserving the original
+pixel mark. An opaque matching dark fill covers the canvas; layer glass,
+group specular, shadow, and translucency are disabled. The system supplies
+the outer icon mask. packaging/build-release.py compiles Assets.car with
+Xcode 26+ and retains omasend.icns as the older macOS fallback. No raster
+redesign was needed: the white outer tile was synthesized by macOS when
+only a legacy ICNS was provided.
+The transparent assets/logo.svg reproduces the emblem as pixel geometry for
+theme-colored application UI; the website header and favicon use the same shape.

@@ -1,5 +1,7 @@
+mod history;
 mod home;
 mod motion;
+mod nearby;
 mod panels;
 
 use gpui_omarchy::gpui::{App, KeyBinding, actions};
@@ -14,7 +16,8 @@ actions!(
         Confirm,
         PreviousDevice,
         NextDevice,
-        Quit
+        Quit,
+        CloseWindow
     ]
 );
 
@@ -33,7 +36,8 @@ pub fn init(cx: &mut App) {
     cx.bind_keys([
         KeyBinding::new("cmd-v", Paste, Some("OmaSend")),
         KeyBinding::new("cmd-o", OpenFiles, Some("OmaSend")),
-        KeyBinding::new("cmd-q", Quit, Some("OmaSend")),
+        KeyBinding::new("cmd-q", Quit, None),
+        KeyBinding::new("cmd-w", CloseWindow, Some("OmaSend")),
     ]);
 }
 

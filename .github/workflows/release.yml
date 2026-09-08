@@ -1,0 +1,178 @@
+name: Release
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - 'vendor/**'
+      - 'assets/**'
+      - 'packaging/**'
+      - 'scripts/**'
+      - 'install.sh'
+      - 'install.ps1'
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-26
+            target: aarch64-apple-darwin
+          - os: macos-26
+            target: x86_64-apple-darwin
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      CARGO_TERM_COLOR: always
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+          components: rustfmt
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake clang pkg-config libssl-dev libfontconfig1-dev \
+            libfreetype6-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
+            libvulkan-dev libxcb1-dev libx11-xcb-dev libzstd-dev
+
+      - name: Use a static Windows C runtime
+        if: runner.os == 'Windows'
+        run: echo 'RUSTFLAGS=-C target-feature=+crt-static' >> "$GITHUB_ENV"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: Validate version and release tag
+        id: version
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os, tomllib
+          from pathlib import Path
+          version = tomllib.loads(Path('Cargo.toml').read_text())['package']['version']
+          if os.environ['RELEASE_REF'].startswith('refs/tags/') and os.environ['RELEASE_TAG'] != f'v{version}':
+              raise SystemExit(f'Release tag must match Cargo.toml: v{version}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write(f'version={version}\n')
+          PY
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Test Unix installer
+        if: runner.os != 'Windows'
+        run: python scripts/test-install.py
+
+      - name: Validate PowerShell installer syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $parseErrors = $null
+          $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path install.ps1), [ref]$tokens, [ref]$parseErrors
+          ) | Out-Null
+          if ($parseErrors) {
+            $parseErrors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
+      - name: Test Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/test-install.ps1
+
+      - name: Test protocol and state
+        # Run native tests; Intel macOS is cross-compiled on the ARM runner.
+        if: matrix.target != 'x86_64-apple-darwin'
+        run: cargo test --locked --no-default-features --target ${{ matrix.target }}
+
+      - name: Build release
+        run: cargo build --locked --release --bin omasend --target ${{ matrix.target }}
+
+      - name: Package release
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TARGET: ${{ matrix.target }}
+        run: |
+          binary="target/$RELEASE_TARGET/release/omasend"
+          if [ "$RUNNER_OS" = Windows ]; then binary="$binary.exe"; fi
+          python packaging/build-release.py --target "$RELEASE_TARGET" \
+            --version "$RELEASE_VERSION" --binary "$binary" --output dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish release assets
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: Verify and combine checksums
+        run: |
+          cd dist
+          cat *.sha256 | sort -k2 > SHA256SUMS
+          test "$(wc -l < SHA256SUMS)" -eq 4
+          sha256sum --check SHA256SUMS
+          rm -- *.sha256
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then prerelease+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" --verify-tag --generate-notes \
+            --title "OmaSend $RELEASE_TAG" "${prerelease[@]}" dist/*

@@ -5,12 +5,40 @@ A native GPUI + gpui-omarchy LocalSend client for Omarchy and Wayland.
 Send files, folders, text, clipboard images and recordings to nearby LocalSend
 clients. Incoming transfers require acceptance and save to the XDG Downloads
 folder, with numbered names when a file already exists. History lasts for the
-current session. Closing the application stops its networking.
+current session. Exit stops networking. On macOS, closing the window keeps the
+session running; clicking the Dock icon restores it.
 
 The interface supports English and Simplified Chinese. It initially follows
 `LC_ALL`, `LC_MESSAGES`, then `LANG`; macOS falls back to its system locale.
 Choose English or 简体中文 in the menu to switch the current session. Device
 identity comes from the operating system, rather than the interface language.
+
+## Install and releases
+
+See [installation instructions](docs/install.md) for macOS, Linux and Windows
+installers. Releases provide macOS Apple Silicon/Intel `.tar.gz` bundles,
+Linux x86_64 `.tar.gz`, Windows x86_64 `.zip`, and SHA-256 checksums.
+The installers require a published GitHub release.
+
+macOS / Linux:
+
+```sh
+curl -fsSL https://github.com/huacnlee/omasend/raw/refs/heads/main/install.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://github.com/huacnlee/omasend/raw/refs/heads/main/install.ps1 | iex
+```
+
+`.github/workflows/release.yml` builds and packages all platforms for pull
+requests; a tag matching `v<Cargo.toml version>` publishes the release after
+all builds pass. Modern macOS icon compilation requires Xcode 26 or newer.
+
+The [website](website/README.md) uses Astro + Bun and GitHub Pages, following
+gpui-omarchy's setup. Its PR workflow builds and runs browser checks; deployment
+runs from `main` after Pages is configured to use GitHub Actions.
 
 ## Build and run
 
@@ -53,7 +81,8 @@ Ensure `~/.local/bin` is on PATH. On Omarchy, use
 - `tab` / `shift+tab`: move keyboard focus.
 - Exit is in the menu. Omarchy's compositor owns `super+w` window closing;
   OmaSend does not override it or bind `ctrl+q`.
-- macOS development builds also accept `cmd+v`, `cmd+o`, and `cmd+q`.
+- macOS also accepts `cmd+v`, `cmd+o`, and `cmd+q`. `cmd+w` closes the
+  window while keeping the session available from the Dock.
 
 Folders expand to relative file paths; empty directories are not transferred.
 Clipboard file URIs use the original file. Clipboard media is streamed to a
@@ -93,6 +122,8 @@ See its `UPSTREAM.txt`.
 
 The original OmaSend emblem is inspired by LocalSend's local-discovery shape
 and Omarchy's pixel geometry; it is not either project's official mark. Linux
-uses the square PNG; macOS uses its own rounded, transparent-margin ICNS.
-The titlebar discovery effect crops the same emblem into animated segments.
+uses the square PNG; macOS combines Icon Composer assets for modern systems
+with a rounded, transparent-margin ICNS for older releases.
+The header logo is static; the empty send area animates its outer pixel segments.
+Both render a transparent vector emblem in the current theme's accent color.
 GPUI's reduced-motion setting renders a static logo.
