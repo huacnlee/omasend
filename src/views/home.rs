@@ -370,7 +370,9 @@ impl Home {
         }
         let prompt = cx.prompt_for_paths(PathPromptOptions {
             files: true,
-            directories: true,
+            // Linux portals interpret directory=true as folder-only selection,
+            // even with files=true. Folders can still be added by drag and drop.
+            directories: !cfg!(target_os = "linux"),
             multiple: true,
             prompt: Some(self.language.text("Add to Omasend").into()),
         });
