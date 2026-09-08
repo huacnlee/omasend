@@ -75,19 +75,11 @@ impl Home {
                 .flex()
                 .flex_col()
                 .gap_2()
+                .flex_shrink_0()
                 .p_3()
                 .border_1()
                 .border_color(theme.border);
-            if item.is_image() {
-                if let Some(path) = item.item.path() {
-                    row = row.child(
-                        img(path.to_path_buf())
-                            .w_full()
-                            .h(rems(10.))
-                            .object_fit(ObjectFit::Contain),
-                    );
-                }
-            } else if item.is_video() {
+            if item.is_video() {
                 row = row.child(
                     div()
                         .text_size(rems(1.5))
@@ -107,6 +99,22 @@ impl Home {
                     .flex()
                     .items_center()
                     .gap_2()
+                    .when(item.is_image(), |header| {
+                        header.when_some(item.item.path(), |header, path| {
+                            header.child(
+                                div()
+                                    .flex_shrink_0()
+                                    .size(px(40.))
+                                    .mr_1()
+                                    .overflow_hidden()
+                                    .child(
+                                        img(path.to_path_buf())
+                                            .size_full()
+                                            .object_fit(ObjectFit::Contain),
+                                    ),
+                            )
+                        })
+                    })
                     .child(
                         div()
                             .flex()
