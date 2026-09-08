@@ -231,12 +231,17 @@ impl Home {
         div()
             .flex()
             .items_center()
-            .flex_shrink_0()
+            .min_w_0()
             .gap_3()
-            .child(div().text_color(color).child(match &transfer.status {
-                TransferStatus::Failed(error) => self.language.error(error),
-                _ => self.language.text(status).to_owned(),
-            }))
+            .child(
+                div()
+                    .min_w_0()
+                    .text_color(color)
+                    .child(match &transfer.status {
+                        TransferStatus::Failed(error) => self.language.transfer_error(error),
+                        _ => self.language.text(status).to_owned(),
+                    }),
+            )
             .child(
                 div()
                     .text_size(rems(0.6875))
