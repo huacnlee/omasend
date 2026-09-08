@@ -49,9 +49,3 @@ debug = "limited"
 
 [patch.crates-io]
 gpui-omarchy = { path = "vendor/gpui-omarchy" }
-
-[dev-dependencies]
-flate2 = "1"
-sha2 = "0.10"
-tar = "0.4"
-zip = { version = "8", default-features = false, features = ["deflate"] }

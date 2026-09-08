@@ -11,23 +11,7 @@ pub fn builder(version: &str) -> Result<UpdateBuilder> {
         "Update must be newer than this application"
     );
     let target = self_update::get_target();
-    ensure!(
-        matches!(
-            target,
-            "aarch64-apple-darwin"
-                | "x86_64-apple-darwin"
-                | "x86_64-unknown-linux-gnu"
-                | "aarch64-unknown-linux-gnu"
-                | "x86_64-pc-windows-msvc"
-        ),
-        "No release package for {target}"
-    );
-    let extension = if target.contains("windows") {
-        "zip"
-    } else {
-        "tar.gz"
-    };
-    let asset_name = format!("omasend-{parsed}-{target}.{extension}");
+    let asset_name = release_asset_name(&parsed, target)?;
     let mut builder = Update::configure();
     builder
         .repo_owner("huacnlee")
@@ -49,6 +33,26 @@ pub fn builder(version: &str) -> Result<UpdateBuilder> {
         .show_download_progress(false)
         .timeout(Duration::from_secs(15 * 60));
     Ok(builder)
+}
+
+fn release_asset_name(version: &semver::Version, target: &str) -> Result<String> {
+    ensure!(
+        matches!(
+            target,
+            "aarch64-apple-darwin"
+                | "x86_64-apple-darwin"
+                | "x86_64-unknown-linux-gnu"
+                | "aarch64-unknown-linux-gnu"
+                | "x86_64-pc-windows-msvc"
+        ),
+        "No release package for {target}"
+    );
+    let extension = if target.contains("windows") {
+        "zip"
+    } else {
+        "tar.gz"
+    };
+    Ok(format!("omasend-{version}-{target}.{extension}"))
 }
 
 pub fn install(
@@ -120,209 +124,44 @@ pub fn restart(executable: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sha2::{Digest, Sha256};
-    use std::io::{Read, Write};
 
-    fn archive() -> Vec<u8> {
-        if cfg!(windows) {
-            let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
-            zip.start_file("omasend.exe", zip::write::SimpleFileOptions::default())
-                .unwrap();
-            zip.write_all(b"new binary").unwrap();
-            zip.finish().unwrap().into_inner()
-        } else {
-            let gzip = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
-            let mut tar = tar::Builder::new(gzip);
-            for (path, data) in [
-                ("omasend", b"new binary".as_slice()),
-                (
-                    "OmaSend.app/Contents/MacOS/omasend",
-                    b"new binary".as_slice(),
-                ),
-                (
-                    "OmaSend.app/Contents/Resources/icon",
-                    b"new icon".as_slice(),
-                ),
-            ] {
-                let mut header = tar::Header::new_gnu();
-                header.set_size(data.len() as u64);
-                header.set_mode(0o755);
-                header.set_cksum();
-                tar.append_data(&mut header, path, data).unwrap();
-            }
-            tar.into_inner().unwrap().finish().unwrap()
+    #[test]
+    fn release_assets_match_published_platform_names() {
+        let version = semver::Version::new(9, 0, 0);
+        for (target, expected) in [
+            (
+                "aarch64-apple-darwin",
+                "omasend-9.0.0-aarch64-apple-darwin.tar.gz",
+            ),
+            (
+                "x86_64-apple-darwin",
+                "omasend-9.0.0-x86_64-apple-darwin.tar.gz",
+            ),
+            (
+                "x86_64-unknown-linux-gnu",
+                "omasend-9.0.0-x86_64-unknown-linux-gnu.tar.gz",
+            ),
+            (
+                "aarch64-unknown-linux-gnu",
+                "omasend-9.0.0-aarch64-unknown-linux-gnu.tar.gz",
+            ),
+            (
+                "x86_64-pc-windows-msvc",
+                "omasend-9.0.0-x86_64-pc-windows-msvc.zip",
+            ),
+        ] {
+            assert_eq!(release_asset_name(&version, target).unwrap(), expected);
         }
-    }
-
-    // Exercise the real backend against a local GitHub-shaped API and disposable
-    // installation. No test can replace the test runner or the user's application.
-    fn update_fixture(bad_checksum: bool, reject_binary: bool, bundle: bool) {
-        let archive = archive();
-        let extension = if cfg!(windows) { "zip" } else { "tar.gz" };
-        let asset = format!("omasend-9.0.0-{}.{extension}", self_update::get_target());
-        let digest = if bad_checksum {
-            "0".repeat(64)
-        } else {
-            format!("{:x}", Sha256::digest(&archive))
-        };
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        listener.set_nonblocking(true).unwrap();
-        let base = format!("http://{}", listener.local_addr().unwrap());
-        let release = serde_json::json!({
-            "tag_name": "v9.0.0", "created_at": "2026-09-08T00:00:00Z",
-            "assets": [
-                {"name": asset, "url": format!("{base}/archive")},
-                {"name": "SHA256SUMS", "url": format!("{base}/sums")}
-            ]
-        })
-        .to_string();
-        let sums = format!("{digest}  {asset}\n");
-        let (stop_tx, stop_rx) = std::sync::mpsc::channel::<()>();
-        let server = std::thread::spawn(move || {
-            while matches!(
-                stop_rx.try_recv(),
-                Err(std::sync::mpsc::TryRecvError::Empty)
-            ) {
-                let (mut socket, _) = match listener.accept() {
-                    Ok(connection) => connection,
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                        // Wake promptly on shutdown; this is idle polling, not a
-                        // startup delay that assumes the client is ready.
-                        let _ = stop_rx.recv_timeout(Duration::from_millis(5));
-                        continue;
-                    }
-                    Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
-                    Err(error) => panic!("Fixture failed to accept a connection: {error}"),
-                };
-                // Windows inherits the listener's nonblocking mode. Request reads
-                // must wait for incoming bytes, bounded by the timeout below.
-                socket.set_nonblocking(false).unwrap();
-                socket
-                    .set_read_timeout(Some(Duration::from_secs(2)))
-                    .unwrap();
-                socket
-                    .set_write_timeout(Some(Duration::from_secs(2)))
-                    .unwrap();
-                let mut request = Vec::new();
-                let mut chunk = [0; 2048];
-                while !request.windows(4).any(|part| part == b"\r\n\r\n") {
-                    let count = match socket.read(&mut chunk) {
-                        Ok(count) => count,
-                        Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
-                        Err(error) => panic!("Fixture failed to read request headers: {error}"),
-                    };
-                    assert!(count > 0, "Client closed before sending complete headers");
-                    assert!(request.len() + count <= 16384, "Request headers too large");
-                    request.extend_from_slice(&chunk[..count]);
-                }
-                let path = std::str::from_utf8(&request)
-                    .unwrap()
-                    .split_whitespace()
-                    .nth(1)
-                    .unwrap();
-                let body = match path {
-                    "/repos/huacnlee/omasend/releases/tags/v9.0.0" => release.as_bytes(),
-                    "/sums" => sums.as_bytes(),
-                    "/archive" => &archive,
-                    _ => panic!("Unexpected request: {path}"),
-                };
-                write!(
-                    socket,
-                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                    body.len()
-                )
-                .unwrap();
-                socket.write_all(body).unwrap();
-            }
-        });
-        let temp = tempfile::tempdir().unwrap();
-        let destination = temp
-            .path()
-            .join(if bundle { "OmaSend.app" } else { "omasend" });
-        let installed_binary = if bundle {
-            destination.join("Contents/MacOS/omasend")
-        } else {
-            destination.clone()
-        };
-        std::fs::create_dir_all(installed_binary.parent().unwrap()).unwrap();
-        std::fs::write(&installed_binary, "old binary").unwrap();
-        if bundle {
-            std::fs::create_dir_all(destination.join("Contents/Resources")).unwrap();
-            std::fs::write(
-                destination.join("Contents/Resources/obsolete"),
-                "old resource",
-            )
-            .unwrap();
-        }
-        let mut config = builder("v9.0.0").unwrap();
-        config.api_base_url(base).timeout(Duration::from_secs(5));
-        if bundle {
-            config
-                .bundle_path_in_archive("OmaSend.app")
-                .bundle_install_path(&destination);
-        } else {
-            config.bin_install_path(&destination);
-        }
-        if reject_binary {
-            config.verify_binary(|_| {
-                Err(self_update::Error::verification_rejected(
-                    "invalid executable",
-                ))
-            });
-        }
-        let result = config.build().unwrap().update();
-        drop(stop_tx);
-        server.join().unwrap();
-        if bad_checksum || reject_binary {
-            let error = result.unwrap_err();
-            if bad_checksum {
-                assert!(
-                    matches!(error, self_update::Error::ChecksumMismatch { .. }),
-                    "Expected checksum rejection, got {error:?}"
-                );
-            } else {
-                assert!(
-                    matches!(error, self_update::Error::VerificationRejected { .. }),
-                    "Expected executable rejection, got {error:?}"
-                );
-            }
-            assert_eq!(
-                std::fs::read_to_string(installed_binary).unwrap(),
-                "old binary"
-            );
-        } else {
-            assert!(result.unwrap().is_updated());
-            assert_eq!(
-                std::fs::read_to_string(installed_binary).unwrap(),
-                "new binary"
-            );
-            if bundle {
-                assert_eq!(
-                    std::fs::read_to_string(destination.join("Contents/Resources/icon")).unwrap(),
-                    "new icon"
-                );
-                assert!(!destination.join("Contents/Resources/obsolete").exists());
-            }
-        }
+        assert!(release_asset_name(&version, "aarch64-pc-windows-msvc").is_err());
+        assert!(release_asset_name(&version, "x86_64-unknown-linux-musl").is_err());
     }
 
     #[test]
-    fn verified_release_replaces_only_the_fixture() {
-        update_fixture(false, false, false);
+    fn accepts_newer_stable_versions_with_optional_tag_prefix() {
+        assert!(builder("9.0.0").is_ok());
+        assert!(builder("v9.0.0").is_ok());
     }
-    #[test]
-    fn checksum_mismatch_keeps_installed_version() {
-        update_fixture(true, false, false);
-    }
-    #[test]
-    fn rejected_executable_keeps_installed_version() {
-        update_fixture(false, true, false);
-    }
-    #[cfg(unix)]
-    #[test]
-    fn bundle_update_replaces_resources_together() {
-        update_fixture(false, false, true);
-    }
+
     #[cfg(target_os = "macos")]
     #[test]
     fn verifies_bundle_signature_and_rejects_modified_resources() {

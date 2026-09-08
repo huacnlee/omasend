@@ -4923,7 +4923,6 @@ dependencies = [
  "cap-std",
  "chrono",
  "dirs 6.0.0",
- "flate2",
  "futures-util",
  "gethostname",
  "gpui-kit",
@@ -4935,8 +4934,6 @@ dependencies = [
  "self_update",
  "semver",
  "serde_json",
- "sha2 0.10.9",
- "tar",
  "tempfile",
  "tokio",
  "tokio-util",
@@ -4944,7 +4941,6 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "uuid",
- "zip",
 ]
 
 [[package]]
