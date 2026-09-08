@@ -1,4 +1,4 @@
-use gpui_omarchy::gpui::{
+use gpui_kit::{
     AppContext, Context, IntoElement, ParentElement, Render, Styled, Window, WindowOptions,
 };
 use gpui_omarchy::{ActiveTheme, ButtonVariant, button, focus_scope, panel};

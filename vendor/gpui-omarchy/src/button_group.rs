@@ -1,10 +1,10 @@
 //! Exclusive settings and page navigation with one keyboard stop per group.
 use crate::{ActiveTheme, ChoiceItem};
-use gpui::{App, Context, ElementId, Entity, FocusHandle, KeyBinding, Window, prelude::*, px};
-use gpui_base::{
+use gpui_kit::base::{
     Radio, RadioGroup, Tabs,
     actions::{Confirm, SelectLeft, SelectRight},
 };
+use gpui_kit::{App, Context, ElementId, Entity, FocusHandle, KeyBinding, Window, prelude::*, px};
 use std::rc::Rc;
 
 type Change = Rc<dyn Fn(usize, &mut Window, &mut App)>;
@@ -97,7 +97,7 @@ pub fn button_group(
         .collect::<Vec<_>>();
     navigate(
         RadioGroup::new(id)
-            .axis(gpui::Axis::Horizontal)
+            .axis(gpui_kit::Axis::Horizontal)
             .flex()
             .flex_wrap()
             .gap(px(6.))
@@ -207,7 +207,7 @@ fn navigate<T: StatefulInteractiveElement + FluentBuilder>(
         });
     if !enabled.is_empty() {
         let pointer_focus = focus.clone();
-        root = root.on_mouse_down(gpui::MouseButton::Left, move |_, window, cx| {
+        root = root.on_mouse_down(gpui_kit::MouseButton::Left, move |_, window, cx| {
             pointer_focus.focus(window, cx)
         });
     }
@@ -254,7 +254,8 @@ fn step(cursor: &mut Cursor, enabled: &[usize], forward: bool, cx: &mut Context<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Render, TestAppContext};
+    use gpui_kit::gpui;
+    use gpui_kit::{Render, TestAppContext};
     struct Harness {
         tab_list: bool,
         selected: usize,

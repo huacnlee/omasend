@@ -1,6 +1,6 @@
 //! State-driven transitions and a segmented discovery indicator.
 //! GPUI automatically renders the final frame when reduced motion is enabled.
-use gpui_omarchy::gpui::Animation;
+use gpui_kit::Animation;
 use std::time::Duration;
 
 pub fn content_enter() -> Animation {
@@ -18,12 +18,12 @@ fn ease_out(t: f32) -> f32 {
 /// Animate theme-colored segments of the shared pixel emblem.
 /// The center stays fixed through each quick actuation burst and shared rest.
 pub fn discovery_logo(
-    color: gpui_omarchy::gpui::Hsla,
+    color: gpui_kit::Hsla,
     discovering: bool,
     revision: u64,
     size: f32,
-) -> gpui_omarchy::gpui::AnyElement {
-    use gpui_omarchy::gpui::{AnimationExt, SharedString, div, prelude::*, px};
+) -> gpui_kit::AnyElement {
+    use gpui_kit::{AnimationExt, SharedString, div, prelude::*, px};
     let mut root = div().relative().size(px(size)).flex_shrink_0();
     if discovering {
         root = root.child(
@@ -122,8 +122,8 @@ pub fn discovery_logo(
 }
 
 /// Transparent vector emblem, tinted by the active Omarchy theme.
-pub fn logo(size: f32, color: gpui_omarchy::gpui::Hsla) -> gpui_omarchy::gpui::Svg {
-    use gpui_omarchy::gpui::{Styled, px, svg};
+pub fn logo(size: f32, color: gpui_kit::Hsla) -> gpui_kit::Svg {
+    use gpui_kit::{Styled, px, svg};
     svg()
         .data(include_bytes!("../../assets/logo.svg"))
         .size(px(size))

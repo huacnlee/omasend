@@ -1,5 +1,5 @@
 use super::Home;
-use gpui_omarchy::gpui::{Context, Window};
+use gpui_kit::{Context, Window};
 use omasend::updates::UpdateState;
 
 impl Home {

@@ -1,7 +1,9 @@
 //! Modal presentation built from gpui-base's dialog hosts and content slots.
 use crate::ActiveTheme;
-use gpui::{App, FocusHandle, FontWeight, ParentElement, SharedString, Styled, px, rgb};
-use gpui_base::{AlertDialog, Dialog, DialogBackdrop, DialogDescription, DialogPopup, DialogTitle};
+use gpui_kit::base::{
+    AlertDialog, Dialog, DialogBackdrop, DialogDescription, DialogPopup, DialogTitle,
+};
+use gpui_kit::{App, FocusHandle, FontWeight, ParentElement, SharedString, Styled, px, rgb};
 
 /// Supply a stable focus handle, focus it on opening, and restore trigger focus on close.
 /// Base owns the focus trap, Escape, confirmation and backdrop dismissal.
@@ -26,7 +28,7 @@ pub fn dialog_backdrop() -> DialogBackdrop {
     DialogBackdrop::new()
         .absolute()
         .size_full()
-        .bg(gpui::Hsla::from(rgb(0)).opacity(0.6))
+        .bg(gpui_kit::Hsla::from(rgb(0)).opacity(0.6))
 }
 
 /// A single edged surface. Content slots and peer actions go inside this popup.
@@ -38,7 +40,7 @@ pub fn dialog_popup(cx: &App) -> DialogPopup {
         .flex_col()
         .gap(px(14.))
         .w(px(420.))
-        .max_w(gpui::relative(1.))
+        .max_w(gpui_kit::relative(1.))
         .p(px(18.))
         .border_1()
         .border_color(t.border)
@@ -65,7 +67,7 @@ pub fn dialog_description(text: impl Into<SharedString>, cx: &App) -> DialogDesc
 
 /// Outline actions for modal footers; semantic emphasis lives in the edge and label.
 pub fn dialog_button(
-    id: impl Into<gpui::ElementId>,
+    id: impl Into<gpui_kit::ElementId>,
     label: impl Into<SharedString>,
     variant: crate::ButtonVariant,
     cx: &App,

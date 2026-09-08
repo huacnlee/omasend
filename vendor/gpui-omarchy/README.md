@@ -46,12 +46,12 @@ Add the library to your application:
 gpui-omarchy = "0.1.0"
 ```
 
-Use `gpui_omarchy::gpui` for GPUI types and `gpui_omarchy::application()` for the desktop entry point. These are provided through GPUI Kit with its component facade disabled. See the [complete quick start](examples/hello.rs).
+Use `gpui_kit` for GPUI types and `gpui_omarchy::application()` for the desktop entry point. These are provided through GPUI Kit with its component facade disabled. See the [complete quick start](examples/hello.rs).
 
 Call `gpui_omarchy::init(cx)` once at startup, then create components inside `Render`:
 
 ```rust,ignore
-use gpui_omarchy::gpui::ParentElement;
+use gpui_kit::ParentElement;
 use gpui_omarchy::{button, panel, ButtonVariant};
 
 panel("Workspace", cx).child(
@@ -80,7 +80,6 @@ Wrap a window or form in `focus_scope("app")` to enable Tab and Shift+Tab traver
 `popover` returns a base Popover with square styling and keyboard isolation inside its content. Escape dismisses it and restores focus. `collapsible(open, cx)` returns a base Collapsible: regular children remain visible, while its content appears only when expanded.
 
 `toast(id, cx)` returns a composable base Toast surface. Applications control its lifecycle, optionally using base ToastManager. The gallery displays notifications at the bottom right with Undo and Retry actions. Saved notifications expire after six seconds, with the timer paused during hover or focus; errors remain until handled manually.
-
 
 `avatar(initials, cx)` returns a square base Avatar. Set its image slot with `.image(avatar_image(source))`. The application decides whether to fall back to initials when image loading fails.
 

@@ -1,7 +1,7 @@
 //! Calendar presentation over gpui-base's date and view state.
 use crate::{ActiveTheme, IconName, icon};
-use gpui::{App, ElementId, Entity, Role, prelude::*, px};
-use gpui_base::{Calendar, CalendarItemKind, CalendarState};
+use gpui_kit::base::{Calendar, CalendarItemKind, CalendarState};
+use gpui_kit::{App, ElementId, Entity, Role, prelude::*, px};
 
 /// A calendar with selectable days, month/year navigation and range styling.
 /// Observe the supplied state or subscribe to base CalendarEvent::Selected.

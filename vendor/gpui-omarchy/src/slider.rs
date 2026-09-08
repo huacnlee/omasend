@@ -1,11 +1,11 @@
 //! Horizontal single-value and range sliders with native pointer interaction.
 use crate::ActiveTheme;
-use gpui::{
-    App, Entity, FocusHandle, KeyDownEvent, MouseButton, Window, div, prelude::*, px, relative,
-};
-use gpui_base::{
+use gpui_kit::base::{
     Slider, SliderIndicator, SliderThumb, SliderTrack,
     slider::{SliderEvent, SliderState, SliderValue},
+};
+use gpui_kit::{
+    App, Entity, FocusHandle, KeyDownEvent, MouseButton, Window, div, prelude::*, px, relative,
 };
 
 /// Compose themed base parts. Pass disabled here so both track and thumbs are inert.
@@ -46,7 +46,7 @@ pub fn slider(
         let focus = window
             .use_keyed_state(
                 (
-                    gpui::ElementId::from(("omarchy-slider-focus", state.entity_id())),
+                    gpui_kit::ElementId::from(("omarchy-slider-focus", state.entity_id())),
                     if start { "start" } else { "end" },
                 ),
                 cx,

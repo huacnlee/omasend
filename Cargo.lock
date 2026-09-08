@@ -2554,6 +2554,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3279d239b0b9228e04511ada0131120f1d7983147586e28a69820630755569f"
 dependencies = [
  "gpui-base",
+ "gpui-kit-assets",
  "gpui-pre",
  "gpui-pre-platform",
  "gpui-pre-reqwest-client",
@@ -2577,12 +2578,10 @@ dependencies = [
 
 [[package]]
 name = "gpui-omarchy"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
- "gpui-base",
  "gpui-kit",
- "gpui-kit-assets",
  "toml 0.8.23",
 ]
 
@@ -4927,7 +4926,6 @@ dependencies = [
  "flate2",
  "futures-util",
  "gethostname",
- "gpui-base",
  "gpui-kit",
  "gpui-omarchy",
  "if-addrs",

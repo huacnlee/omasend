@@ -1,14 +1,14 @@
 //! Contextual controls in an anchored, non-modal surface.
 use crate::ActiveTheme;
-use gpui::{App, Context, Div, ElementId, Window, div, prelude::*, px};
-use gpui_base::{Popover, PopoverState};
+use gpui_kit::base::{Popover, PopoverState};
+use gpui_kit::{App, Context, Div, ElementId, Window, div, prelude::*, px};
 
 pub(crate) fn init(cx: &mut App) {
     // Suppress the outer Popover toggle bindings inside its content. Deeper
     // control contexts (Button, Input, Select) still retain their own bindings.
     cx.bind_keys([
-        gpui::KeyBinding::new("enter", gpui::NoAction, Some("OmarchyPopoverContent")),
-        gpui::KeyBinding::new("space", gpui::NoAction, Some("OmarchyPopoverContent")),
+        gpui_kit::KeyBinding::new("enter", gpui_kit::NoAction, Some("OmarchyPopoverContent")),
+        gpui_kit::KeyBinding::new("space", gpui_kit::NoAction, Some("OmarchyPopoverContent")),
     ]);
 }
 
@@ -19,7 +19,7 @@ pub(crate) fn init(cx: &mut App) {
 /// and compose `popover_surface(cx)` with your own dimensions and children.
 pub fn popover<E: IntoElement>(
     id: impl Into<ElementId>,
-    trigger: impl gpui_base::Selectable + IntoElement + 'static,
+    trigger: impl gpui_kit::base::Selectable + IntoElement + 'static,
     content: impl FnOnce(&mut PopoverState, &mut Window, &mut Context<PopoverState>) -> E + 'static,
 ) -> Popover {
     Popover::new(id)
@@ -40,7 +40,7 @@ pub fn popover_surface(cx: &App) -> Div {
         .flex_col()
         .gap(px(14.))
         .w(px(280.))
-        .max_w(gpui::relative(1.))
+        .max_w(gpui_kit::relative(1.))
         .p(px(14.))
         .border_1()
         .rounded(px(0.))
@@ -54,7 +54,8 @@ pub fn popover_surface(cx: &App) -> Div {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{FocusHandle, Render, TestAppContext};
+    use gpui_kit::gpui;
+    use gpui_kit::{FocusHandle, Render, TestAppContext};
     struct Harness {
         trigger: FocusHandle,
         checked: bool,
@@ -82,16 +83,16 @@ mod tests {
                                 "hidden",
                                 "Show hidden files",
                                 if checked {
-                                    gpui_base::CheckboxState::Checked
+                                    gpui_kit::base::CheckboxState::Checked
                                 } else {
-                                    gpui_base::CheckboxState::Unchecked
+                                    gpui_kit::base::CheckboxState::Unchecked
                                 },
                                 cx,
                             )
                             .track_focus(&checkbox_focus)
                             .on_change(move |value, _, _, cx| {
                                 target.update(cx, |state, cx| {
-                                    state.checked = value == gpui_base::CheckboxState::Checked;
+                                    state.checked = value == gpui_kit::base::CheckboxState::Checked;
                                     cx.notify();
                                 })
                             }),
@@ -127,13 +128,13 @@ mod tests {
                 "Tab should focus checkbox"
             )
         });
-        let keystroke = gpui::Keystroke::parse("space").unwrap();
-        cx.simulate_event(gpui::KeyDownEvent {
+        let keystroke = gpui_kit::Keystroke::parse("space").unwrap();
+        cx.simulate_event(gpui_kit::KeyDownEvent {
             keystroke: keystroke.clone(),
             is_held: false,
             prefer_character_input: false,
         });
-        cx.simulate_event(gpui::KeyUpEvent { keystroke });
+        cx.simulate_event(gpui_kit::KeyUpEvent { keystroke });
         cx.update(|window, cx| {
             window.draw(cx).clear(cx);
             assert!(view.read(cx).checked);

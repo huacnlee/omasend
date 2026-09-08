@@ -1,5 +1,5 @@
 use super::Home;
-use gpui_omarchy::gpui::{AnyElement, Context, Window, div, prelude::*, px, rems};
+use gpui_kit::{AnyElement, Context, Window, div, prelude::*, px, rems};
 use gpui_omarchy::{
     ActiveTheme, ButtonVariant, IconName, button, dialog, dialog_popup, dialog_title, icon,
 };

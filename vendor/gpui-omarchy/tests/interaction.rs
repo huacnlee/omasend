@@ -1,4 +1,5 @@
-use gpui::{
+use gpui_kit::gpui;
+use gpui_kit::{
     Context, IntoElement, Modifiers, Render, TestAppContext, Window, div, point, prelude::*, px,
 };
 use gpui_omarchy::*;
@@ -34,13 +35,13 @@ fn styled_button_accepts_pointer_return_and_space(cx: &mut TestAppContext) {
     assert_eq!(clicks.get(), 1);
     cx.update(|window, cx| window.draw(cx).clear(cx));
     for key in ["enter", "space"] {
-        let keystroke = gpui::Keystroke::parse(key).unwrap();
-        cx.simulate_event(gpui::KeyDownEvent {
+        let keystroke = gpui_kit::Keystroke::parse(key).unwrap();
+        cx.simulate_event(gpui_kit::KeyDownEvent {
             keystroke: keystroke.clone(),
             is_held: false,
             prefer_character_input: false,
         });
-        cx.simulate_event(gpui::KeyUpEvent { keystroke });
+        cx.simulate_event(gpui_kit::KeyUpEvent { keystroke });
     }
     assert_eq!(clicks.get(), 3);
 }
@@ -59,13 +60,13 @@ fn disabled_styled_button_cannot_activate(cx: &mut TestAppContext) {
     cx.update(|window, cx| window.focus_next(cx));
     cx.update(|window, cx| window.draw(cx).clear(cx));
     for key in ["enter", "space"] {
-        let keystroke = gpui::Keystroke::parse(key).unwrap();
-        cx.simulate_event(gpui::KeyDownEvent {
+        let keystroke = gpui_kit::Keystroke::parse(key).unwrap();
+        cx.simulate_event(gpui_kit::KeyDownEvent {
             keystroke: keystroke.clone(),
             is_held: false,
             prefer_character_input: false,
         });
-        cx.simulate_event(gpui::KeyUpEvent { keystroke });
+        cx.simulate_event(gpui_kit::KeyUpEvent { keystroke });
     }
     assert_eq!(clicks.get(), 0);
 }
@@ -75,9 +76,9 @@ fn applying_theme_updates_base_tokens_and_geometry(cx: &mut TestAppContext) {
     cx.update(|cx| {
         gpui_omarchy::init(cx);
         Theme::flexoki_light().apply(cx);
-        let base = gpui_base::Theme::global(cx);
+        let base = gpui_kit::base::Theme::global(cx);
         assert_eq!(base.tokens.colors, cx.omarchy().tokens());
-        assert_eq!(base.appearance, gpui_base::ThemeAppearance::Light);
+        assert_eq!(base.appearance, gpui_kit::base::ThemeAppearance::Light);
         for radius in [
             base.tokens.radius.none,
             base.tokens.radius.sm,
@@ -93,7 +94,7 @@ fn applying_theme_updates_base_tokens_and_geometry(cx: &mut TestAppContext) {
         for theme in [Theme::tokyo_night(), Theme::flexoki_light()] {
             let style = theme
                 .input_style()
-                .resolved(&gpui_base::SemanticThemeTokens {
+                .resolved(&gpui_kit::base::SemanticThemeTokens {
                     colors: theme.tokens(),
                     ..Default::default()
                 });
@@ -103,7 +104,7 @@ fn applying_theme_updates_base_tokens_and_geometry(cx: &mut TestAppContext) {
         }
         Theme::tokyo_night().apply(cx);
         assert_eq!(
-            gpui_base::Theme::global(cx).tokens.colors,
+            gpui_kit::base::Theme::global(cx).tokens.colors,
             cx.omarchy().tokens()
         );
     });

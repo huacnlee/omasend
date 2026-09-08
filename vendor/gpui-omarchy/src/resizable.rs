@@ -1,6 +1,6 @@
 use crate::ActiveTheme;
-use gpui::{App, Axis, ElementId, div, prelude::*, px};
-use gpui_base::{ResizablePanel, ResizablePanelGroup};
+use gpui_kit::base::{ResizablePanel, ResizablePanelGroup};
+use gpui_kit::{App, Axis, ElementId, div, prelude::*, px};
 use std::rc::Rc;
 
 /// Resizable panes with a fine divider and base-owned drag hit area and limits.
@@ -28,14 +28,15 @@ pub fn resizable(id: impl Into<ElementId>, axis: Axis, cx: &App) -> ResizablePan
 }
 
 pub fn resizable_panel() -> ResizablePanel {
-    gpui_base::resizable_panel()
+    gpui_kit::base::resizable_panel()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Context, Entity, MouseButton, Render, TestAppContext, Window, point};
-    use gpui_base::ResizableState;
+    use gpui_kit::base::ResizableState;
+    use gpui_kit::gpui;
+    use gpui_kit::{Context, Entity, MouseButton, Render, TestAppContext, Window, point};
     struct Harness {
         state: Entity<ResizableState>,
         axis: Axis,

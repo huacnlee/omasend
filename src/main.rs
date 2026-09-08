@@ -5,9 +5,7 @@
 
 mod views;
 
-use gpui_omarchy::gpui::{
-    App, AppContext, Bounds, Entity, Global, WindowBounds, WindowOptions, px, size,
-};
+use gpui_kit::{App, AppContext, Bounds, Entity, Global, WindowBounds, WindowOptions, px, size};
 
 // On macOS the application session survives closing its last native window.
 // Reopening attaches the same entity, preserving the node and pending transfers.
@@ -77,8 +75,7 @@ fn main() -> anyhow::Result<()> {
         cx.on_action(|_: &views::Quit, cx| cx.quit());
         #[cfg(target_os = "macos")]
         cx.set_menus(vec![
-            gpui_omarchy::gpui::Menu::new("Omasend")
-                .items([gpui_omarchy::gpui::MenuItem::action("Exit", views::Quit)]),
+            gpui_kit::Menu::new("Omasend").items([gpui_kit::MenuItem::action("Exit", views::Quit)]),
         ]);
         #[cfg(not(target_os = "macos"))]
         cx.on_window_closed(|cx, _| {
@@ -102,11 +99,11 @@ fn main() -> anyhow::Result<()> {
 #[cfg(all(test, feature = "ui-tests"))]
 mod lifecycle_tests {
     use super::*;
-    use gpui_omarchy::gpui;
+    use gpui_kit::gpui;
 
     #[gpui::test]
     async fn closing_and_reopening_retains_session_without_duplicate_windows(
-        cx: &mut gpui::TestAppContext,
+        cx: &mut gpui_kit::TestAppContext,
     ) {
         // This exercises production preparation on Tokio's blocking pool. Its
         // completion wakes GPUI from a real worker thread, so opt into the test
@@ -128,9 +125,9 @@ mod lifecycle_tests {
                 window_handle: None,
                 modal_focus: cx.focus_handle(),
                 nearby_expanded: false,
-                nearby_scroll: gpui::UniformListScrollHandle::new(),
+                nearby_scroll: gpui_kit::UniformListScrollHandle::new(),
                 history_expanded: false,
-                history_scroll: gpui::ScrollHandle::new(),
+                history_scroll: gpui_kit::ScrollHandle::new(),
                 logs: None,
                 about_open: false,
                 update_state: Default::default(),

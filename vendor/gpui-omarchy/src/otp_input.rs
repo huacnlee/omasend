@@ -1,14 +1,14 @@
 use crate::ActiveTheme;
-use gpui::{App, Entity, Focusable, MouseButton, Window, div, prelude::*, px};
-use gpui_base::{OtpState, StyledExt as _};
+use gpui_kit::base::{OtpState, StyledExt as _};
+use gpui_kit::{App, Entity, Focusable, MouseButton, Window, div, prelude::*, px};
 
 /// Numeric code entry using base state, with clipboard support and inert disabled cells.
 #[derive(IntoElement)]
 pub struct OtpInput {
     state: Entity<OtpState>,
     disabled: bool,
-    style: gpui::StyleRefinement,
-    children: Vec<gpui::AnyElement>,
+    style: gpui_kit::StyleRefinement,
+    children: Vec<gpui_kit::AnyElement>,
 }
 impl OtpInput {
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -17,12 +17,12 @@ impl OtpInput {
     }
 }
 impl Styled for OtpInput {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }
 impl ParentElement for OtpInput {
-    fn extend(&mut self, elements: impl IntoIterator<Item = gpui::AnyElement>) {
+    fn extend(&mut self, elements: impl IntoIterator<Item = gpui_kit::AnyElement>) {
         self.children.extend(elements);
     }
 }
@@ -122,9 +122,9 @@ impl RenderOnce for OtpInput {
                             if !next.is_empty() && next != state.value().as_ref() {
                                 let complete = next.len() == state.len();
                                 state.set_value(next, window, cx);
-                                cx.emit(gpui_base::OtpEvent::Change);
+                                cx.emit(gpui_kit::base::OtpEvent::Change);
                                 if complete {
-                                    cx.emit(gpui_base::OtpEvent::Complete);
+                                    cx.emit(gpui_kit::base::OtpEvent::Complete);
                                 }
                             }
                         });
@@ -158,9 +158,9 @@ impl RenderOnce for OtpInput {
                                 next.push_str(&digit);
                                 let complete = next.chars().count() == state.len();
                                 state.set_value(next, window, cx);
-                                cx.emit(gpui_base::OtpEvent::Change);
+                                cx.emit(gpui_kit::base::OtpEvent::Change);
                                 if complete {
-                                    cx.emit(gpui_base::OtpEvent::Complete);
+                                    cx.emit(gpui_kit::base::OtpEvent::Complete);
                                 }
                             }
                         });
@@ -170,7 +170,7 @@ impl RenderOnce for OtpInput {
                 }
             })
             .child(
-                gpui_base::OtpInput::new(&state)
+                gpui_kit::base::OtpInput::new(&state)
                     .flex()
                     .gap(px(6.))
                     .children(cells)
@@ -183,7 +183,8 @@ impl RenderOnce for OtpInput {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Context, Render, TestAppContext};
+    use gpui_kit::gpui;
+    use gpui_kit::{Context, Render, TestAppContext};
     struct Harness {
         state: Entity<OtpState>,
         disabled: bool,
@@ -233,7 +234,7 @@ mod tests {
             ("2", "３", "13"),
         ] {
             cx.update(|window, cx| {
-                let mut stroke = gpui::Keystroke::parse(key).unwrap();
+                let mut stroke = gpui_kit::Keystroke::parse(key).unwrap();
                 stroke.key_char = Some(character.into());
                 window.dispatch_keystroke(stroke, cx);
                 assert_eq!(view.read(cx).state.read(cx).value().as_ref(), expected);
@@ -252,9 +253,10 @@ mod tests {
         let events = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
         let seen = events.clone();
         view.update(cx, |this, cx| {
-            cx.subscribe(&this.state, move |_, _, event: &gpui_base::OtpEvent, _| {
-                seen.borrow_mut().push(*event)
-            })
+            cx.subscribe(
+                &this.state,
+                move |_, _, event: &gpui_kit::base::OtpEvent, _| seen.borrow_mut().push(*event),
+            )
             .detach();
         });
         cx.update(|window, cx| {
@@ -263,7 +265,7 @@ mod tests {
                 .read(cx)
                 .focus_handle(cx)
                 .focus(window, cx);
-            cx.write_to_clipboard(gpui::ClipboardItem::new_string("１２3-4567".into()));
+            cx.write_to_clipboard(gpui_kit::ClipboardItem::new_string("１２3-4567".into()));
             window.draw(cx).clear(cx);
         });
         let paste = if cfg!(target_os = "macos") {
@@ -277,7 +279,7 @@ mod tests {
             events
                 .borrow()
                 .iter()
-                .filter(|event| **event == gpui_base::OtpEvent::Complete)
+                .filter(|event| **event == gpui_kit::base::OtpEvent::Complete)
                 .count(),
             1
         );
@@ -286,7 +288,7 @@ mod tests {
             events
                 .borrow()
                 .iter()
-                .filter(|event| **event == gpui_base::OtpEvent::Complete)
+                .filter(|event| **event == gpui_kit::base::OtpEvent::Complete)
                 .count(),
             1
         );
@@ -297,7 +299,7 @@ mod tests {
             cx.notify();
         });
         cx.update(|window, cx| window.draw(cx).clear(cx));
-        cx.simulate_click(gpui::point(px(10.), px(10.)), Default::default());
+        cx.simulate_click(gpui_kit::point(px(10.), px(10.)), Default::default());
         cx.simulate_keystrokes("backspace 9");
         cx.simulate_keystrokes(paste);
         cx.update(|_, cx| assert_eq!(view.read(cx).state.read(cx).value().as_ref(), "12345"));
@@ -305,7 +307,7 @@ mod tests {
             window.blur(cx);
             window.draw(cx).clear(cx);
         });
-        cx.simulate_click(gpui::point(px(10.), px(10.)), Default::default());
+        cx.simulate_click(gpui_kit::point(px(10.), px(10.)), Default::default());
         cx.update(|window, cx| {
             assert!(
                 !view

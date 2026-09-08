@@ -1,13 +1,13 @@
 //! Styled constructors retain gpui-base's controlled-state builder APIs.
 use crate::{ActiveTheme, Button, IconName, Link, icon};
-use gpui::prelude::FluentBuilder;
-use gpui::{
-    App, ElementId, FontWeight, InteractiveElement, ParentElement, SharedString,
-    StatefulInteractiveElement, Styled, div, px,
-};
-use gpui_base::{
+use gpui_kit::base::{
     Checkbox, CheckboxIndicator, CheckboxState, Radio, Switch, SwitchThumb, SwitchTrack, Tab, Tabs,
     Toggle,
+};
+use gpui_kit::prelude::FluentBuilder;
+use gpui_kit::{
+    App, ElementId, FontWeight, InteractiveElement, ParentElement, SharedString,
+    StatefulInteractiveElement, Styled, div, px,
 };
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -264,9 +264,9 @@ pub fn toggle(
 
 /// A multi-choice toolbar. Compose independent `toggle` children; each retains
 /// its own keyboard focus and controlled pressed state.
-pub fn toggle_group(id: impl Into<ElementId>, cx: &App) -> gpui_base::ToggleGroup {
+pub fn toggle_group(id: impl Into<ElementId>, cx: &App) -> gpui_kit::base::ToggleGroup {
     let t = cx.omarchy();
-    gpui_base::ToggleGroup::new(id)
+    gpui_kit::base::ToggleGroup::new(id)
         .flex()
         .flex_wrap()
         .items_center()

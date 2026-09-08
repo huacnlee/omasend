@@ -1,15 +1,15 @@
 //! Short, non-interactive explanations with GPUI's tooltip lifecycle.
 use crate::ActiveTheme;
-use gpui::{
+use gpui_kit::{
     App, AppContext, Context, Render, SharedString, StatefulInteractiveElement, Window, prelude::*,
     px,
 };
 use std::time::Duration;
 
 /// A composable tooltip surface, retaining the base tooltip role and styling API.
-pub fn tooltip(text: impl Into<SharedString>, cx: &App) -> gpui_base::Tooltip {
+pub fn tooltip(text: impl Into<SharedString>, cx: &App) -> gpui_kit::base::Tooltip {
     let t = cx.omarchy();
-    gpui_base::Tooltip::new("omarchy-tooltip")
+    gpui_kit::base::Tooltip::new("omarchy-tooltip")
         .max_w(px(320.))
         .px(px(10.))
         .py(px(6.))
@@ -36,7 +36,7 @@ pub fn with_tooltip<T: StatefulInteractiveElement>(control: T, text: impl Into<S
 struct TooltipText(SharedString);
 impl Render for TooltipText {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        gpui::div()
+        gpui_kit::div()
             .debug_selector(|| "omarchy-tooltip-surface".into())
             .child(tooltip(self.0.clone(), cx))
     }
@@ -45,11 +45,12 @@ impl Render for TooltipText {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Render, TestAppContext, point};
+    use gpui_kit::gpui;
+    use gpui_kit::{Render, TestAppContext, point};
     struct Harness;
     impl Render for Harness {
         fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-            gpui::div().size_full().child(with_tooltip(
+            gpui_kit::div().size_full().child(with_tooltip(
                 crate::button("favorite", "Favorite", crate::ButtonVariant::Secondary, cx),
                 "Add to favorites",
             ))
@@ -62,7 +63,7 @@ mod tests {
         cx.update(|window, cx| {
             window.draw(cx).clear(cx);
         });
-        cx.simulate_event(gpui::MouseMoveEvent {
+        cx.simulate_event(gpui_kit::MouseMoveEvent {
             position: point(px(10.), px(10.)),
             pressed_button: None,
             modifiers: Default::default(),
@@ -82,7 +83,7 @@ mod tests {
             window.draw(cx).clear(cx);
         });
         assert!(cx.debug_bounds("omarchy-tooltip-surface").is_some());
-        cx.simulate_event(gpui::MouseMoveEvent {
+        cx.simulate_event(gpui_kit::MouseMoveEvent {
             position: point(px(400.), px(400.)),
             pressed_button: None,
             modifiers: Default::default(),

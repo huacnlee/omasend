@@ -1,6 +1,6 @@
 use super::*;
 use anyhow::{Context as _, Result};
-use gpui_omarchy::gpui::{
+use gpui_kit::{
     self, AnyElement, Context, ExternalPaths, FocusHandle, PathPromptOptions, Window, div,
     prelude::*, rems,
 };
@@ -19,17 +19,17 @@ pub struct Home {
     pub node: Option<Node>,
     pub runtime: tokio::runtime::Handle,
     pub focus: FocusHandle,
-    pub window_handle: Option<gpui::AnyWindowHandle>,
+    pub window_handle: Option<gpui_kit::AnyWindowHandle>,
     pub modal_focus: FocusHandle,
     pub nearby_expanded: bool,
-    pub nearby_scroll: gpui::UniformListScrollHandle,
+    pub nearby_scroll: gpui_kit::UniformListScrollHandle,
     pub history_expanded: bool,
-    pub history_scroll: gpui::ScrollHandle,
+    pub history_scroll: gpui_kit::ScrollHandle,
     pub logs: Option<super::logs::LogsPanel>,
     pub about_open: bool,
     pub update_state: omasend::updates::UpdateState,
     pub show_update_status: bool,
-    pub update_status_dismiss: Option<gpui::Task<()>>,
+    pub update_status_dismiss: Option<gpui_kit::Task<()>>,
     pub restore_focus: Option<FocusHandle>,
     pub preview: Option<String>,
     pub loading_input: bool,
@@ -53,9 +53,9 @@ impl Home {
             window_handle: Some(window.window_handle()),
             modal_focus: cx.focus_handle(),
             nearby_expanded: false,
-            nearby_scroll: gpui::UniformListScrollHandle::new(),
+            nearby_scroll: gpui_kit::UniformListScrollHandle::new(),
             history_expanded: false,
-            history_scroll: gpui::ScrollHandle::new(),
+            history_scroll: gpui_kit::ScrollHandle::new(),
             logs: None,
             about_open: false,
             update_state: Default::default(),
@@ -299,7 +299,7 @@ impl Home {
             let paths: Vec<_> = entries
                 .iter()
                 .filter_map(|entry| {
-                    if let gpui::ClipboardEntry::ExternalPaths(paths) = entry {
+                    if let gpui_kit::ClipboardEntry::ExternalPaths(paths) = entry {
                         Some(paths.0.iter().cloned())
                     } else {
                         None
@@ -313,19 +313,19 @@ impl Home {
                 return;
             }
             if let Some(image) = entries.iter().find_map(|entry| {
-                if let gpui::ClipboardEntry::Image(image) = entry {
+                if let gpui_kit::ClipboardEntry::Image(image) = entry {
                     Some(image)
                 } else {
                     None
                 }
             }) {
                 let mime = match image.format() {
-                    gpui::ImageFormat::Png => "image/png",
-                    gpui::ImageFormat::Jpeg => "image/jpeg",
-                    gpui::ImageFormat::Tiff => "image/tiff",
-                    gpui::ImageFormat::Webp => "image/webp",
-                    gpui::ImageFormat::Gif => "image/gif",
-                    gpui::ImageFormat::Bmp => "image/bmp",
+                    gpui_kit::ImageFormat::Png => "image/png",
+                    gpui_kit::ImageFormat::Jpeg => "image/jpeg",
+                    gpui_kit::ImageFormat::Tiff => "image/tiff",
+                    gpui_kit::ImageFormat::Webp => "image/webp",
+                    gpui_kit::ImageFormat::Gif => "image/gif",
+                    gpui_kit::ImageFormat::Bmp => "image/bmp",
                     _ => {
                         self.state.error = Some("Copy the image as PNG or JPEG".into());
                         cx.notify();
@@ -345,7 +345,7 @@ impl Home {
                 let items = entries
                     .into_iter()
                     .filter_map(|entry| {
-                        if let gpui::ClipboardEntry::String(value) = entry {
+                        if let gpui_kit::ClipboardEntry::String(value) = entry {
                             Some(SendItem::Text(value.text().clone()))
                         } else {
                             None
@@ -662,7 +662,7 @@ impl Render for Home {
                             .child(
                                 div()
                                     .text_color(theme.bright)
-                                    .font_weight(gpui::FontWeight::BOLD)
+                                    .font_weight(gpui_kit::FontWeight::BOLD)
                                     .child("Omasend"),
                             ),
                     )
@@ -817,7 +817,7 @@ impl Render for Home {
                                     .child(
                                         div()
                                             .flex_shrink_0()
-                                            .font_weight(gpui::FontWeight::BOLD)
+                                            .font_weight(gpui_kit::FontWeight::BOLD)
                                             .text_color(theme.bright)
                                             .child(self.language.text("Outbox")),
                                     )
@@ -958,7 +958,8 @@ impl Render for Home {
 #[cfg(all(test, feature = "ui-tests"))]
 mod keyboard_tests {
     use super::*;
-    use gpui::{KeyDownEvent, KeyUpEvent, Keystroke, TestAppContext};
+    use gpui_kit::gpui;
+    use gpui_kit::{KeyDownEvent, KeyUpEvent, Keystroke, TestAppContext};
 
     #[gpui::test]
     fn update_restart_preserves_outbox_and_check_does_not_interrupt_install(
@@ -1003,7 +1004,7 @@ mod keyboard_tests {
     }
     fn with_home(
         cx: &mut TestAppContext,
-        test: impl FnOnce(gpui::Entity<Home>, &mut gpui::VisualTestContext),
+        test: impl FnOnce(gpui_kit::Entity<Home>, &mut gpui_kit::VisualTestContext),
     ) {
         cx.update(|cx| {
             gpui_omarchy::init(cx);
@@ -1030,9 +1031,9 @@ mod keyboard_tests {
                 focus,
                 modal_focus: cx.focus_handle(),
                 nearby_expanded: false,
-                nearby_scroll: gpui::UniformListScrollHandle::new(),
+                nearby_scroll: gpui_kit::UniformListScrollHandle::new(),
                 history_expanded: false,
-                history_scroll: gpui::ScrollHandle::new(),
+                history_scroll: gpui_kit::ScrollHandle::new(),
                 logs: None,
                 about_open: false,
                 update_state: Default::default(),
@@ -1055,17 +1056,24 @@ mod keyboard_tests {
             cx.update(|window, cx| {
                 assert!(*cx.global::<ThemeMode>() == ThemeMode::System);
                 ThemeMode::Light.apply(window, cx);
-                assert_eq!(cx.omarchy().appearance, gpui_base::ThemeAppearance::Light);
+                assert_eq!(
+                    cx.omarchy().appearance,
+                    gpui_kit::base::ThemeAppearance::Light
+                );
                 ThemeMode::Dark.apply(window, cx);
-                assert_eq!(cx.omarchy().appearance, gpui_base::ThemeAppearance::Dark);
+                assert_eq!(
+                    cx.omarchy().appearance,
+                    gpui_kit::base::ThemeAppearance::Dark
+                );
                 ThemeMode::System.apply(window, cx);
                 if !cfg!(target_os = "linux") {
                     let light = matches!(
                         window.appearance(),
-                        gpui::WindowAppearance::Light | gpui::WindowAppearance::VibrantLight
+                        gpui_kit::WindowAppearance::Light
+                            | gpui_kit::WindowAppearance::VibrantLight
                     );
                     assert_eq!(
-                        cx.omarchy().appearance == gpui_base::ThemeAppearance::Light,
+                        cx.omarchy().appearance == gpui_kit::base::ThemeAppearance::Light,
                         light
                     );
                 }
@@ -1102,13 +1110,13 @@ mod keyboard_tests {
         let (view, cx) = cx.add_window_view(|_, _| MenuHarness { selected: None });
         cx.update(|window, cx| window.draw(cx).clear(cx));
         cx.simulate_click(
-            gpui::point(gpui::px(15.), gpui::px(12.)),
+            gpui_kit::point(gpui_kit::px(15.), gpui_kit::px(12.)),
             Default::default(),
         );
         cx.update(|window, cx| window.draw(cx).clear(cx));
         let parent = cx.debug_bounds("omarchy-menu-content").unwrap();
         cx.simulate_click(
-            parent.origin + gpui::point(gpui::px(24.), gpui::px(20.)),
+            parent.origin + gpui_kit::point(gpui_kit::px(24.), gpui_kit::px(20.)),
             Default::default(),
         );
         cx.update(|window, cx| window.draw(cx).clear(cx));
@@ -1120,7 +1128,7 @@ mod keyboard_tests {
             .debug_bounds("omarchy-submenu-content")
             .expect("Theme must open its flyout");
         cx.simulate_click(
-            child.origin + gpui::point(gpui::px(24.), gpui::px(50.)),
+            child.origin + gpui_kit::point(gpui_kit::px(24.), gpui_kit::px(50.)),
             Default::default(),
         );
         cx.update(|window, cx| window.draw(cx).clear(cx));
@@ -1391,7 +1399,7 @@ mod keyboard_tests {
             view.read_with(cx, |view, _| {
                 let scroll = &view.history_scroll;
                 assert!(
-                    scroll.max_offset().y > gpui::px(0.),
+                    scroll.max_offset().y > gpui_kit::px(0.),
                     "fixture must overflow the dock"
                 );
                 assert_eq!(
@@ -1440,7 +1448,7 @@ mod keyboard_tests {
             view.update_in(cx, |view, window, cx| view.open_history(window, cx));
             cx.update(|window, cx| window.draw(cx).clear(cx));
             cx.simulate_click(
-                gpui::point(gpui::px(10.), gpui::px(10.)),
+                gpui_kit::point(gpui_kit::px(10.), gpui_kit::px(10.)),
                 Default::default(),
             );
             cx.update(|window, cx| {
@@ -1480,7 +1488,7 @@ mod keyboard_tests {
                 let text = clipboard
                     .into_entries()
                     .filter_map(|entry| match entry {
-                        gpui::ClipboardEntry::String(value) => Some(value.text().clone()),
+                        gpui_kit::ClipboardEntry::String(value) => Some(value.text().clone()),
                         _ => None,
                     })
                     .collect::<Vec<_>>()

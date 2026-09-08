@@ -12,7 +12,7 @@
 [package]
 edition = "2024"
 name = "gpui-omarchy"
-version = "0.1.0"
+version = "0.1.1"
 build = false
 exclude = [
     "website/**",
@@ -47,25 +47,18 @@ path = "tests/interaction.rs"
 [dependencies.chrono]
 version = "0.4.45"
 
-[dependencies.gpui]
+[dependencies.gpui-kit]
 version = "=0.6.0"
+features = ["assets"]
 default-features = false
-package = "gpui-kit"
-
-[dependencies.gpui-base]
-version = "=0.6.0"
-
-[dependencies.gpui-kit-assets]
-version = "=0.6.0"
 
 [dependencies.toml]
 version = "0.8"
 
-[dev-dependencies.gpui]
+[dev-dependencies.gpui-kit]
 version = "=0.6.0"
 features = ["test-support"]
 default-features = false
-package = "gpui-kit"
 
 [dev-dependencies.tempfile]
 version = "3"

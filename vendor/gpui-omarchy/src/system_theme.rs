@@ -1,7 +1,7 @@
 //! Omarchy's current theme is a directory (or symlink), not an OS identity flag.
 use crate::Theme;
-use gpui::{Hsla, Rgba, rgb};
-use gpui_base::ThemeAppearance;
+use gpui_kit::base::ThemeAppearance;
+use gpui_kit::{Hsla, Rgba, rgb};
 use std::{fmt, fs, path::Path};
 
 #[derive(Debug)]
@@ -15,12 +15,12 @@ impl std::error::Error for ThemeLoadError {}
 
 #[cfg(not(target_family = "wasm"))]
 struct SystemThemeWatcher {
-    _task: gpui::Task<()>,
+    _task: gpui_kit::Task<()>,
 }
 #[cfg(not(target_family = "wasm"))]
-impl gpui::Global for SystemThemeWatcher {}
+impl gpui_kit::Global for SystemThemeWatcher {}
 
-pub(crate) fn stop_following(cx: &mut gpui::App) {
+pub(crate) fn stop_following(cx: &mut gpui_kit::App) {
     #[cfg(not(target_family = "wasm"))]
     if cx.try_global::<SystemThemeWatcher>().is_some() {
         cx.remove_global::<SystemThemeWatcher>();
@@ -33,7 +33,7 @@ impl Theme {
     /// Apply the system palette and follow changes until an explicit theme is applied.
     /// Native apps check once per second off the UI thread, following replaced symlinks.
     /// Browsers use the default palette without filesystem monitoring.
-    pub fn follow_system(cx: &mut gpui::App) {
+    pub fn follow_system(cx: &mut gpui_kit::App) {
         #[cfg(not(target_family = "wasm"))]
         Self::follow_system_from_home(std::env::var_os("HOME").map(Into::into), cx);
         #[cfg(target_family = "wasm")]
@@ -41,7 +41,7 @@ impl Theme {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    fn follow_system_from_home(home: Option<std::path::PathBuf>, cx: &mut gpui::App) {
+    fn follow_system_from_home(home: Option<std::path::PathBuf>, cx: &mut gpui_kit::App) {
         let mut previous = Self::system_from_home(home.as_deref());
         previous.clone().apply(cx);
         let task = cx.spawn(async move |cx| {
@@ -213,11 +213,12 @@ fn contrast(a: Hsla, b: Hsla) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gpui_kit::gpui;
     const ANSI: &str = "background = '#fffcf0'\nforeground = '#100f0f'\naccent = '#205ea6'\ncolor1 = '#af3029'\ncolor2 = '#526600'\ncolor3 = '#855b00'\n";
     #[cfg(unix)]
     #[gpui::test]
     fn following_system_tracks_symlink_replacement_edits_and_recovery(
-        cx: &mut gpui::TestAppContext,
+        cx: &mut gpui_kit::TestAppContext,
     ) {
         let home = tempfile::tempdir().unwrap();
         let current = home.path().join(".local/state/omarchy/current");
@@ -230,7 +231,7 @@ mod tests {
         }
         std::os::unix::fs::symlink(&first, current.join("theme")).unwrap();
         cx.update(|cx| {
-            gpui_base::init(cx);
+            gpui_kit::base::init(cx);
             Theme::follow_system_from_home(Some(home.path().into()), cx);
         });
         cx.run_until_parked();
@@ -261,7 +262,7 @@ mod tests {
             assert_eq!(cx.global::<Theme>().name.as_ref(), "Recovered");
             assert_eq!(cx.global::<Theme>().accent, Hsla::from(rgb(0x205ea6)));
             assert_eq!(
-                gpui_base::Theme::global(cx).tokens.colors.primary,
+                gpui_kit::base::Theme::global(cx).tokens.colors.primary,
                 Hsla::from(rgb(0x205ea6))
             );
         });
@@ -270,14 +271,14 @@ mod tests {
     #[cfg(not(target_family = "wasm"))]
     #[gpui::test]
     fn explicit_theme_stops_following_and_system_can_be_selected_again(
-        cx: &mut gpui::TestAppContext,
+        cx: &mut gpui_kit::TestAppContext,
     ) {
         let home = tempfile::tempdir().unwrap();
         let current = home.path().join(".local/state/omarchy/current/theme");
         fs::create_dir_all(&current).unwrap();
         fs::write(current.join("colors.toml"), ANSI).unwrap();
         cx.update(|cx| {
-            gpui_base::init(cx);
+            gpui_kit::base::init(cx);
             Theme::follow_system_from_home(Some(home.path().into()), cx);
         });
         cx.run_until_parked();

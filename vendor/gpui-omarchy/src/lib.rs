@@ -4,10 +4,10 @@
 //! inside `Render`. They retain base builder APIs; Button adds disabled-state style gating.
 
 /// GPUI types and traits used to compose Omarchy applications.
-pub use gpui;
+pub use gpui_kit;
 /// Create an application using the current desktop platform.
 #[cfg(not(target_family = "wasm"))]
-pub use gpui::application;
+pub use gpui_kit::application;
 
 pub mod button;
 pub mod button_group;
@@ -70,8 +70,8 @@ pub use tooltip::{tooltip, with_tooltip};
 pub use tree::tree;
 
 /// Initialize base behavior and the current Omarchy theme (Tokyo Night when unavailable).
-pub fn init(cx: &mut gpui::App) {
-    gpui_base::init(cx);
+pub fn init(cx: &mut gpui_kit::App) {
+    gpui_kit::base::init(cx);
     focus::init(cx);
     button_group::init(cx);
     popover::init(cx);

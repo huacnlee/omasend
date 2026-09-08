@@ -1,7 +1,5 @@
 use super::Home;
-use gpui_omarchy::gpui::{
-    self, AnyElement, Context, Pixels, SharedString, Window, div, prelude::*, rems,
-};
+use gpui_kit::{self, AnyElement, Context, Pixels, SharedString, Window, div, prelude::*, rems};
 use gpui_omarchy::{ActiveTheme, ButtonVariant, IconName, avatar, button, icon};
 
 impl Home {
@@ -29,7 +27,7 @@ impl Home {
                 )
                 .into_any_element()
         } else {
-            gpui::uniform_list(
+            gpui_kit::uniform_list(
                 "nearby-list",
                 rows,
                 cx.processor(move |view, range: std::ops::Range<usize>, _, cx| {
@@ -78,7 +76,7 @@ impl Home {
                             .gap_2()
                             .child(
                                 div()
-                                    .font_weight(gpui::FontWeight::BOLD)
+                                    .font_weight(gpui_kit::FontWeight::BOLD)
                                     .child(self.language.text("Nearby")),
                             )
                             .child(
@@ -113,7 +111,7 @@ impl Home {
                             .on_click(cx.listener(|view, _, _, cx| {
                                 view.nearby_expanded = !view.nearby_expanded;
                                 view.nearby_scroll
-                                    .scroll_to_item(0, gpui::ScrollStrategy::Top);
+                                    .scroll_to_item(0, gpui_kit::ScrollStrategy::Top);
                                 cx.notify();
                             })),
                         )
@@ -234,7 +232,7 @@ impl Home {
         {
             self.nearby_scroll.scroll_to_item(
                 index / nearby_layout(window).0,
-                gpui::ScrollStrategy::Center,
+                gpui_kit::ScrollStrategy::Center,
             );
         }
     }

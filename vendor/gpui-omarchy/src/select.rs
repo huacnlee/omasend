@@ -1,10 +1,10 @@
 //! Select and searchable Combobox presentations over the controlled base roots.
 use crate::{ActiveTheme, ButtonVariant, IconName, button, icon, input};
-use gpui::{
+use gpui_kit::base::{Combobox, ElementExt as _, Popup, Select, input::InputState};
+use gpui_kit::{
     App, Context, ElementId, Entity, FocusHandle, Focusable, SharedString, Window, div, prelude::*,
     px,
 };
-use gpui_base::{Combobox, ElementExt as _, Popup, Select, input::InputState};
 
 #[derive(Clone, Debug)]
 pub struct ChoiceItem {
@@ -40,16 +40,16 @@ pub struct ChoiceState {
     popup_focus: FocusHandle,
     query: Entity<InputState>,
     searchable: bool,
-    scroll: gpui::ScrollHandle,
-    popup_width: gpui::Pixels,
+    scroll: gpui_kit::ScrollHandle,
+    popup_width: gpui_kit::Pixels,
 }
 impl ChoiceState {
     pub fn new(items: Vec<ChoiceItem>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let query = cx.new(|cx| InputState::new(window, cx).placeholder("Search options…"));
         cx.subscribe(
             &query,
-            |this, _, event: &gpui_base::input::InputEvent, cx| {
-                if !matches!(event, gpui_base::input::InputEvent::Change) {
+            |this, _, event: &gpui_kit::base::input::InputEvent, cx| {
+                if !matches!(event, gpui_kit::base::input::InputEvent::Change) {
                     return;
                 }
                 this.cursor = if this.query.read(cx).value().trim().is_empty() {
@@ -60,7 +60,7 @@ impl ChoiceState {
                         .into_iter()
                         .find(|&i| !this.items[i].disabled)
                 };
-                this.scroll.set_offset(gpui::point(px(0.), px(0.)));
+                this.scroll.set_offset(gpui_kit::point(px(0.), px(0.)));
                 cx.notify();
             },
         )
@@ -77,7 +77,7 @@ impl ChoiceState {
             popup_focus: cx.focus_handle(),
             query,
             searchable: false,
-            scroll: gpui::ScrollHandle::new(),
+            scroll: gpui_kit::ScrollHandle::new(),
             popup_width: px(280.),
         }
     }
@@ -334,7 +334,7 @@ fn presentation(
             .track_focus(&focus)
             .mt(px(4.))
             .w(popup_width)
-            .max_w(gpui::relative(1.))
+            .max_w(gpui_kit::relative(1.))
             .p(px(6.))
             .border_1()
             .border_color(t.control_border())
@@ -350,7 +350,7 @@ fn presentation(
                     state.set_open(false, window, cx);
                 })
             })
-            .on_action(move |_: &gpui_base::actions::Confirm, window, cx| {
+            .on_action(move |_: &gpui_kit::base::actions::Confirm, window, cx| {
                 cx.stop_propagation();
                 confirm.update(cx, |state, cx| state.commit(window, cx));
             });
@@ -364,7 +364,7 @@ fn presentation(
         }
         let mut rows = div()
             .id("choice-options")
-            .role(gpui::Role::ListBox)
+            .role(gpui_kit::Role::ListBox)
             .max_h(px(224.))
             .overflow_y_scroll()
             .track_scroll(&scroll)
@@ -386,7 +386,7 @@ fn presentation(
                 button(("choice-option", index), "", ButtonVariant::Secondary, cx)
                     .accessibility_label(item.label.clone())
                     .debug_selector(move || format!("omarchy-choice-option-{index}").into())
-                    .role(gpui::Role::ListBoxOption)
+                    .role(gpui_kit::Role::ListBoxOption)
                     .aria_selected(selected == Some(index))
                     .when(cursor == Some(index), |row| row.aria_active_descendant())
                     .focusable(false)
@@ -457,16 +457,16 @@ fn presentation(
             });
         }};
     }
-    action!(gpui_base::actions::Confirm, "enter");
-    action!(gpui_base::actions::Cancel, "escape");
-    action!(gpui_base::actions::SelectUp, "up");
-    action!(gpui_base::actions::SelectDown, "down");
-    action!(gpui_base::input::Enter, "enter");
-    action!(gpui_base::input::Escape, "escape");
-    action!(gpui_base::input::MoveUp, "up");
-    action!(gpui_base::input::MoveDown, "down");
-    action!(gpui_base::input::IndentInline, "tab");
-    action!(gpui_base::input::OutdentInline, "shift-tab");
+    action!(gpui_kit::base::actions::Confirm, "enter");
+    action!(gpui_kit::base::actions::Cancel, "escape");
+    action!(gpui_kit::base::actions::SelectUp, "up");
+    action!(gpui_kit::base::actions::SelectDown, "down");
+    action!(gpui_kit::base::input::Enter, "enter");
+    action!(gpui_kit::base::input::Escape, "escape");
+    action!(gpui_kit::base::input::MoveUp, "up");
+    action!(gpui_kit::base::input::MoveDown, "down");
+    action!(gpui_kit::base::input::IndentInline, "tab");
+    action!(gpui_kit::base::input::OutdentInline, "shift-tab");
     let target = state.clone();
     root.capture_key_down(move |event, window, cx| {
         if disabled {
@@ -513,7 +513,8 @@ fn presentation(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Render, TestAppContext, VisualTestContext};
+    use gpui_kit::gpui;
+    use gpui_kit::{Render, TestAppContext, VisualTestContext};
     struct Harness {
         state: Entity<ChoiceState>,
         searchable: bool,
@@ -653,7 +654,10 @@ mod tests {
     fn disabled_choice_does_not_open(cx: &mut TestAppContext) {
         let (state, cx) = harness(cx, false, true);
         cx.simulate_keystrokes("down enter space");
-        cx.simulate_click(gpui::point(px(10.), px(10.)), gpui::Modifiers::default());
+        cx.simulate_click(
+            gpui_kit::point(px(10.), px(10.)),
+            gpui_kit::Modifiers::default(),
+        );
         cx.update(|_, cx| assert!(!state.read(cx).open));
     }
     #[gpui::test]
@@ -687,7 +691,7 @@ mod tests {
             window.draw(cx).clear(cx);
         });
         let row = cx.debug_bounds("omarchy-choice-option-2").unwrap();
-        cx.simulate_click(row.center(), gpui::Modifiers::default());
+        cx.simulate_click(row.center(), gpui_kit::Modifiers::default());
         cx.update(|window, cx| {
             window.draw(cx).clear(cx);
             assert!(!state.read(cx).open);
@@ -697,7 +701,10 @@ mod tests {
         cx.update(|window, cx| {
             window.draw(cx).clear(cx);
         });
-        cx.simulate_click(gpui::point(px(400.), px(400.)), gpui::Modifiers::default());
+        cx.simulate_click(
+            gpui_kit::point(px(400.), px(400.)),
+            gpui_kit::Modifiers::default(),
+        );
         cx.update(|window, cx| {
             window.draw(cx).clear(cx);
             assert!(!state.read(cx).open);

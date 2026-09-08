@@ -1,7 +1,5 @@
-use gpui_omarchy::{
-    Theme,
-    gpui::{App, Global, Window, WindowAppearance},
-};
+use gpui_kit::{App, Global, Window, WindowAppearance};
+use gpui_omarchy::Theme;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub enum ThemeMode {

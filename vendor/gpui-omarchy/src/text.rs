@@ -1,19 +1,19 @@
 //! Read-only rich text using base's Markdown and HTML renderers.
 use crate::ActiveTheme;
-use gpui::{App, ElementId, SharedString, StyleRefinement, Styled, px, rems};
-use gpui_base::{TextView, TextViewStyle};
+use gpui_kit::base::{TextView, TextViewStyle};
+use gpui_kit::{App, ElementId, SharedString, StyleRefinement, Styled, px, rems};
 
 /// Theme mapping shared by Markdown, HTML and state-backed TextViews.
 pub fn text_view_style(cx: &App) -> TextViewStyle {
     let t = cx.omarchy();
-    TextViewStyle::from_theme(&gpui_base::Theme::global(cx))
+    TextViewStyle::from_theme(&gpui_kit::base::Theme::global(cx))
         .with_foreground(t.foreground)
         .with_muted_foreground(t.secondary)
         .with_link(t.accent)
         .with_selection(t.foreground.opacity(0.35))
         .with_border(t.divider())
         .with_code_background(t.normal_fill())
-        .with_inline_code(gpui::HighlightStyle {
+        .with_inline_code(gpui_kit::HighlightStyle {
             background_color: Some(t.normal_fill()),
             ..Default::default()
         })
@@ -49,7 +49,8 @@ pub fn html(id: impl Into<ElementId>, source: impl Into<SharedString>, cx: &App)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Context, IntoElement, Render, TestAppContext, Window, div, point, prelude::*};
+    use gpui_kit::gpui;
+    use gpui_kit::{Context, IntoElement, Render, TestAppContext, Window, div, point, prelude::*};
 
     struct Document {
         html: bool,

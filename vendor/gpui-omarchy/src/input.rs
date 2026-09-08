@@ -1,12 +1,12 @@
 //! Native text editing, selection, clipboard and IME supplied by gpui-base.
 use crate::ActiveTheme;
-use gpui::{
-    App, ElementId, Entity, Focusable, InteractiveElement, MouseButton, ParentElement, Styled,
-    Window, px,
-};
-use gpui_base::{
+use gpui_kit::base::{
     Input, InputBase, Textarea,
     input::{InputState, TextareaState},
+};
+use gpui_kit::{
+    App, ElementId, Entity, Focusable, InteractiveElement, MouseButton, ParentElement, Styled,
+    Window, px,
 };
 
 fn frame(id: impl Into<ElementId>, focused: bool, cx: &App) -> InputBase {
@@ -66,15 +66,15 @@ pub fn textarea(
 }
 
 /// Numeric editing with native arrow-key stepping and paired step buttons.
-pub fn number_input(state: &Entity<InputState>, cx: &mut App) -> gpui_base::NumberInput {
-    use gpui::ParentElement as _;
+pub fn number_input(state: &Entity<InputState>, cx: &mut App) -> gpui_kit::base::NumberInput {
+    use gpui_kit::ParentElement as _;
     let t = cx.omarchy().clone();
     state.update(cx, |state, cx| {
         state.set_editor_style(t.input_style());
-        state.set_text_align(gpui::TextAlign::Center, cx);
+        state.set_text_align(gpui_kit::TextAlign::Center, cx);
     });
     let minus = t.clone();
-    gpui_base::NumberInput::new(state)
+    gpui_kit::base::NumberInput::new(state)
         .w(px(120.))
         .h(px(28.))
         .flex()
@@ -87,7 +87,7 @@ pub fn number_input(state: &Entity<InputState>, cx: &mut App) -> gpui_base::Numb
         .font_family(t.font.clone())
         .text_size(px(12.))
         .input(
-            gpui::div()
+            gpui_kit::div()
                 .flex_1()
                 .min_w_0()
                 .px(px(10.))

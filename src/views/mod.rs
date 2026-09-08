@@ -8,7 +8,7 @@ mod panels;
 pub mod theme;
 mod updates;
 
-use gpui_omarchy::gpui::{App, KeyBinding, actions};
+use gpui_kit::{App, KeyBinding, actions};
 pub use home::Home;
 
 // Application spacing uses a 4px grid, expressed in rems to follow text scale.
