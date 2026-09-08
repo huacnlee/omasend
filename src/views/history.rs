@@ -6,6 +6,45 @@ use gpui_omarchy::{ActiveTheme, ButtonVariant, IconName, button, icon, progress,
 use omasend::model::{Transfer, TransferStatus};
 
 impl Home {
+    pub fn active_sends(&self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = cx.omarchy().clone();
+        div()
+            .id("active-sends")
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
+            .children(
+                self.state
+                    .transfers
+                    .iter()
+                    .filter(|transfer| {
+                        transfer.sending && transfer.status == TransferStatus::Active
+                    })
+                    .map(|transfer| {
+                        div()
+                            .border_1()
+                            .border_color(theme.divider())
+                            .px_3()
+                            .child(self.transfer_row(transfer, true, cx))
+                    }),
+            )
+            .into_any_element()
+    }
+
+    pub fn history_button(&self, cx: &mut Context<Self>) -> AnyElement {
+        button("toggle-transfer-history", "", ButtonVariant::Secondary, cx)
+            .accessibility_label(self.language.text("Transfer history"))
+            .map(|button| {
+                gpui_omarchy::with_tooltip(button, self.language.text("Transfer history"))
+            })
+            .disabled(self.state.transfers.is_empty())
+            .child(icon(IconName::ChevronUp).size(rems(0.875)))
+            .on_click(cx.listener(|view, _, window, cx| view.open_history(window, cx)))
+            .into_any_element()
+    }
+
     pub fn transfers(&self, cx: &mut Context<Self>) -> AnyElement {
         let theme = cx.omarchy().clone();
         let mut footer = div()
@@ -192,7 +231,7 @@ impl Home {
     fn transfer_row(
         &self,
         transfer: &Transfer,
-        expandable: bool,
+        compact: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let theme = cx.omarchy().clone();
@@ -246,27 +285,9 @@ impl Home {
                                 },
                             )),
                         )
-                    })
-                    .when(expandable, |row| {
-                        row.child(
-                            button("toggle-transfer-history", "", ButtonVariant::Secondary, cx)
-                                .accessibility_label(self.language.text("Transfer history"))
-                                .map(|button| {
-                                    gpui_omarchy::with_tooltip(
-                                        button,
-                                        self.language.text("Transfer history"),
-                                    )
-                                })
-                                .flex_shrink_0()
-                                .p_1()
-                                .child(icon(IconName::ChevronUp).size(rems(0.875)))
-                                .on_click(cx.listener(|view, _, window, cx| {
-                                    view.open_history(window, cx);
-                                })),
-                        )
                     }),
             )
-            .when(!expandable, |row| {
+            .when(!compact, |row| {
                 row.child(div().text_color(theme.secondary).child(format!(
                     "{} · {}",
                     self.language.named(

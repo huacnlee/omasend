@@ -78,6 +78,10 @@ impl Language {
 }
 
 const CATALOG: &[(&str, &str)] = &[
+    ("Connecting…", "正在连接…"),
+    ("Disconnected", "未连接"),
+    ("Searching for devices…", "正在搜索设备…"),
+    ("Connected", "已连接"),
     ("The receiver requires a PIN", "接收方需要 PIN 码"),
     ("The receiver declined the transfer", "接收方拒绝了传输"),
     (

@@ -1,7 +1,8 @@
 use super::*;
 use anyhow::{Context as _, Result};
 use gpui_omarchy::gpui::{
-    self, Context, ExternalPaths, FocusHandle, PathPromptOptions, Window, div, prelude::*, rems,
+    self, AnyElement, Context, ExternalPaths, FocusHandle, PathPromptOptions, Window, div,
+    prelude::*, rems,
 };
 use gpui_omarchy::{
     ActiveTheme, ButtonVariant, IconName, MenuItem, button, focus_scope, icon, menu, separator,
@@ -421,6 +422,56 @@ impl Home {
     }
 }
 
+impl Home {
+    fn status_bar(&self, cx: &Context<Self>) -> AnyElement {
+        let theme = cx.omarchy();
+        let name = self
+            .node
+            .as_ref()
+            .map(|node| node.device.alias.clone())
+            .unwrap_or_else(|| gethostname::gethostname().to_string_lossy().into_owned());
+        let (status, color) = if self.starting {
+            ("Connecting…", theme.secondary)
+        } else if self.node.is_none() {
+            ("Disconnected", theme.danger)
+        } else if self.state.devices.is_empty() {
+            ("Searching for devices…", theme.secondary)
+        } else {
+            ("Connected", theme.success)
+        };
+        div()
+            .id("status-bar")
+            .flex()
+            .items_center()
+            .flex_shrink_0()
+            .gap_3()
+            .px_4()
+            .h(rems(1.75))
+            .border_t_1()
+            .border_color(theme.divider())
+            .text_size(rems(0.6875))
+            .text_color(theme.secondary)
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .child(name),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .flex_shrink_0()
+                    .child(div().size(rems(0.3)).bg(color))
+                    .child(self.language.text(status)),
+            )
+            .into_any_element()
+    }
+}
+
 impl Render for Home {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // Keep the application and popup controls in the same mono face.
@@ -661,10 +712,22 @@ impl Render for Home {
                                             .text_color(theme.secondary)
                                             .child(
                                                 self.state
-                                                    .selected_device()
-                                                    .map(|device| {
+                                                    .transfers
+                                                    .iter()
+                                                    .find(|transfer| {
+                                                        transfer.sending
+                                                            && transfer.status
+                                                                == TransferStatus::Active
+                                                    })
+                                                    .map(|transfer| {
                                                         self.language
-                                                            .named("to {name}", &device.alias)
+                                                            .named("to {name}", &transfer.peer)
+                                                    })
+                                                    .or_else(|| {
+                                                        self.state.selected_device().map(|device| {
+                                                            self.language
+                                                                .named("to {name}", &device.alias)
+                                                        })
                                                     })
                                                     .unwrap_or_else(|| {
                                                         self.language
@@ -698,7 +761,11 @@ impl Render for Home {
                                 },
                             )),
                     )
-                    .child(self.composer(cx))
+                    .child(if self.state.sending() {
+                        self.active_sends(cx)
+                    } else {
+                        self.composer(cx)
+                    })
                     .child(
                         div()
                             .flex()
@@ -739,18 +806,26 @@ impl Render for Home {
                                     ),
                             )
                             .child(
-                                button("send", "", ButtonVariant::Primary, cx)
-                                    .accessibility_label(send_label)
-                                    .child(icon(IconName::Send).size(rems(0.875)))
-                                    .child(send_label)
-                                    .disabled(!can_send)
-                                    .on_click(cx.listener(|view, _, window, cx| {
-                                        view.send(&Confirm, window, cx)
-                                    })),
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap_2()
+                                    .child(self.history_button(cx))
+                                    .child(
+                                        button("send", "", ButtonVariant::Primary, cx)
+                                            .accessibility_label(send_label)
+                                            .child(icon(IconName::Send).size(rems(0.875)))
+                                            .child(send_label)
+                                            .disabled(!can_send)
+                                            .on_click(cx.listener(|view, _, window, cx| {
+                                                view.send(&Confirm, window, cx)
+                                            })),
+                                    ),
                             ),
                     ),
             )
-            .child(self.transfers(cx));
+            .when(!self.state.sending(), |root| root.child(self.transfers(cx)))
+            .child(self.status_bar(cx));
         if self.logs.is_some() && self.state.incoming.is_none() {
             root = root.child(self.logs_overlay(window, cx));
         } else if self.history_expanded && self.state.incoming.is_none() && self.preview.is_none() {

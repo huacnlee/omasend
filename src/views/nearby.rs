@@ -79,28 +79,6 @@ impl Home {
                                     .child(self.state.devices.len().to_string()),
                             ),
                     )
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w_0()
-                            .text_right()
-                            .text_ellipsis()
-                            .overflow_hidden()
-                            .text_size(rems(0.6875))
-                            .text_color(theme.secondary)
-                            .child(
-                                self.node
-                                    .as_ref()
-                                    .map(|node| {
-                                        format!(
-                                            "{}: {}",
-                                            self.language.text("You"),
-                                            node.device.alias
-                                        )
-                                    })
-                                    .unwrap_or_default(),
-                            ),
-                    )
                     .when(self.state.devices.len() > columns, |header| {
                         header.child(
                             button(
