@@ -1,0 +1,18 @@
+{
+  "fill": { "solid": "srgb:0.09412,0.09804,0.14118,1.00000" },
+  "groups": [
+    {
+      "layers": [
+        {
+          "glass": false,
+          "image-name": "omasend.png",
+          "name": "OmaSend pixel mark"
+        }
+      ],
+      "shadow": { "kind": "neutral", "opacity": 0 },
+      "specular": false,
+      "translucency": { "enabled": false, "value": 0 }
+    }
+  ],
+  "supported-platforms": { "squares": "shared" }
+}

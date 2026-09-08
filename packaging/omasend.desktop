@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Omasend
+Comment=Send files and text to nearby LocalSend devices
+Comment[zh_CN]=向附近的 LocalSend 设备发送文件和文字
+Exec=omasend
+Icon=omasend
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=LocalSend;Send;Share;LAN;
+StartupWMClass=omasend
