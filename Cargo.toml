@@ -21,14 +21,18 @@ chrono = "0.4"
 cap-std = "3"
 dirs = "6"
 futures-util = "0.3"
-gpui-omarchy = { version = "=0.1.1", optional = true }
-gpui-kit = { version = "=0.6.0", default-features = false, optional = true }
+gpui-omarchy = { version = "0.1.2", optional = true }
+# gpui-kit-assets carries the shared Lucide IconName from longbridge/gpui-kit#3020.
+# Move back to a published version once that release is out.
+gpui-kit = { version = "0.6.1", default-features = false, features = ["assets"], optional = true }
 localsend = { path = "vendor/localsend", features = ["discovery"] }
 if-addrs = "0.15"
 gethostname = "1.1"
 mime_guess = "2"
 semver = "1"
+rust-i18n = "3"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tempfile = "3"
 tokio = { version = "1", features = ["full"] }
@@ -47,5 +51,7 @@ required-features = ["desktop"]
 [profile.dev]
 debug = "limited"
 
-[patch.crates-io]
-gpui-omarchy = { path = "vendor/gpui-omarchy" }
+[profile.release]
+strip = "symbols"
+lto = "thin"
+codegen-units = 1

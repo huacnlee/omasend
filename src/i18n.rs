@@ -1,4 +1,11 @@
-//! Application language catalogs. User content and protocol metadata remain untouched.
+//! Application language selection.
+//!
+//! The catalogs live in `locales/app.yml` and are owned by rust-i18n; this
+//! module decides which locale is active and maps the raw error text produced
+//! deeper in the application onto translation keys. User content and protocol
+//! metadata remain untouched.
+use rust_i18n::t;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Language {
     En,
@@ -35,31 +42,39 @@ impl Language {
         }
         Self::En
     }
-    pub fn text(self, key: &str) -> &str {
-        if self == Self::En {
-            return key;
+    /// The rust-i18n locale code for this language.
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::En => "en",
+            Self::ZhCn => "zh-CN",
         }
-        CATALOG
-            .iter()
-            .find(|(en, _)| *en == key)
-            .map(|(_, zh)| *zh)
-            .unwrap_or(key)
+    }
+    /// Makes this the locale every bare `t!` resolves against.
+    pub fn activate(self) {
+        rust_i18n::set_locale(self.code());
+    }
+    pub fn text(self, key: &str) -> String {
+        t!(key, locale = self.code()).into_owned()
     }
     pub fn named(self, key: &str, value: &str) -> String {
         // Substitute only the catalog template, never re-interpret user content.
-        self.text(key).replacen("{name}", value, 1)
+        t!(key, locale = self.code(), name = value).into_owned()
     }
     pub fn count(self, count: usize, singular: &str, plural: &str) -> String {
-        self.text(if count == 1 { singular } else { plural })
-            .replacen("{count}", &count.to_string(), 1)
+        t!(
+            if count == 1 { singular } else { plural },
+            locale = self.code(),
+            count = count
+        )
+        .into_owned()
     }
     /// Transfer failures contain transport internals; only show actionable summaries.
     pub fn transfer_error(self, error: &str) -> String {
         let details = error.to_ascii_lowercase();
-        let message = if details.contains("certificate") || details.contains("tls") {
-            "Could not verify the receiver. Check its identity and try again"
+        let key = if details.contains("certificate") || details.contains("tls") {
+            "error.peer_identity"
         } else if details.contains("timed out") || details.contains("timeout") {
-            "The receiver did not respond. Try again"
+            "error.peer_timeout"
         } else if details.contains("error sending request")
             || details.contains("connection refused")
             || details.contains("connection reset")
@@ -67,9 +82,9 @@ impl Language {
             || details.contains("network is unreachable")
             || details.contains("dns error")
         {
-            "Cannot connect to the receiver. Make sure it is online and try again"
-        } else if CATALOG.iter().any(|(key, _)| *key == error) {
-            error
+            "error.peer_unreachable"
+        } else if let Some(key) = error_key(error) {
+            key
         } else {
             let formatted = self.error(error);
             if error.split_once(';').is_some_and(|(code, _)| {
@@ -78,9 +93,9 @@ impl Language {
             }) {
                 return formatted;
             }
-            "Transfer failed. View logs for details"
+            "error.transfer_generic"
         };
-        self.text(message).to_owned()
+        self.text(key)
     }
 
     pub fn error(self, error: &str) -> String {
@@ -90,273 +105,205 @@ impl Language {
             && let Ok(code) = code.parse::<u16>()
             && (400..600).contains(&code)
         {
-            let message = match code {
-                401 => "The receiver requires a PIN",
-                403 => "The receiver declined the transfer",
-                409 => "The receiver is busy. Try again shortly",
-                422 => "File verification failed. Try sending again",
-                _ => "Transfer failed. View logs for details",
+            let key = match code {
+                401 => "error.peer_pin",
+                403 => "error.peer_declined",
+                409 => "error.peer_busy",
+                422 => "error.checksum_retry",
+                _ => "error.transfer_generic",
             };
-            return self.text(message).to_owned();
+            return self.text(key);
         }
         error
             .split(": ")
-            .map(|part| self.text(part))
+            .map(|part| match error_key(part) {
+                Some(key) => self.text(key),
+                None => part.to_owned(),
+            })
             .collect::<Vec<_>>()
             .join(": ")
     }
 }
 
-const CATALOG: &[(&str, &str)] = &[
-    ("Done", "完成"),
-    ("Average speed", "平均速度"),
+/// The translation key for an error phrase produced inside the application.
+///
+/// Errors travel as English text so that logs stay readable; only the phrases
+/// listed here are ever shown to the user, and anything else passes through.
+fn error_key(phrase: &str) -> Option<&'static str> {
+    ERROR_KEYS
+        .iter()
+        .find(|(source, _)| *source == phrase)
+        .map(|(_, key)| *key)
+}
+
+const ERROR_KEYS: &[(&str, &str)] = &[
     (
         "Cannot connect to the receiver. Make sure it is online and try again",
-        "无法连接接收方，请确认对方在线后重试",
+        "error.peer_unreachable",
     ),
     (
         "The receiver did not respond. Try again",
-        "接收方响应超时，请重试",
+        "error.peer_timeout",
     ),
     (
         "Could not verify the receiver. Check its identity and try again",
-        "无法验证接收方身份，请确认对方身份后重试",
+        "error.peer_identity",
     ),
-    ("Install {name}…", "安装 {name}…"),
-    ("Downloading update…", "正在下载更新…"),
-    ("Installing update…", "正在安装更新…"),
-    ("Restart to update", "重启以完成更新"),
-    ("Update failed · Retry", "更新失败 · 重试"),
-    (
-        "Finish transfers and clear Outbox before restarting",
-        "请先完成传输并清空待发送内容，再重启",
-    ),
-    ("Check for update", "检查更新"),
-    ("Checking for updates…", "正在检查更新…"),
-    ("Up to date", "已是最新版本"),
-    ("No releases yet", "暂无发布版本"),
-    ("Update check failed", "检查更新失败"),
-    ("About…", "关于…"),
-    ("Theme", "主题"),
-    ("Language", "语言"),
-    ("System", "跟随系统"),
-    ("Light", "浅色"),
-    ("Dark", "深色"),
-    ("Connecting…", "正在连接…"),
-    ("Disconnected", "未连接"),
-    ("Searching for devices…", "正在搜索设备…"),
-    ("Connected", "已连接"),
-    ("The receiver requires a PIN", "接收方需要 PIN 码"),
-    ("The receiver declined the transfer", "接收方拒绝了传输"),
-    (
-        "The receiver is busy. Try again shortly",
-        "接收方正忙，请稍后重试",
-    ),
+    ("The receiver requires a PIN", "error.peer_pin"),
+    ("The receiver declined the transfer", "error.peer_declined"),
+    ("The receiver is busy. Try again shortly", "error.peer_busy"),
     (
         "File verification failed. Try sending again",
-        "文件校验失败，请重新发送",
+        "error.checksum_retry",
     ),
     (
         "Transfer failed. View logs for details",
-        "传输失败，可查看日志了解详情",
+        "error.transfer_generic",
     ),
-    ("Logs…", "日志…"),
-    ("Logs", "日志"),
-    ("Copy", "复制"),
-    ("No logs yet", "暂无日志"),
-    ("Copied", "已复制"),
-    ("to {name}", "至 {name}"),
-    ("To {name}", "发送至 {name}"),
-    ("From {name}", "来自 {name}"),
-    ("Choose a nearby device", "请选择附近的设备"),
-    ("Nothing added yet", "尚未添加内容"),
-    ("Transfer history", "传输记录"),
-    ("Clear", "清空"),
-    ("Clear transfer history", "清空传输记录"),
-    ("Menu", "菜单"),
-    ("Paste", "粘贴"),
-    ("Add files…", "添加文件…"),
-    ("Add files", "添加文件"),
-    ("Exit", "退出"),
-    ("Retry", "重试"),
-    ("Dismiss", "关闭提示"),
-    (
-        "Nearby device identity could not be verified",
-        "无法验证附近设备的身份，请检查对方是否重启或更换了应用",
-    ),
-    (
-        "Could not connect to nearby device",
-        "无法连接附近设备，请检查对方应用和网络连接",
-    ),
-    ("Outbox", "待发送"),
-    ("Preparing…", "正在准备…"),
-    ("Send", "发送"),
-    ("Preview…", "预览…"),
-    ("Preview", "预览"),
-    ("Remove", "移除"),
-    ("Cancel", "取消"),
-    ("Open", "打开"),
-    ("Show in Files", "显示位置"),
-    ("Decline", "拒绝"),
-    ("Accept", "接受"),
-    ("Close", "关闭"),
-    ("Starting…", "正在启动…"),
-    ("Waiting for receiver", "等待对方接受"),
-    ("Sending", "正在发送"),
-    ("Receiving", "正在接收"),
-    ("Sent", "已发送"),
-    ("Received", "已接收"),
-    ("Cancelled", "已取消"),
-    ("Failed", "失败"),
-    ("Nearby", "附近设备"),
-    ("Expand", "展开"),
-    ("Collapse", "收起"),
-    ("Show earlier", "展开更早记录"),
-    ("This session", "本次会话"),
-    ("You", "本机"),
-    ("No transfers yet", "暂无传输记录"),
-    ("Drop something here", "将内容拖到这里"),
-    (
-        "Files, folders, images or a few words.",
-        "文件、文件夹、图片或文字。",
-    ),
-    (
-        "Looking for devices… Open LocalSend on the same Wi-Fi.",
-        "正在查找设备… 请在同一 Wi-Fi 下打开 LocalSend。",
-    ),
-    ("Save to your Downloads folder", "保存到下载文件夹"),
-    ("Add to Omasend", "添加到 Omasend"),
-    ("Clipboard is empty", "剪贴板为空"),
+    ("Clipboard is empty", "error.clipboard_empty"),
     (
         "Copy the image as PNG or JPEG",
-        "请将图片复制为 PNG 或 JPEG",
+        "error.clipboard_image_format",
     ),
-    ("Network task stopped", "网络任务已停止"),
-    ("File preparation stopped", "文件准备任务已停止"),
-    ("Clipboard task stopped", "剪贴板任务已停止"),
-    ("Select {name}", "选择 {name}"),
-    ("Send to {name}", "发送到 {name}"),
-    ("{name} wants to send", "{name} 想要发送文件"),
-    ("{count} item", "{count} 项"),
-    ("{count} items", "{count} 项"),
-    ("{count} file", "{count} 个文件"),
-    ("{count} files", "{count} 个文件"),
+    ("Network task stopped", "error.network_task"),
+    ("File preparation stopped", "error.file_task"),
+    ("Clipboard task stopped", "error.clipboard_task"),
     (
         "XDG_RUNTIME_DIR is not set; start Omasend in your Wayland session",
-        "未设置 XDG_RUNTIME_DIR；请在 Wayland 会话中启动 Omasend",
+        "error.no_runtime_dir",
     ),
     (
         "Clipboard temporary directory is not a directory",
-        "剪贴板临时路径不是目录",
+        "error.clipboard_tmp_kind",
     ),
     (
         "Clipboard temporary directory must be private (mode 700)",
-        "剪贴板临时目录必须为私有目录（权限 700）",
+        "error.clipboard_tmp_mode",
     ),
-    ("Clipboard did not respond", "剪贴板未响应"),
+    ("Clipboard did not respond", "error.clipboard_timeout"),
     (
         "Install wl-clipboard to paste from Wayland",
-        "请安装 wl-clipboard 以读取 Wayland 剪贴板",
+        "error.wl_clipboard_missing",
     ),
     (
         "Cannot read clipboard; copy something first",
-        "无法读取剪贴板，请先复制内容",
+        "error.clipboard_unreadable",
     ),
-    ("Clipboard media read timed out", "读取剪贴板媒体超时"),
+    (
+        "Clipboard media read timed out",
+        "error.clipboard_media_timeout",
+    ),
     (
         "Clipboard media is empty or changed; copy it again",
-        "剪贴板媒体为空或已变化，请重新复制",
+        "error.clipboard_media_changed",
     ),
-    ("Cannot read clipboard output", "无法读取剪贴板输出"),
-    ("Clipboard text read timed out", "读取剪贴板文本超时"),
+    ("Cannot read clipboard output", "error.clipboard_output"),
+    (
+        "Clipboard text read timed out",
+        "error.clipboard_text_timeout",
+    ),
     (
         "Clipboard text exceeds 16 MB; send it as a file",
-        "剪贴板文本超过 16 MB，请作为文件发送",
+        "error.clipboard_text_large",
     ),
     (
         "Clipboard changed; copy the content again",
-        "剪贴板已变化，请重新复制内容",
+        "error.clipboard_changed",
     ),
-    ("Clipboard text is empty", "剪贴板文本为空"),
+    ("Clipboard text is empty", "error.clipboard_text_empty"),
     (
         "Choose the original file instead of a symbolic link",
-        "请选择原始文件，而非符号链接",
+        "error.symlink",
     ),
     (
         "This folder contains no files; LocalSend cannot transfer empty folders",
-        "该文件夹没有文件；LocalSend 无法传输空文件夹",
+        "error.empty_folder",
     ),
     (
         "Select at most 10,000 files per transfer",
-        "每次传输最多选择 10,000 个文件",
+        "error.too_many_files",
     ),
-    ("Folder nesting exceeds 128 levels", "文件夹嵌套超过 128 层"),
-    ("File name is not valid UTF-8", "文件名不是有效的 UTF-8"),
-    ("Missing file name", "缺少文件名"),
-    ("Invalid file name", "文件名无效"),
-    ("Unsafe relative file path", "相对文件路径不安全"),
-    ("Absolute file paths are not accepted", "不接受绝对文件路径"),
-    ("Sender stopped responding", "发送方停止响应"),
-    ("Transfer cancelled", "传输已取消"),
-    ("File checksum did not match", "文件校验失败"),
+    ("Folder nesting exceeds 128 levels", "error.deep_folder"),
+    ("File name is not valid UTF-8", "error.name_utf8"),
+    ("Missing file name", "error.name_missing"),
+    ("Invalid file name", "error.name_invalid"),
+    ("Unsafe relative file path", "error.path_unsafe"),
     (
-        "Received more data than offered",
-        "接收的数据超出了声明大小",
+        "Absolute file paths are not accepted",
+        "error.path_absolute",
     ),
+    ("Sender stopped responding", "error.sender_stopped"),
+    ("Transfer cancelled", "error.cancelled"),
+    ("File checksum did not match", "error.checksum"),
+    ("Received more data than offered", "error.overlong"),
     (
         "Clipboard has no supported files, images, videos or text",
-        "剪贴板中没有支持的文件、图片、视频或文本",
+        "error.clipboard_unsupported",
     ),
     (
         "Clipboard is empty; copy the content again",
-        "剪贴板为空，请重新复制内容",
+        "error.clipboard_empty_retry",
     ),
-    ("File clipboard is not UTF-8", "剪贴板文件列表不是 UTF-8"),
-    ("Invalid clipboard file URI", "剪贴板文件 URI 无效"),
+    ("File clipboard is not UTF-8", "error.clipboard_list_utf8"),
+    ("Invalid clipboard file URI", "error.clipboard_uri"),
     (
         "Clipboard URI is not a local file",
-        "剪贴板 URI 不是本地文件",
+        "error.clipboard_uri_remote",
     ),
     (
         "File URI has a query or fragment",
-        "文件 URI 包含查询或片段",
+        "error.clipboard_uri_extra",
     ),
-    ("Invalid clipboard file path", "剪贴板文件路径无效"),
-    ("Clipboard contains no local files", "剪贴板中没有本地文件"),
-    ("Clipboard text is not UTF-8", "剪贴板文本不是 UTF-8"),
-    ("Unsupported clipboard media type", "不支持该剪贴板媒体类型"),
-    ("Add something to send first", "请先添加要发送的内容"),
-    ("The receiver did not respond", "接收方未响应"),
-    ("The receiver accepted no files", "接收方未接受任何文件"),
+    ("Invalid clipboard file path", "error.clipboard_path"),
+    (
+        "Clipboard contains no local files",
+        "error.clipboard_no_files",
+    ),
+    ("Clipboard text is not UTF-8", "error.clipboard_text_utf8"),
+    (
+        "Unsupported clipboard media type",
+        "error.clipboard_media_type",
+    ),
+    ("The receiver did not respond", "error.no_response"),
+    ("The receiver accepted no files", "error.no_files_accepted"),
     (
         "Receiver returned an unknown file ID",
-        "接收方返回了未知的文件 ID",
+        "error.unknown_file_id",
     ),
-    ("Transfer is too large", "传输内容过大"),
-    ("Network service stopped", "网络服务已停止"),
-    ("Cannot create Downloads folder", "无法创建下载文件夹"),
-    ("Cannot locate your Downloads folder", "无法找到下载文件夹"),
+    ("Transfer is too large", "error.too_large"),
+    ("Network service stopped", "error.network_service"),
+    ("Cannot create Downloads folder", "error.downloads_create"),
+    (
+        "Cannot locate your Downloads folder",
+        "error.downloads_missing",
+    ),
     (
         "Cannot listen for LocalSend transfers; another app may be using port 53317",
-        "无法监听 LocalSend 传输；其他应用可能正在使用端口 53317",
+        "error.port_in_use",
     ),
     (
         "Multicast unavailable; trying local network discovery",
-        "组播不可用，正在尝试局域网发现",
+        "error.multicast",
     ),
-    ("Transfer task stopped", "传输任务已停止"),
-    ("An encrypted connection is required", "需要加密连接"),
+    ("Transfer task stopped", "error.transfer_task"),
+    (
+        "An encrypted connection is required",
+        "error.encryption_required",
+    ),
     (
         "Offer must contain between 1 and 10,000 files",
-        "传输请求必须包含 1 至 10,000 个文件",
+        "error.offer_range",
     ),
     (
         "File ID does not match its metadata",
-        "文件 ID 与元数据不匹配",
+        "error.file_id_mismatch",
     ),
-    ("Folder contains a symbolic link", "文件夹包含符号链接"),
-    ("Folder contains a special file", "文件夹包含特殊文件"),
-    ("Clipboard file no longer exists", "剪贴板中的文件已不存在"),
+    ("Folder contains a symbolic link", "error.folder_symlink"),
+    ("Folder contains a special file", "error.folder_special"),
+    (
+        "Clipboard file no longer exists",
+        "error.clipboard_file_gone",
+    ),
 ];
 
 #[cfg(test)]
@@ -414,6 +361,10 @@ mod tests {
             Language::En.error("500;Some(\"internal details\")"),
             "Transfer failed. View logs for details"
         );
+        assert_eq!(
+            Language::ZhCn.error("Network task stopped: OS error 7"),
+            "网络任务已停止: OS error 7"
+        );
     }
 
     #[test]
@@ -424,51 +375,133 @@ mod tests {
         for locale in ["en", "en_US.UTF-8", "ja-JP", "C", ""] {
             assert_eq!(Language::from_locale(locale), Language::En);
         }
+        // A device alias that looks like a template must survive verbatim.
         assert_eq!(
-            Language::ZhCn.named("Send to {name}", "My {name} iPhone"),
-            "发送到 My {name} iPhone"
+            Language::ZhCn.named("action.send_to", "My %{name} iPhone"),
+            "发送到 My %{name} iPhone"
         );
         assert_eq!(
-            Language::En.count(1, "{count} item", "{count} items"),
+            Language::En.count(1, "history.item_one", "history.item_other"),
             "1 item"
         );
         assert_eq!(
-            Language::En.count(2, "{count} item", "{count} items"),
+            Language::En.count(2, "history.item_one", "history.item_other"),
             "2 items"
         );
         assert_eq!(
-            Language::ZhCn.count(2, "{count} item", "{count} items"),
+            Language::ZhCn.count(2, "history.item_one", "history.item_other"),
             "2 项"
         );
-        assert_eq!(
-            Language::ZhCn.error("Network task stopped: OS error 7"),
-            "网络任务已停止: OS error 7"
-        );
     }
+
+    /// `key: {locale: text}` parsed from the generated `_version: 2` catalog.
+    fn catalog() -> Vec<(String, Vec<(String, String)>)> {
+        let mut entries: Vec<(String, Vec<(String, String)>)> = Vec::new();
+        for line in include_str!("../locales/app.yml").lines() {
+            if line.starts_with('#') || line.trim().is_empty() || line.starts_with("_version") {
+                continue;
+            }
+            if let Some(key) = line.strip_suffix(':').filter(|key| !key.starts_with(' ')) {
+                entries.push((key.to_owned(), Vec::new()));
+            } else if let Some((locale, text)) = line.trim().split_once(": ") {
+                let text = text.trim_matches('"').to_owned();
+                entries
+                    .last_mut()
+                    .expect("a locale line before its key")
+                    .1
+                    .push((locale.to_owned(), text));
+            }
+        }
+        entries
+    }
+
     #[test]
-    fn catalogs_cover_ui_keys_and_preserve_placeholders() {
+    fn catalog_covers_every_locale_and_preserves_placeholders() {
+        let entries = catalog();
+        assert!(entries.len() > 100, "catalog looks truncated");
         let mut seen = std::collections::HashSet::new();
-        for (en, zh) in CATALOG {
-            assert!(seen.insert(en), "duplicate catalog key: {en}");
+        for (key, locales) in &entries {
+            assert!(seen.insert(key), "duplicate catalog key: {key}");
+            let text = |wanted: &str| {
+                locales
+                    .iter()
+                    .find(|(locale, _)| locale == wanted)
+                    .unwrap_or_else(|| panic!("{key} has no {wanted} entry"))
+                    .1
+                    .clone()
+            };
+            let (en, zh) = (text("en"), text("zh-CN"));
             assert!(!zh.is_empty());
-            for placeholder in ["{name}", "{count}"] {
+            for placeholder in ["%{name}", "%{count}"] {
                 assert_eq!(
                     en.matches(placeholder).count(),
                     zh.matches(placeholder).count(),
-                    "{en}"
+                    "{key}"
                 );
             }
         }
+    }
+
+    /// The interface sources, so a lookup can only reach a key that exists.
+    const INTERFACE: &[&str] = &[
+        include_str!("views/home.rs"),
+        include_str!("views/panels.rs"),
+        include_str!("views/about.rs"),
+        include_str!("views/history.rs"),
+        include_str!("views/logs.rs"),
+        include_str!("views/nearby.rs"),
+        include_str!("views/updates.rs"),
+    ];
+
+    /// Every key the interface asks for by name, whichever lookup it uses.
+    fn keys_in(source: &str) -> Vec<&str> {
+        let mut keys = Vec::new();
+        for opening in ["t!(\"", ".text(\"", ".named(\""] {
+            for (at, matched) in source.match_indices(opening) {
+                // `format!("…")` ends in the same three characters as `t!("`.
+                if opening.starts_with('t')
+                    && source[..at]
+                        .chars()
+                        .next_back()
+                        .is_some_and(|char| char.is_alphanumeric() || char == '_')
+                {
+                    continue;
+                }
+                keys.push(source[at + matched.len()..].split('"').next().unwrap());
+            }
+        }
+        keys
+    }
+
+    #[test]
+    fn no_interface_string_still_carries_a_catalog_placeholder() {
+        // A key left behind by the move to rust-i18n reaches the interface as
+        // itself, so `{name}` renders literally instead of the device alias.
+        for source in INTERFACE {
+            for placeholder in ["{name}", "{count}"] {
+                assert!(
+                    !source.contains(placeholder),
+                    "{placeholder} is a catalog placeholder, not interface text"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_key_used_by_the_interface_is_translated() {
+        let known: std::collections::HashSet<String> =
+            catalog().into_iter().map(|(key, _)| key).collect();
         for source in [
             include_str!("views/home.rs"),
             include_str!("views/panels.rs"),
+            include_str!("views/about.rs"),
+            include_str!("views/history.rs"),
+            include_str!("views/logs.rs"),
+            include_str!("views/nearby.rs"),
+            include_str!("views/updates.rs"),
         ] {
-            for suffix in source.split("self.language.text(\"").skip(1) {
-                let key = suffix.split('"').next().unwrap();
-                assert!(
-                    CATALOG.iter().any(|(en, _)| *en == key),
-                    "missing translation: {key}"
-                );
+            for key in keys_in(source) {
+                assert!(known.contains(key), "missing translation: {key}");
             }
         }
     }

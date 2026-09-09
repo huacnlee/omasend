@@ -16,6 +16,8 @@ test('English and Chinese routes keep correct links, language and metadata', asy
     expect(markup).toContain(`d="${path}"`);
   }
   expect(markup).not.toContain('<rect');
+  await expect(page.getByRole('link', { name: 'LocalSend ↗', exact: true })).toHaveAttribute('href', 'https://localsend.org');
+  await expect(page.getByRole('link', { name: 'LocalSend protocol ↗', exact: true })).toHaveAttribute('href', 'https://github.com/localsend/protocol');
 
   await page.locator('#language-toggle').click();
   await page.getByRole('menuitemradio', { name: '简体中文' }).click();

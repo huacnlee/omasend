@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+pub mod history;
 mod state;
 pub use state::{AppState, ComposerItem, IncomingRequest, Transfer, TransferStatus};
 

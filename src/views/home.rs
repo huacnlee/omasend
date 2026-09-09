@@ -11,6 +11,7 @@ use omasend::{
     localsend::{Node, NodeConfig, TransferEvent},
     model::{AppState, ComposerItem, SendItem, TransferStatus},
 };
+use rust_i18n::t;
 
 pub struct Home {
     pub state: AppState,
@@ -68,6 +69,18 @@ impl Home {
             loading_input: false,
             starting: false,
         };
+        view.language.activate();
+        // Earlier sessions' records belong on screen before anything new lands.
+        // The success card reports something that just happened, so a restored
+        // record starts already dismissed.
+        view.state.transfers = omasend::model::history::load();
+        view.dismissed_success = view
+            .state
+            .transfers
+            .iter()
+            .filter(|transfer| transfer.status == TransferStatus::Completed)
+            .max_by_key(|transfer| transfer.when)
+            .map(|transfer| transfer.id.clone());
         view.watch_theme(window, cx);
         view.connect(window, cx);
         view.start_update_checks(cx);
@@ -124,6 +137,14 @@ impl Home {
         });
     }
 
+    /// Language selection is a single decision: the field drives the menu's
+    /// check mark, and the same value drives every `t!` in the interface.
+    fn set_language(&mut self, language: omasend::i18n::Language, cx: &mut Context<Self>) {
+        self.language = language;
+        language.activate();
+        cx.notify();
+    }
+
     fn connect(&mut self, _: &mut Window, cx: &mut Context<Self>) {
         if self.starting || self.node.is_some() {
             return;
@@ -144,6 +165,9 @@ impl Home {
                         .update(cx, |view, cx| {
                             view.node = Some(node);
                             view.starting = false;
+                            // The banner that offered Retry described a network we
+                            // have now joined; leaving it up reads as a failure.
+                            view.state.error = None;
                             cx.notify();
                         })
                         .is_err()
@@ -156,6 +180,15 @@ impl Home {
                                 let was_incoming = view.state.incoming.is_some();
                                 let incoming =
                                     matches!(&event, TransferEvent::IncomingRequest { .. });
+                                // A transfer only reaches the stored history
+                                // once it has finished, so this is the moment
+                                // the file on disk needs to change.
+                                let finished = matches!(
+                                    &event,
+                                    TransferEvent::Completed { .. }
+                                        | TransferEvent::Cancelled { .. }
+                                        | TransferEvent::Failed { .. }
+                                );
                                 let preserve_focus = view.history_expanded
                                     || view.preview.is_some()
                                     || view.logs.is_some()
@@ -167,6 +200,9 @@ impl Home {
                                     view.preview = None;
                                 }
                                 view.state.apply(event);
+                                if finished {
+                                    omasend::model::history::save(&view.state.transfers);
+                                }
                                 let restore = was_incoming && view.state.incoming.is_none();
                                 if incoming || restore {
                                     view.with_window(cx, move |view, window, cx| {
@@ -376,7 +412,7 @@ impl Home {
             // even with files=true. Folders can still be added by drag and drop.
             directories: !cfg!(target_os = "linux"),
             multiple: true,
-            prompt: Some(self.language.text("Add to Omasend").into()),
+            prompt: Some(t!("composer.add_to_omasend").into()),
         });
         cx.spawn(async move |this, cx| {
             let result = prompt.await;
@@ -467,13 +503,13 @@ impl Home {
             .map(|node| node.device.alias.clone())
             .unwrap_or_else(|| gethostname::gethostname().to_string_lossy().into_owned());
         let (status, color) = if self.starting {
-            ("Connecting…", theme.secondary)
+            ("status.connecting", theme.secondary)
         } else if self.node.is_none() {
-            ("Disconnected", theme.danger)
+            ("status.disconnected", theme.danger)
         } else if self.state.devices.is_empty() {
-            ("Searching for devices…", theme.secondary)
+            ("status.searching", theme.secondary)
         } else {
-            ("Connected", theme.success)
+            ("status.connected", theme.success)
         };
         div()
             .id("status-bar")
@@ -574,11 +610,11 @@ impl Render for Home {
                     && transfer.status == TransferStatus::Active
                     && transfer.awaiting_acceptance
             }) {
-                "Waiting for receiver"
+                "status.waiting"
             } else if self.state.sending() {
-                "Sending"
+                "status.sending"
             } else {
-                "Send"
+                "action.send"
             },
         );
         let mut root = focus_scope("omasend")
@@ -674,20 +710,18 @@ impl Render for Home {
                         menu(
                             "app-menu",
                             button("menu-trigger", "", ButtonVariant::Secondary, cx)
-                                .accessibility_label(self.language.text("Menu"))
-                                .map(|button| {
-                                    gpui_omarchy::with_tooltip(button, self.language.text("Menu"))
-                                })
+                                .accessibility_label(t!("action.menu"))
+                                .map(|button| gpui_omarchy::with_tooltip(button, t!("action.menu")))
                                 .p_1()
                                 .child(icon(IconName::Menu).size(rems(0.875))),
                             vec![
-                                MenuItem::new(self.language.text("Paste"))
+                                MenuItem::new(t!("action.paste"))
                                     .shortcut("ctrl+v")
                                     .disabled(self.loading_input),
-                                MenuItem::new(self.language.text("Add files…"))
+                                MenuItem::new(t!("action.add_files_ellipsis"))
                                     .shortcut("ctrl+o")
                                     .disabled(self.loading_input),
-                                MenuItem::new(self.language.text("Language"))
+                                MenuItem::new(t!("action.language"))
                                     .separator_before()
                                     .submenu(vec![
                                         (
@@ -703,11 +737,11 @@ impl Render for Home {
                                             ),
                                         ),
                                     ]),
-                                MenuItem::new(self.language.text("Theme")).submenu(
+                                MenuItem::new(t!("action.theme")).submenu(
                                     [
-                                        (20, "System", super::theme::ThemeMode::System),
-                                        (21, "Light", super::theme::ThemeMode::Light),
-                                        (22, "Dark", super::theme::ThemeMode::Dark),
+                                        (20, "theme.system", super::theme::ThemeMode::System),
+                                        (21, "theme.light", super::theme::ThemeMode::Light),
+                                        (22, "theme.dark", super::theme::ThemeMode::Dark),
                                     ]
                                     .into_iter()
                                     .map(|(id, label, mode)| {
@@ -720,13 +754,13 @@ impl Render for Home {
                                     })
                                     .collect(),
                                 ),
-                                MenuItem::new(self.language.text("Check for update"))
-                                    .separator_before(),
-                                MenuItem::new(self.language.text("About…")).separator_before(),
+                                MenuItem::new(t!("action.check_update")).separator_before(),
+                                MenuItem::new(t!("action.about")).separator_before(),
                                 MenuItem::new("Omasend…"),
                                 MenuItem::new("GitHub…"),
-                                MenuItem::new(self.language.text("Logs…")).separator_before(),
-                                MenuItem::new(self.language.text("Exit")).separator_before(),
+                                MenuItem::new("LocalSend…"),
+                                MenuItem::new(t!("action.logs")).separator_before(),
+                                MenuItem::new(t!("action.exit")).separator_before(),
                             ],
                             {
                                 let view = cx.entity();
@@ -734,18 +768,19 @@ impl Render for Home {
                                     view.update(cx, |view, cx| match index {
                                         0 => view.paste(&Paste, window, cx),
                                         1 => view.open_files(&OpenFiles, window, cx),
-                                        12 | 13 => {
-                                            view.language = if index == 12 {
+                                        12 | 13 => view.set_language(
+                                            if index == 12 {
                                                 omasend::i18n::Language::En
                                             } else {
                                                 omasend::i18n::Language::ZhCn
-                                            };
-                                            cx.notify();
-                                        }
+                                            },
+                                            cx,
+                                        ),
                                         6 => cx.open_url("https://huacnlee.github.io/omasend/"),
                                         7 => cx.open_url("https://github.com/huacnlee/omasend"),
-                                        8 => view.open_logs(window, cx),
-                                        9 => cx.quit(),
+                                        8 => cx.open_url("https://localsend.org"),
+                                        9 => view.open_logs(window, cx),
+                                        10 => cx.quit(),
                                         5 => view.open_about(window, cx),
                                         4 => view.check_updates_manually(cx),
                                         20..=22 => {
@@ -771,23 +806,19 @@ impl Render for Home {
                 gpui_omarchy::alert(self.language.error(error), gpui_omarchy::Status::Error, cx)
                     .mx_4()
                     .mt_3()
-                    .when(self.node.is_none() && !self.starting, |row| {
+                    .when(self.node.is_none(), |row| {
                         row.child(
-                            button(
-                                "reconnect",
-                                self.language.text("Retry"),
-                                ButtonVariant::Outline,
-                                cx,
-                            )
-                            .on_click(cx.listener(|view, _, window, cx| view.connect(window, cx))),
+                            button("reconnect", t!("action.retry"), ButtonVariant::Outline, cx)
+                                .disabled(self.starting)
+                                .on_click(
+                                    cx.listener(|view, _, window, cx| view.connect(window, cx)),
+                                ),
                         )
                     })
                     .child(
                         button("dismiss-error", "", ButtonVariant::Secondary, cx)
-                            .accessibility_label(self.language.text("Dismiss"))
-                            .map(|button| {
-                                gpui_omarchy::with_tooltip(button, self.language.text("Dismiss"))
-                            })
+                            .accessibility_label(t!("action.dismiss"))
+                            .map(|button| gpui_omarchy::with_tooltip(button, t!("action.dismiss")))
                             .p_1()
                             .child(icon(IconName::Close).size(rems(0.875)))
                             .on_click(cx.listener(|view, _, _, cx| {
@@ -827,7 +858,7 @@ impl Render for Home {
                                             .flex_shrink_0()
                                             .font_weight(gpui_kit::FontWeight::BOLD)
                                             .text_color(theme.bright)
-                                            .child(self.language.text("Outbox")),
+                                            .child(t!("composer.outbox")),
                                     )
                                     .child(
                                         div()
@@ -845,26 +876,28 @@ impl Render for Home {
                                                                 == TransferStatus::Active
                                                     })
                                                     .map(|transfer| {
-                                                        self.language
-                                                            .named("to {name}", &transfer.peer)
+                                                        self.language.named(
+                                                            "history.to_lower",
+                                                            &transfer.peer,
+                                                        )
                                                     })
                                                     .or_else(|| {
                                                         self.state.selected_device().map(|device| {
-                                                            self.language
-                                                                .named("to {name}", &device.alias)
+                                                            self.language.named(
+                                                                "history.to_lower",
+                                                                &device.alias,
+                                                            )
                                                         })
                                                     })
                                                     .unwrap_or_else(|| {
-                                                        self.language
-                                                            .text("Choose a nearby device")
-                                                            .into()
+                                                        self.language.text("composer.choose_device")
                                                     }),
                                             ),
                                     ),
                             )
                             .child(div().flex_shrink_0().text_color(theme.secondary).child(
                                 if self.loading_input {
-                                    self.language.text("Preparing…").into()
+                                    t!("status.preparing").into()
                                 } else if self.state.composer.is_empty() {
                                     String::new()
                                 } else {
@@ -872,8 +905,8 @@ impl Render for Home {
                                         "{} / {}",
                                         self.language.count(
                                             self.state.composer.len(),
-                                            "{count} item",
-                                            "{count} items"
+                                            "history.item_one",
+                                            "history.item_other"
                                         ),
                                         size_label(
                                             self.state
@@ -901,7 +934,7 @@ impl Render for Home {
                                     .child(
                                         button(
                                             "add-files",
-                                            self.language.text("Add files…"),
+                                            t!("action.add_files_ellipsis"),
                                             ButtonVariant::Outline,
                                             cx,
                                         )
@@ -915,7 +948,7 @@ impl Render for Home {
                                     .child(
                                         button(
                                             "paste-content",
-                                            self.language.text("Paste"),
+                                            t!("action.paste"),
                                             ButtonVariant::Secondary,
                                             cx,
                                         )
@@ -935,7 +968,7 @@ impl Render for Home {
                                     .child(self.history_button(cx))
                                     .child(
                                         button("send", "", ButtonVariant::Primary, cx)
-                                            .accessibility_label(send_label)
+                                            .accessibility_label(send_label.clone())
                                             .child(icon(IconName::Send).size(rems(0.875)))
                                             .child(send_label)
                                             .disabled(!can_send)
