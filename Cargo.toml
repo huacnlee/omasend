@@ -24,7 +24,7 @@ futures-util = "0.3"
 gpui-omarchy = { version = "0.1.2", optional = true }
 # gpui-kit-assets carries the shared Lucide IconName from longbridge/gpui-kit#3020.
 # Move back to a published version once that release is out.
-gpui-kit = { git = "https://github.com/longbridge/gpui-kit", rev = "abc47ce5b522de4b7300ea57e77236b2d95a1c4f", default-features = false, features = ["assets"], optional = true }
+gpui-kit = { version = "0.6.1", default-features = false, features = ["assets"], optional = true }
 localsend = { path = "vendor/localsend", features = ["discovery"] }
 if-addrs = "0.15"
 gethostname = "1.1"
@@ -55,9 +55,3 @@ debug = "limited"
 strip = "symbols"
 lto = "thin"
 codegen-units = 1
-
-# Until gpui-omarchy 0.1.2 is published. It cannot be, while it depends on
-# gpui-kit from git, so point at the branch carrying those changes and move to
-# the release once both are out.
-[patch.crates-io]
-gpui-omarchy = { git = "https://github.com/huacnlee/gpui-omarchy", branch = "kit-assets-icons-and-submenus" }
