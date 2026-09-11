@@ -1,3 +1,4 @@
+use super::home::Preview;
 use super::{Home, size_label};
 use gpui_kit::{
     AnimationExt, AnyElement, Context, ObjectFit, SharedString, div, img, prelude::*, px, rems,
@@ -155,20 +156,68 @@ impl Home {
                                         .child(
                                             div()
                                                 .id("dismiss-transfer-success")
-                                                .debug_selector(|| "dismiss-transfer-success".into())
+                                                .debug_selector(|| {
+                                                    "dismiss-transfer-success".into()
+                                                })
                                                 .child(
-                                                    button("confirm-transfer-success", t!("status.done"), ButtonVariant::Outline, cx)
-                                                        .on_click(cx.listener(move |view, _, window, cx| {
-                                                            view.dismissed_success = Some(transfer_id.clone());
+                                                    button(
+                                                        "confirm-transfer-success",
+                                                        t!("status.done"),
+                                                        ButtonVariant::Outline,
+                                                        cx,
+                                                    )
+                                                    .on_click(cx.listener(
+                                                        move |view, _, window, cx| {
+                                                            view.dismissed_success =
+                                                                Some(transfer_id.clone());
                                                             view.focus.focus(window, cx);
                                                             cx.notify();
-                                                        })),
+                                                        },
+                                                    )),
                                                 ),
                                         )
-                                        .when_some(transfer.paths.first().cloned(), |actions, path| {
-                                            actions.child(
-                                                button("reveal-completed-transfer", t!("action.show_in_files"), ButtonVariant::Outline, cx)
-                                                    .on_click(move |_, _, cx| cx.reveal_path(&path)),
+                                        .when_some(
+                                            transfer.received_text.clone(),
+                                            |actions, text| {
+                                                actions.child(
+                                                    button(
+                                                        "show-completed-text",
+                                                        t!("action.show_text"),
+                                                        ButtonVariant::Outline,
+                                                        cx,
+                                                    )
+                                                    .debug_selector(|| "show-completed-text".into())
+                                                    .on_click(cx.listener(
+                                                        move |view, _, window, cx| {
+                                                            view.open_received_text(
+                                                                text.clone(),
+                                                                window,
+                                                                cx,
+                                                            );
+                                                        },
+                                                    )),
+                                                )
+                                            },
+                                        )
+                                        .when(transfer.received_text.is_none(), |actions| {
+                                            actions.when_some(
+                                                transfer.paths.first().cloned(),
+                                                |actions, path| {
+                                                    actions.child(
+                                                        button(
+                                                            "reveal-completed-transfer",
+                                                            t!("action.show_in_files"),
+                                                            ButtonVariant::Outline,
+                                                            cx,
+                                                        )
+                                                        .debug_selector(|| {
+                                                            "reveal-completed-transfer".into()
+                                                        })
+                                                        .on_click(move |_, _, cx| {
+                                                            cx.reveal_path(&path)
+                                                        }),
+                                                    )
+                                                },
                                             )
                                         }),
                                 ),
@@ -313,7 +362,7 @@ impl Home {
                             )
                             .on_click(cx.listener(
                                 move |view, _, window, cx| {
-                                    view.preview = Some(preview_id.clone());
+                                    view.preview = Some(Preview::Composer(preview_id.clone()));
                                     view.restore_focus = window.focused(cx);
                                     view.modal_focus.focus(window, cx);
                                     cx.notify();
@@ -460,17 +509,54 @@ impl Home {
             .into_any_element()
     }
 
-    pub fn preview_dialog(&self, cx: &mut Context<Self>) -> AnyElement {
-        let item = self
-            .state
-            .composer
-            .iter()
-            .find(|item| Some(&item.id) == self.preview.as_ref());
+    pub fn preview_dialog(
+        &self,
+        window: &mut gpui_kit::Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let item =
+            self.state.composer.iter().find(
+                |item| matches!(&self.preview, Some(Preview::Composer(id)) if id == &item.id),
+            );
         let mut popup = dialog_popup(cx).w(rems(40.)).child(dialog_title(
             item.map(|item| item.name())
                 .unwrap_or_else(|| t!("action.preview").into()),
             cx,
         ));
+        let mut actions = div().flex().justify_end().gap_2();
+        if let Some(Preview::ReceivedText { input, copied }) = &self.preview {
+            popup = dialog_popup(cx)
+                .w(rems(40.))
+                .child(dialog_title(t!("dialog.received_text"), cx))
+                .child(
+                    gpui_omarchy::textarea("received-text", input, window, cx)
+                        .h(rems(18.))
+                        .overflow_hidden()
+                        .debug_selector(|| "received-text".into()),
+                );
+            actions = actions.child(
+                button(
+                    "copy-received-text",
+                    t!(if *copied {
+                        "status.copied"
+                    } else {
+                        "action.copy"
+                    }),
+                    ButtonVariant::Outline,
+                    cx,
+                )
+                .debug_selector(|| "copy-received-text".into())
+                .on_click(cx.listener(|view, _, _, cx| {
+                    if let Some(Preview::ReceivedText { input, copied }) = &mut view.preview {
+                        cx.write_to_clipboard(gpui_kit::ClipboardItem::new_string(
+                            input.read(cx).value().to_string(),
+                        ));
+                        *copied = true;
+                        cx.notify();
+                    }
+                })),
+            );
+        }
         if let Some(path) = item.and_then(|item| item.item.path()) {
             popup = popup.child(
                 img(path.to_path_buf())
@@ -479,7 +565,7 @@ impl Home {
                     .object_fit(ObjectFit::Contain),
             );
         }
-        popup = popup.child(
+        actions = actions.child(
             button(
                 "close-preview",
                 t!("action.close"),
@@ -492,12 +578,13 @@ impl Home {
                 cx.notify();
             })),
         );
+        popup = popup.child(actions);
         dialog(&self.modal_focus, cx)
-            .popup(popup.with_animation(
+            .popup(div().max_w_full().occlude().child(popup.with_animation(
                 "popup-enter",
                 super::motion::popup_enter(),
                 |popup, phase| popup.opacity(phase).top(px(4. * (1. - phase))),
-            ))
+            )))
             .on_close(cx.listener(|view, _, window, cx| {
                 view.preview = None;
                 view.restore(window, cx);

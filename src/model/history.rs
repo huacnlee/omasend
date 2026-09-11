@@ -22,6 +22,8 @@ struct Record {
     files: Vec<File>,
     total: u64,
     paths: Vec<PathBuf>,
+    #[serde(default)]
+    received_text: Option<String>,
     outcome: Outcome,
     #[serde(default)]
     error: Option<String>,
@@ -124,6 +126,7 @@ impl Record {
                 .collect(),
             total: transfer.total,
             paths: transfer.paths.clone(),
+            received_text: transfer.received_text.clone(),
             outcome,
             error,
             when: transfer
@@ -140,7 +143,7 @@ impl Record {
             Outcome::Cancelled => TransferStatus::Cancelled,
             Outcome::Failed => TransferStatus::Failed(self.error.unwrap_or_default()),
         };
-        Transfer::restored(
+        let mut transfer = Transfer::restored(
             self.id,
             self.peer,
             self.sending,
@@ -160,7 +163,9 @@ impl Record {
                 .collect(),
             status,
             UNIX_EPOCH + Duration::from_secs(self.when),
-        )
+        );
+        transfer.received_text = self.received_text;
+        transfer
     }
 }
 
@@ -188,8 +193,10 @@ mod tests {
 
     #[test]
     fn only_finished_transfers_round_trip() {
+        let mut received = transfer("done", TransferStatus::Completed);
+        received.received_text = Some("hello from history".into());
         let records: Vec<Record> = [
-            transfer("done", TransferStatus::Completed),
+            received,
             transfer("running", TransferStatus::Active),
             transfer("broken", TransferStatus::Failed("boom".into())),
         ]
@@ -201,6 +208,10 @@ mod tests {
         assert_eq!(restored[0].id, "done");
         assert_eq!(restored[0].status, TransferStatus::Completed);
         assert_eq!(restored[0].files[0].name, "a.txt");
+        assert_eq!(
+            restored[0].received_text.as_deref(),
+            Some("hello from history")
+        );
         assert_eq!(restored[1].status, TransferStatus::Failed("boom".into()));
         assert_eq!(
             restored[1]

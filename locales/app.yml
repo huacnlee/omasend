@@ -4,6 +4,9 @@ _version: 2
 status.done:
   en: "Done"
   zh-CN: "完成"
+status.copied:
+  en: "Copied"
+  zh-CN: "已复制"
 status.average_speed:
   en: "Average speed"
   zh-CN: "平均速度"
@@ -340,6 +343,9 @@ action.open:
 action.show_in_files:
   en: "Show in Files"
   zh-CN: "显示位置"
+action.show_text:
+  en: "Show Text"
+  zh-CN: "显示文本"
 action.decline:
   en: "Decline"
   zh-CN: "拒绝"
@@ -364,6 +370,10 @@ action.select_device:
 action.send_to:
   en: "Send to %{name}"
   zh-CN: "发送到 %{name}"
+
+dialog.received_text:
+  en: "Received text"
+  zh-CN: "收到的文本"
 
 about.protocol:
   en: "Native client for the LocalSend protocol %{name}"

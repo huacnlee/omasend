@@ -13,6 +13,14 @@ use omasend::{
 };
 use rust_i18n::t;
 
+pub enum Preview {
+    Composer(String),
+    ReceivedText {
+        input: gpui_kit::Entity<gpui_kit::base::input::TextareaState>,
+        copied: bool,
+    },
+}
+
 pub struct Home {
     pub state: AppState,
 
@@ -33,7 +41,7 @@ pub struct Home {
     pub show_update_status: bool,
     pub update_status_dismiss: Option<gpui_kit::Task<()>>,
     pub restore_focus: Option<FocusHandle>,
-    pub preview: Option<String>,
+    pub preview: Option<Preview>,
     pub loading_input: bool,
     pub starting: bool,
 }
@@ -177,6 +185,12 @@ impl Home {
                     while let Ok(event) = events.recv().await {
                         if this
                             .update(cx, |view, cx| {
+                                if let TransferEvent::ReceivedText { text, .. } = &event {
+                                    let text = text.clone();
+                                    view.with_window(cx, move |view, window, cx| {
+                                        view.open_received_text(text, window, cx);
+                                    });
+                                }
                                 let was_incoming = view.state.incoming.is_some();
                                 let incoming =
                                     matches!(&event, TransferEvent::IncomingRequest { .. });
@@ -234,6 +248,33 @@ impl Home {
             }
         })
         .detach();
+    }
+
+    pub fn open_received_text(
+        &mut self,
+        text: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.restore_focus.is_none() {
+            self.restore_focus = window.focused(cx);
+        }
+        self.logs = None;
+        self.about_open = false;
+        self.history_expanded = false;
+        let input = cx.new(|cx| {
+            let mut input = gpui_kit::base::input::TextareaState::new(window, cx)
+                .rows(12)
+                .default_value(text);
+            input.set_readonly(true, cx);
+            input
+        });
+        input.update(cx, |input, cx| input.focus(window, cx));
+        self.preview = Some(Preview::ReceivedText {
+            input,
+            copied: false,
+        });
+        cx.notify();
     }
 
     pub fn restore(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -617,6 +658,58 @@ impl Render for Home {
                 "action.send"
             },
         );
+        let mut app_menu_items = vec![
+            MenuItem::new(t!("action.paste"))
+                .shortcut("ctrl+v")
+                .disabled(self.loading_input),
+            MenuItem::new(t!("action.add_files_ellipsis"))
+                .shortcut("ctrl+o")
+                .disabled(self.loading_input),
+            MenuItem::new(t!("action.language"))
+                .separator_before()
+                .submenu(vec![
+                    (
+                        12,
+                        MenuItem::new("English")
+                            .checked(self.language == omasend::i18n::Language::En),
+                    ),
+                    (
+                        13,
+                        MenuItem::new("简体中文")
+                            .checked(self.language == omasend::i18n::Language::ZhCn),
+                    ),
+                ]),
+        ];
+        if !super::theme::is_omarchy() {
+            app_menu_items.push(
+                MenuItem::new(t!("action.theme")).submenu(
+                    [
+                        (20, "theme.system", super::theme::ThemeMode::System),
+                        (21, "theme.light", super::theme::ThemeMode::Light),
+                        (22, "theme.dark", super::theme::ThemeMode::Dark),
+                    ]
+                    .into_iter()
+                    .map(|(id, label, mode)| {
+                        (
+                            id,
+                            MenuItem::new(self.language.text(label))
+                                .checked(*cx.global::<super::theme::ThemeMode>() == mode),
+                        )
+                    })
+                    .collect(),
+                ),
+            );
+        }
+        app_menu_items.extend([
+            MenuItem::new(t!("action.check_update")).separator_before(),
+            MenuItem::new(t!("action.about")).separator_before(),
+            MenuItem::new("Omasend…"),
+            MenuItem::new("GitHub…"),
+            MenuItem::new("LocalSend…"),
+            MenuItem::new(t!("action.logs")).separator_before(),
+            MenuItem::new(t!("action.exit")).separator_before(),
+        ]);
+        let omarchy_menu = super::theme::is_omarchy();
         let mut root = focus_scope("omasend")
             .key_context("Omasend OmarchyFocusScope")
             .track_focus(&self.focus)
@@ -714,57 +807,15 @@ impl Render for Home {
                                 .map(|button| gpui_omarchy::with_tooltip(button, t!("action.menu")))
                                 .p_1()
                                 .child(icon(IconName::Menu).size(rems(0.875))),
-                            vec![
-                                MenuItem::new(t!("action.paste"))
-                                    .shortcut("ctrl+v")
-                                    .disabled(self.loading_input),
-                                MenuItem::new(t!("action.add_files_ellipsis"))
-                                    .shortcut("ctrl+o")
-                                    .disabled(self.loading_input),
-                                MenuItem::new(t!("action.language"))
-                                    .separator_before()
-                                    .submenu(vec![
-                                        (
-                                            12,
-                                            MenuItem::new("English").checked(
-                                                self.language == omasend::i18n::Language::En,
-                                            ),
-                                        ),
-                                        (
-                                            13,
-                                            MenuItem::new("简体中文").checked(
-                                                self.language == omasend::i18n::Language::ZhCn,
-                                            ),
-                                        ),
-                                    ]),
-                                MenuItem::new(t!("action.theme")).submenu(
-                                    [
-                                        (20, "theme.system", super::theme::ThemeMode::System),
-                                        (21, "theme.light", super::theme::ThemeMode::Light),
-                                        (22, "theme.dark", super::theme::ThemeMode::Dark),
-                                    ]
-                                    .into_iter()
-                                    .map(|(id, label, mode)| {
-                                        (
-                                            id,
-                                            MenuItem::new(self.language.text(label)).checked(
-                                                *cx.global::<super::theme::ThemeMode>() == mode,
-                                            ),
-                                        )
-                                    })
-                                    .collect(),
-                                ),
-                                MenuItem::new(t!("action.check_update")).separator_before(),
-                                MenuItem::new(t!("action.about")).separator_before(),
-                                MenuItem::new("Omasend…"),
-                                MenuItem::new("GitHub…"),
-                                MenuItem::new("LocalSend…"),
-                                MenuItem::new(t!("action.logs")).separator_before(),
-                                MenuItem::new(t!("action.exit")).separator_before(),
-                            ],
+                            app_menu_items,
                             {
                                 let view = cx.entity();
                                 move |index, window, cx| {
+                                    let index = if omarchy_menu && (3..=9).contains(&index) {
+                                        index + 1
+                                    } else {
+                                        index
+                                    };
                                     view.update(cx, |view, cx| match index {
                                         0 => view.paste(&Paste, window, cx),
                                         1 => view.open_files(&OpenFiles, window, cx),
@@ -990,7 +1041,7 @@ impl Render for Home {
         } else if self.about_open {
             root = root.child(self.about_dialog(cx));
         } else if self.preview.is_some() {
-            root = root.child(self.preview_dialog(cx));
+            root = root.child(self.preview_dialog(window, cx));
         }
         root
     }
@@ -1001,6 +1052,47 @@ mod keyboard_tests {
     use super::*;
     use gpui_kit::gpui;
     use gpui_kit::{KeyDownEvent, KeyUpEvent, Keystroke, TestAppContext};
+
+    #[gpui::test]
+    fn received_text_is_readonly_and_copyable(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            let text = "你好\n  received text\n".repeat(80);
+            view.update_in(cx, |view, window, cx| {
+                view.open_received_text(text.clone(), window, cx);
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            cx.simulate_keystrokes("ctrl-a backspace ctrl-v");
+            cx.update(|_, cx| {
+                let Some(Preview::ReceivedText { input, .. }) = &view.read(cx).preview else {
+                    panic!("text viewer missing")
+                };
+                assert_eq!(input.read(cx).value().as_str(), text);
+            });
+            cx.simulate_keystrokes("ctrl-a ctrl-c");
+            cx.update(|_, cx| {
+                assert_eq!(cx.read_from_clipboard().unwrap().text().unwrap(), text);
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            let copy = cx.debug_bounds("copy-received-text").unwrap();
+            cx.update(|_, cx| {
+                cx.write_to_clipboard(gpui_kit::ClipboardItem::new_string("other".into()))
+            });
+            cx.simulate_click(copy.center(), Default::default());
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            cx.update(|_, cx| {
+                assert_eq!(cx.read_from_clipboard().unwrap().text().unwrap(), text);
+                assert!(matches!(
+                    &view.read(cx).preview,
+                    Some(Preview::ReceivedText { copied: true, .. })
+                ));
+            });
+            cx.simulate_keystrokes("escape");
+            cx.update(|window, cx| {
+                assert!(view.read(cx).preview.is_none());
+                assert_eq!(window.focused(cx), Some(view.read(cx).focus.clone()));
+            });
+        });
+    }
 
     #[gpui::test]
     fn update_restart_preserves_outbox_and_check_does_not_interrupt_install(
@@ -1259,7 +1351,7 @@ mod keyboard_tests {
                         }],
                     });
                 } else {
-                    view.preview = Some(view.state.composer[0].id.clone());
+                    view.preview = Some(Preview::Composer(view.state.composer[0].id.clone()));
                 }
                 view.restore_focus = window.focused(cx);
                 view.modal_focus.focus(window, cx);
@@ -1450,6 +1542,44 @@ mod keyboard_tests {
             cx.update(|window, cx| window.draw(cx).clear(cx));
             assert!(cx.debug_bounds("last-completed-transfer").is_some());
             assert_eq!(view.read_with(cx, |view, _| view.state.transfers.len()), 2);
+        });
+    }
+
+    #[gpui::test]
+    fn completed_received_text_always_has_show_text_action(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            view.update_in(cx, |view, _, cx| {
+                view.state.composer.clear();
+                view.state.apply(TransferEvent::Started {
+                    id: "received-text".into(),
+                    peer: "Sender".into(),
+                    sending: false,
+                    files: vec![],
+                    total: 5,
+                });
+                view.state.apply(TransferEvent::ReceivedText {
+                    id: "received-text".into(),
+                    text: "hello".into(),
+                });
+                view.state.apply(TransferEvent::Completed {
+                    id: "received-text".into(),
+                    paths: vec!["Message.txt".into()],
+                });
+                cx.notify();
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            assert!(cx.debug_bounds("show-completed-text").is_some());
+            assert!(cx.debug_bounds("reveal-completed-transfer").is_none());
+
+            let show = cx.debug_bounds("show-completed-text").unwrap();
+            cx.simulate_click(show.center(), Default::default());
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            view.read_with(cx, |view, cx| {
+                let Some(Preview::ReceivedText { input, .. }) = &view.preview else {
+                    panic!("text preview did not open");
+                };
+                assert_eq!(input.read(cx).value().as_str(), "hello");
+            });
         });
     }
 

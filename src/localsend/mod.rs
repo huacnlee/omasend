@@ -49,6 +49,10 @@ pub enum TransferEvent {
         transferred: u64,
         total: u64,
     },
+    ReceivedText {
+        id: String,
+        text: String,
+    },
     Completed {
         id: String,
         paths: Vec<PathBuf>,
