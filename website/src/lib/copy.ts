@@ -32,6 +32,13 @@ export const copy = {
     prerelease: 'Development builds. Published downloads appear on GitHub Releases.',
     installNote: 'The installer selects your platform and verifies the release checksum.',
     sourceInstall: 'Build from source', script: 'Read the installer',
+    related: 'More Omarchy projects',
+    relatedIntro: 'Small tools that make the Omarchy desktop more useful.',
+    relatedDescriptions: {
+      omamail: 'A mail plugin for Omarchy with Gmail, HEY, and IMAP support. Read and manage email right from the desktop.',
+      mihoro: 'An Omarchy bar panel for Mihoro. Monitor your proxy, switch between Rule, Global, and Direct modes, and manage subscriptions.',
+      whichKey: 'Which Key for the desktop. Hold Super to see a shortcut guide drawn from your active Omarchy and Hyprland keybindings.',
+    },
     footer: 'An independent community project.', built: 'Built with',
   },
   'zh-CN': {
@@ -67,6 +74,13 @@ export const copy = {
     prerelease: '开发阶段。已发布的下载包会列在 GitHub Releases。',
     installNote: '安装脚本会选择对应平台，并校验发行包的校验和。',
     sourceInstall: '从源码构建', script: '查看安装脚本',
+    related: '更多 Omarchy 项目',
+    relatedIntro: '让 Omarchy 桌面更顺手的实用工具。',
+    relatedDescriptions: {
+      omamail: '支持 Gmail、HEY 和 IMAP 的 Omarchy 邮件插件，直接在桌面阅读和管理邮件。',
+      mihoro: 'Mihoro 的 Omarchy 顶栏面板。监控代理、切换规则、全局和直连模式，并管理订阅。',
+      whichKey: '桌面端快捷键指南。按住 Super，即可查看当前 Omarchy 与 Hyprland 快捷键。',
+    },
     footer: '独立社区项目。', built: '构建于',
   },
 } as const;

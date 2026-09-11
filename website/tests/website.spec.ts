@@ -31,6 +31,27 @@ test('English and Chinese routes keep correct links, language and metadata', asy
   expect(errors).toEqual([]);
 });
 
+test('related Omarchy projects close the page with GitHub links and descriptions', async ({ page }) => {
+  await page.goto('./');
+  const related = page.getByRole('region', { name: 'More Omarchy projects' });
+  await expect(related).toContainText('Read and manage email right from the desktop.');
+  await expect(related).toContainText('Monitor your proxy');
+  await expect(related).toContainText('Hold Super to see a shortcut guide');
+  await expect(related.getByRole('link', { name: 'Omamail' })).toHaveAttribute(
+    'href',
+    'https://github.com/huacnlee/omamail',
+  );
+  await expect(related.getByRole('link', { name: 'omarchy-mihoro' })).toHaveAttribute(
+    'href',
+    'https://github.com/huacnlee/omarchy-mihoro',
+  );
+  await expect(related.getByRole('link', { name: 'omarchy-which-key' })).toHaveAttribute(
+    'href',
+    'https://github.com/huacnlee/omarchy-which-key',
+  );
+  await expect(related.locator('xpath=following-sibling::*')).toHaveCount(0);
+});
+
 test('light and dark toggle follows system then persists across reload and language navigation', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('./');
