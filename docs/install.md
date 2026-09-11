@@ -7,6 +7,17 @@ access. A release must have been published before these commands can succeed.
 Published builds support Apple Silicon and Intel macOS, x86_64 and ARM64 Linux, and
 x86_64 Windows. Other architectures require a source build.
 
+## Omarchy
+
+Install Omasend from the Omarchy package repository:
+
+```sh
+omarchy pkg add omasend
+```
+
+Omasend will then be updated with the rest of the system by `omarchy update`.
+Remove it with `omarchy pkg drop omasend`.
+
 ## macOS and Linux
 
 ```sh

@@ -10,6 +10,8 @@ LocalSend is pinned to upstream commit `6279d3e30d1d1290caee3b81549f8128a8b01d9f
 
 Use a single crate with `localsend/` for the adapter, `model/` for send items and transfer state, `clipboard/` for MIME selection and Wayland process access, and `views/` for GPUI composition. The optional desktop feature permits protocol tests without a display; it does not provide a CLI product.
 
+Interface text lives in `locales/app.yml` and is resolved by rust-i18n under symbolic keys. `i18n::Language` decides the active locale and maps the English error text produced deeper in the application onto those keys, so errors stay readable in logs while the interface stays translated.
+
 ## Ordered work
 
 - [ ] Protocol adapter: bind HTTPS, discover automatically, accept/decline incoming requests, stream file/text transfers, expose progress/cancel/failure/completion, stop all tasks on exit. Integration tests must exercise real sockets, both directions, refusal, cancellation, fingerprint mismatch and port release.
@@ -53,7 +55,10 @@ Run `cargo test --no-default-features`, `cargo fmt --check`, `cargo check --all-
 - The bilingual website passes its production build and twelve browser tests,
   including installation tabs, first-viewport commands, theme and language
   controls, and reduced-motion behavior.
-- gpui-omarchy 0.1.0 is pinned locally with its menu shortcut renderer using the
-  existing keycap component and focus traversal respecting gpui-base modal traps.
+- gpui-omarchy is a published dependency again. The fixes Omasend used to carry
+  as a local patch — submenus, the inline alert, icon names for the whole
+  gpui-kit-assets set, and focus traversal respecting gpui-base modal traps —
+  live upstream in 0.1.2. Menu shortcuts render as plain secondary text there,
+  not as keycaps.
 - Remaining acceptance work: real Wayland clipboard/drag-drop/portal behavior,
   the complete keyboard/modal matrix, mobile peers, and PIN entry UX.

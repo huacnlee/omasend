@@ -8,6 +8,7 @@ use gpui_omarchy::{
     icon, keycap,
 };
 use omasend::model::{SendItem, TransferStatus};
+use rust_i18n::t;
 
 impl Home {
     pub fn composer(&self, cx: &mut Context<Self>) -> AnyElement {
@@ -20,6 +21,92 @@ impl Home {
             .flex_1()
             .min_h(rems(8.))
             .gap_3();
+        // A receiver has no composer items, so an incoming transfer would run
+        // with nothing on screen. Give it the place the outbox occupies while
+        // it is in flight.
+        if let Some(transfer) = self
+            .state
+            .transfers
+            .iter()
+            .rev()
+            .find(|transfer| !transfer.sending && transfer.status == TransferStatus::Active)
+        {
+            let transfer_id = transfer.id.clone();
+            return list
+                .child(
+                    div()
+                        .id("active-receive")
+                        .debug_selector(|| "active-receive".into())
+                        .flex()
+                        .flex_col()
+                        .flex_1()
+                        .items_center()
+                        .justify_center()
+                        .bg(theme.background)
+                        .border_1()
+                        .border_color(theme.divider())
+                        .p_4()
+                        .child(
+                            div()
+                                .w(rems(28.))
+                                .max_w_full()
+                                .flex()
+                                .flex_col()
+                                .gap_3()
+                                .child(
+                                    div()
+                                        .flex()
+                                        .justify_center()
+                                        .text_color(theme.accent)
+                                        .child(icon(IconName::ArrowDown).size(rems(2.))),
+                                )
+                                .child(
+                                    div().w_full().text_center().text_color(theme.bright).child(
+                                        transfer
+                                            .files
+                                            .iter()
+                                            .map(|file| file.name.as_str())
+                                            .collect::<Vec<_>>()
+                                            .join(", "),
+                                    ),
+                                )
+                                .child(
+                                    div()
+                                        .w_full()
+                                        .text_center()
+                                        .text_color(theme.secondary)
+                                        .child(format!(
+                                            "{} · {}",
+                                            self.language.named("history.from", &transfer.peer),
+                                            size_label(transfer.total),
+                                        )),
+                                )
+                                .child(self.transfer_progress(transfer, "active-receive", None, cx))
+                                .child(
+                                    div().flex().justify_center().child(
+                                        button(
+                                            "cancel-active-receive",
+                                            t!("action.cancel"),
+                                            ButtonVariant::Outline,
+                                            cx,
+                                        )
+                                        .on_click(
+                                            cx.listener(move |view, _, _, cx| {
+                                                if let Some(node) = &view.node
+                                                    && let Err(error) =
+                                                        node.handle.cancel(&transfer_id)
+                                                {
+                                                    view.state.error = Some(error.to_string());
+                                                }
+                                                cx.notify();
+                                            }),
+                                        ),
+                                    ),
+                                ),
+                        ),
+                )
+                .into_any_element();
+        }
         if self.state.composer.is_empty()
             && let Some(transfer) = self
                 .state
@@ -75,7 +162,7 @@ impl Home {
                                                 .child(
                                                     button(
                                                         "confirm-transfer-success",
-                                                        self.language.text("Done"),
+                                                        t!("status.done"),
                                                         ButtonVariant::Outline,
                                                         cx,
                                                     )
@@ -95,7 +182,7 @@ impl Home {
                                                 actions.child(
                                                     button(
                                                         "show-completed-text",
-                                                        self.language.text("Show Text"),
+                                                        t!("action.show_text"),
                                                         ButtonVariant::Outline,
                                                         cx,
                                                     )
@@ -119,7 +206,7 @@ impl Home {
                                                     actions.child(
                                                         button(
                                                             "reveal-completed-transfer",
-                                                            self.language.text("Show in Files"),
+                                                            t!("action.show_in_files"),
                                                             ButtonVariant::Outline,
                                                             cx,
                                                         )
@@ -163,12 +250,12 @@ impl Home {
                         div()
                             .text_color(theme.bright)
                             .font_weight(gpui_kit::FontWeight::BOLD)
-                            .child(self.language.text("Drop something here")),
+                            .child(t!("composer.drop_hint")),
                     )
                     .child(
                         div()
                             .text_color(theme.secondary)
-                            .child(self.language.text("Files, folders, images or a few words.")),
+                            .child(t!("composer.drop_kinds")),
                     )
                     .child(
                         div()
@@ -176,10 +263,10 @@ impl Home {
                             .items_center()
                             .gap_2()
                             .child(keycap("ctrl+v", cx))
-                            .child(self.language.text("Paste"))
+                            .child(t!("action.paste"))
                             .child(div().w(rems(0.5)))
                             .child(keycap("ctrl+o", cx))
-                            .child(self.language.text("Add files")),
+                            .child(t!("action.add_files")),
                     ),
             );
         }
@@ -258,8 +345,8 @@ impl Home {
                                         size_label(item.size()),
                                         self.language.count(
                                             item.uploads.len(),
-                                            "{count} file",
-                                            "{count} files"
+                                            "history.file_one",
+                                            "history.file_other"
                                         )
                                     )
                                 },
@@ -269,7 +356,7 @@ impl Home {
                         row.child(
                             button(
                                 gpui_kit::SharedString::from(format!("preview-{id}")),
-                                self.language.text("Preview…"),
+                                t!("action.preview_ellipsis"),
                                 ButtonVariant::Secondary,
                                 cx,
                             )
@@ -287,7 +374,7 @@ impl Home {
                         row.child(
                             button(
                                 gpui_kit::SharedString::from(format!("remove-{id}")),
-                                self.language.text("Remove"),
+                                t!("action.remove"),
                                 ButtonVariant::Secondary,
                                 cx,
                             )
@@ -305,7 +392,7 @@ impl Home {
                         row.child(
                             button(
                                 SharedString::from(format!("cancel-item-{}", item.id)),
-                                self.language.text("Cancel"),
+                                t!("action.cancel"),
                                 ButtonVariant::Secondary,
                                 cx,
                             )
@@ -368,15 +455,14 @@ impl Home {
         }
         let popup = dialog_popup(cx)
             .child(dialog_title(
-                self.language
-                    .named("{name} wants to send", &request.peer.alias),
+                self.language.named("receive.title", &request.peer.alias),
                 cx,
             ))
             .child(files)
             .child(
                 div()
                     .text_color(cx.omarchy().secondary)
-                    .child(self.language.text("Save to your Downloads folder")),
+                    .child(t!("receive.destination")),
             )
             .child(
                 div()
@@ -384,24 +470,15 @@ impl Home {
                     .justify_end()
                     .gap_2()
                     .child(
-                        button(
-                            "decline",
-                            self.language.text("Decline"),
-                            ButtonVariant::Outline,
-                            cx,
-                        )
-                        .on_click(
-                            cx.listener(|view, _, window, cx| view.decide(false, window, cx)),
-                        ),
+                        button("decline", t!("action.decline"), ButtonVariant::Outline, cx)
+                            .on_click(
+                                cx.listener(|view, _, window, cx| view.decide(false, window, cx)),
+                            ),
                     )
                     .child(
-                        button(
-                            "accept",
-                            self.language.text("Accept"),
-                            ButtonVariant::Primary,
-                            cx,
-                        )
-                        .on_click(cx.listener(|view, _, window, cx| view.decide(true, window, cx))),
+                        button("accept", t!("action.accept"), ButtonVariant::Primary, cx).on_click(
+                            cx.listener(|view, _, window, cx| view.decide(true, window, cx)),
+                        ),
                     ),
             );
         let ok = cx.listener(|view: &mut Self, _, window, cx| view.decide(true, window, cx));
@@ -443,14 +520,14 @@ impl Home {
             );
         let mut popup = dialog_popup(cx).w(rems(40.)).child(dialog_title(
             item.map(|item| item.name())
-                .unwrap_or_else(|| self.language.text("Preview").into()),
+                .unwrap_or_else(|| t!("action.preview").into()),
             cx,
         ));
         let mut actions = div().flex().justify_end().gap_2();
         if let Some(Preview::ReceivedText { input, copied }) = &self.preview {
             popup = dialog_popup(cx)
                 .w(rems(40.))
-                .child(dialog_title(self.language.text("Received text"), cx))
+                .child(dialog_title(t!("dialog.received_text"), cx))
                 .child(
                     gpui_omarchy::textarea("received-text", input, window, cx)
                         .h(rems(18.))
@@ -460,7 +537,11 @@ impl Home {
             actions = actions.child(
                 button(
                     "copy-received-text",
-                    self.language.text(if *copied { "Copied" } else { "Copy" }),
+                    t!(if *copied {
+                        "status.copied"
+                    } else {
+                        "action.copy"
+                    }),
                     ButtonVariant::Outline,
                     cx,
                 )
@@ -487,7 +568,7 @@ impl Home {
         actions = actions.child(
             button(
                 "close-preview",
-                self.language.text("Close"),
+                t!("action.close"),
                 ButtonVariant::Outline,
                 cx,
             )

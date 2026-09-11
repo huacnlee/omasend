@@ -16,6 +16,8 @@ test('English and Chinese routes keep correct links, language and metadata', asy
     expect(markup).toContain(`d="${path}"`);
   }
   expect(markup).not.toContain('<rect');
+  await expect(page.getByRole('link', { name: 'LocalSend ↗', exact: true })).toHaveAttribute('href', 'https://localsend.org');
+  await expect(page.getByRole('link', { name: 'LocalSend protocol ↗', exact: true })).toHaveAttribute('href', 'https://github.com/localsend/protocol');
 
   await page.locator('#language-toggle').click();
   await page.getByRole('menuitemradio', { name: '简体中文' }).click();
@@ -27,6 +29,27 @@ test('English and Chinese routes keep correct links, language and metadata', asy
   await expect(page.locator('#command-linux')).toContainText('/main/install.sh | sh');
   await expect(page.locator('#command-windows')).toContainText('/main/install.ps1 | iex');
   expect(errors).toEqual([]);
+});
+
+test('related Omarchy projects close the page with GitHub links and descriptions', async ({ page }) => {
+  await page.goto('./');
+  const related = page.getByRole('region', { name: 'More Omarchy projects' });
+  await expect(related).toContainText('Read and manage email right from the desktop.');
+  await expect(related).toContainText('Monitor your proxy');
+  await expect(related).toContainText('Hold Super to see a shortcut guide');
+  await expect(related.getByRole('link', { name: 'Omamail' })).toHaveAttribute(
+    'href',
+    'https://github.com/huacnlee/omamail',
+  );
+  await expect(related.getByRole('link', { name: 'omarchy-mihoro' })).toHaveAttribute(
+    'href',
+    'https://github.com/huacnlee/omarchy-mihoro',
+  );
+  await expect(related.getByRole('link', { name: 'omarchy-which-key' })).toHaveAttribute(
+    'href',
+    'https://github.com/huacnlee/omarchy-which-key',
+  );
+  await expect(related.locator('xpath=following-sibling::*')).toHaveCount(0);
 });
 
 test('light and dark toggle follows system then persists across reload and language navigation', async ({ page }) => {

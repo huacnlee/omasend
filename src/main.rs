@@ -3,7 +3,33 @@
     windows_subsystem = "windows"
 )]
 
+// The interface lives in this binary, so it carries its own catalog handle;
+// `omasend::i18n` decides which locale both halves resolve against.
+rust_i18n::i18n!("locales", fallback = "en");
+
 mod views;
+
+// gpui-kit-assets embeds a default bundle for the component set; Omasend needs
+// two icons outside it. Compose the two sources so the binary carries those two
+// SVGs rather than the whole Lucide catalog.
+gpui_kit::assets::icon_assets!(ExtraIcons, [Send, ClockFading]);
+
+struct Assets;
+impl gpui_kit::AssetSource for Assets {
+    fn load(&self, path: &str) -> gpui_kit::Result<Option<std::borrow::Cow<'static, [u8]>>> {
+        if let Some(bytes) = ExtraIcons.load(path)? {
+            return Ok(Some(bytes));
+        }
+        gpui_kit::assets::Assets.load(path)
+    }
+    fn list(&self, path: &str) -> gpui_kit::Result<Vec<gpui_kit::SharedString>> {
+        let mut paths = gpui_kit::assets::Assets.list(path)?;
+        paths.extend(ExtraIcons.list(path)?);
+        paths.sort();
+        paths.dedup();
+        Ok(paths)
+    }
+}
 
 use gpui_kit::{App, AppContext, Bounds, Entity, Global, WindowBounds, WindowOptions, px, size};
 
@@ -56,7 +82,7 @@ fn main() -> anyhow::Result<()> {
         .thread_name("omasend-network")
         .build()?;
     let handle = runtime.handle().clone();
-    let application = gpui_omarchy::application();
+    let application = gpui_kit::application().with_assets(Assets);
     #[cfg(target_os = "macos")]
     {
         let handle = handle.clone();

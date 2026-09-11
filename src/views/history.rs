@@ -2,16 +2,15 @@ use super::{Home, size_label};
 use gpui_kit::{AnimationExt, AnyElement, Context, SharedString, Window, div, prelude::*, rems};
 use gpui_omarchy::{ActiveTheme, ButtonVariant, IconName, button, icon, progress, sheet};
 use omasend::model::{Transfer, TransferStatus};
+use rust_i18n::t;
 
 impl Home {
     pub fn history_button(&self, cx: &mut Context<Self>) -> AnyElement {
         button("toggle-transfer-history", "", ButtonVariant::Secondary, cx)
-            .accessibility_label(self.language.text("Transfer history"))
-            .map(|button| {
-                gpui_omarchy::with_tooltip(button, self.language.text("Transfer history"))
-            })
+            .accessibility_label(t!("history.title"))
+            .map(|button| gpui_omarchy::with_tooltip(button, t!("history.title")))
             .disabled(self.state.transfers.is_empty())
-            .child(icon(IconName::History).size(rems(0.875)))
+            .child(icon(IconName::ClockFading).size(rems(0.875)))
             .on_click(cx.listener(|view, _, window, cx| view.open_history(window, cx)))
             .into_any_element()
     }
@@ -51,7 +50,7 @@ impl Home {
                 div()
                     .py_3()
                     .text_color(theme.secondary)
-                    .child(self.language.text("No transfers yet")),
+                    .child(t!("history.empty")),
             );
         }
         let surface = div()
@@ -79,11 +78,11 @@ impl Home {
                     .py_2()
                     .border_b_1()
                     .border_color(theme.divider())
-                    .child(div().flex_1().child(self.language.text("Transfer history")))
+                    .child(div().flex_1().child(t!("history.title")))
                     .child(
                         button(
                             "clear-transfer-history",
-                            self.language.text("Clear"),
+                            t!("action.clear"),
                             ButtonVariant::Outline,
                             cx,
                         )
@@ -100,7 +99,7 @@ impl Home {
                                 .border_color(theme.danger)
                         })
                         .active(|style| style.bg(theme.danger.opacity(0.14)))
-                        .accessibility_label(self.language.text("Clear transfer history"))
+                        .accessibility_label(t!("action.clear_history"))
                         .disabled(
                             !self
                                 .state
@@ -110,6 +109,7 @@ impl Home {
                         )
                         .on_click(cx.listener(|view, _, window, cx| {
                             view.state.clear_transfer_history();
+                            omasend::model::history::save(&view.state.transfers);
                             view.history_scroll.scroll_to_bottom();
                             view.modal_focus.focus(window, cx);
                             cx.notify();
@@ -117,10 +117,8 @@ impl Home {
                     )
                     .child(
                         button("close-transfer-history", "", ButtonVariant::Secondary, cx)
-                            .accessibility_label(self.language.text("Close"))
-                            .map(|button| {
-                                gpui_omarchy::with_tooltip(button, self.language.text("Close"))
-                            })
+                            .accessibility_label(t!("action.close"))
+                            .map(|button| gpui_omarchy::with_tooltip(button, t!("action.close")))
                             .p_1()
                             .child(icon(IconName::Close).size(rems(0.875)))
                             .on_click(cx.listener(|view, _, window, cx| {
@@ -218,14 +216,14 @@ impl Home {
         let theme = cx.omarchy();
         let (status, color) = match &transfer.status {
             TransferStatus::Active if transfer.awaiting_acceptance => {
-                ("Waiting for receiver", theme.secondary)
+                ("status.waiting", theme.secondary)
             }
-            TransferStatus::Active if transfer.sending => ("Sending", theme.accent),
-            TransferStatus::Active => ("Receiving", theme.accent),
-            TransferStatus::Completed if transfer.sending => ("Sent", theme.success),
-            TransferStatus::Completed => ("Received", theme.success),
-            TransferStatus::Cancelled => ("Cancelled", theme.secondary),
-            TransferStatus::Failed(_) => ("Failed", theme.danger),
+            TransferStatus::Active if transfer.sending => ("status.sending", theme.accent),
+            TransferStatus::Active => ("status.receiving", theme.accent),
+            TransferStatus::Completed if transfer.sending => ("status.sent", theme.success),
+            TransferStatus::Completed => ("status.received", theme.success),
+            TransferStatus::Cancelled => ("status.cancelled", theme.secondary),
+            TransferStatus::Failed(_) => ("status.failed", theme.danger),
         };
         let clock: chrono::DateTime<chrono::Local> = transfer.when.into();
         div()
@@ -277,19 +275,20 @@ impl Home {
                 "{} · {}",
                 self.language.named(
                     if transfer.sending {
-                        "To {name}"
+                        "history.to"
                     } else {
-                        "From {name}"
+                        "history.from"
                     },
                     &transfer.peer
                 ),
                 size_label(transfer.total),
             )))
             .child(self.transfer_status(transfer, cx))
-            .child(div().text_color(theme.secondary).child(format!(
-                "{} · {average}",
-                self.language.text("Average speed"),
-            )))
+            .child(
+                div()
+                    .text_color(theme.secondary)
+                    .child(format!("{} · {average}", t!("status.average_speed"),)),
+            )
             .into_any_element()
     }
 
@@ -302,14 +301,15 @@ impl Home {
         let theme = cx.omarchy().clone();
         let id = transfer.id.clone();
         let active = transfer.status == TransferStatus::Active;
-        let mut row = div()
-            .flex_shrink_0()
+        // The record reads as one line of text with its actions parked at the
+        // trailing edge, centred against the whole block rather than hanging
+        // off its last line.
+        let mut details = div()
             .flex()
             .flex_col()
+            .flex_1()
+            .min_w_0()
             .gap_2()
-            .py_3()
-            .border_b_1()
-            .border_color(theme.divider())
             .child(
                 div()
                     .flex()
@@ -335,7 +335,7 @@ impl Home {
                         row.child(
                             button(
                                 SharedString::from(format!("cancel-{id}")),
-                                self.language.text("Cancel"),
+                                t!("action.cancel"),
                                 ButtonVariant::Secondary,
                                 cx,
                             )
@@ -357,36 +357,39 @@ impl Home {
                     "{} · {}",
                     self.language.named(
                         if transfer.sending {
-                            "To {name}"
+                            "history.to"
                         } else {
-                            "From {name}"
+                            "history.from"
                         },
                         &transfer.peer
                     ),
                     size_label(transfer.total),
                 )))
             });
-        row = row.child(self.transfer_progress(transfer, &transfer.id, None, cx));
+        details = details.child(self.transfer_progress(transfer, &transfer.id, None, cx));
+
+        let mut actions = div().flex().flex_col().items_end().flex_shrink_0().gap_2();
         for (index, path) in transfer.paths.iter().enumerate() {
             let open_path = path.clone();
             let reveal_path = path.clone();
-            row = row.child(
+            actions = actions.child(
                 div()
                     .flex()
-                    .items_center()
+                    .flex_col()
+                    .items_end()
                     .gap_2()
                     .when(
                         transfer.paths.len() > 1
                             || transfer.files.first().is_some_and(|file| {
                                 path.file_name().unwrap_or_default().to_string_lossy() != file.name
                             }),
-                        |row| {
-                            row.child(
+                        |group| {
+                            group.child(
                                 div()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .text_ellipsis()
+                                    .max_w(rems(12.))
                                     .overflow_hidden()
+                                    .text_ellipsis()
+                                    .text_color(theme.secondary)
                                     .child(
                                         path.file_name()
                                             .unwrap_or_default()
@@ -399,7 +402,7 @@ impl Home {
                     .child(
                         button(
                             SharedString::from(format!("open-{}-{index}", transfer.id)),
-                            self.language.text("Open"),
+                            t!("action.open"),
                             ButtonVariant::Secondary,
                             cx,
                         )
@@ -408,7 +411,7 @@ impl Home {
                     .child(
                         button(
                             SharedString::from(format!("reveal-{}-{index}", transfer.id)),
-                            self.language.text("Show in Files"),
+                            t!("action.show_in_files"),
                             ButtonVariant::Secondary,
                             cx,
                         )
@@ -416,6 +419,17 @@ impl Home {
                     ),
             );
         }
+
+        let row = div()
+            .flex_shrink_0()
+            .flex()
+            .items_center()
+            .gap_3()
+            .py_3()
+            .border_b_1()
+            .border_color(theme.divider())
+            .child(details)
+            .when(!transfer.paths.is_empty(), |item| item.child(actions));
         row.with_animation(
             SharedString::from(format!("transfer-enter-{}", transfer.id)),
             super::motion::content_enter(),
