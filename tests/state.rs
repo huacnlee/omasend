@@ -110,6 +110,28 @@ fn acceptance_is_independent_of_the_first_uploaded_byte() {
 }
 
 #[test]
+fn received_text_remains_attached_to_completed_transfer() {
+    let mut state = AppState::default();
+    state.apply(TransferEvent::Started {
+        id: "received-text".into(),
+        peer: "Sender".into(),
+        sending: false,
+        files: vec![],
+        total: 5,
+    });
+    state.apply(TransferEvent::ReceivedText {
+        id: "received-text".into(),
+        text: "hello".into(),
+    });
+    state.apply(TransferEvent::Completed {
+        id: "received-text".into(),
+        paths: vec!["Message.txt".into()],
+    });
+
+    assert_eq!(state.transfers[0].received_text.as_deref(), Some("hello"));
+}
+
+#[test]
 fn active_peer_survives_discovery_expiry_until_transfer_finishes() {
     let mut state = AppState::default();
     let peer = Device {

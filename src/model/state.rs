@@ -98,6 +98,7 @@ pub struct Transfer {
     pub transferred: u64,
     pub total: u64,
     pub paths: Vec<PathBuf>,
+    pub received_text: Option<String>,
     pub status: TransferStatus,
     pub when: SystemTime,
     pub composer_ids: HashSet<String>,
@@ -181,6 +182,7 @@ impl AppState {
             rate: TransferRate::default(),
             total: self.composer.iter().map(ComposerItem::size).sum(),
             paths: Vec::new(),
+            received_text: None,
             status: TransferStatus::Active,
             when: SystemTime::now(),
             composer_ids: self.composer.iter().map(|item| item.id.clone()).collect(),
@@ -211,6 +213,12 @@ impl AppState {
             TransferEvent::DeviceLost(id) => {
                 self.expired_devices.insert(id);
                 self.remove_expired_devices();
+            }
+            TransferEvent::ReceivedText { id, text } => {
+                if let Some(transfer) = self.transfers.iter_mut().find(|transfer| transfer.id == id)
+                {
+                    transfer.received_text = Some(text);
+                }
             }
             TransferEvent::NetworkError(error) => self.error = Some(error),
             TransferEvent::IncomingRequest { id, peer, files } => {
@@ -255,6 +263,7 @@ impl AppState {
                             ..Default::default()
                         },
                         paths: Vec::new(),
+                        received_text: None,
                         status: TransferStatus::Active,
                         when: SystemTime::now(),
                         composer_ids: HashSet::new(),

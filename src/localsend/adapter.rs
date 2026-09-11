@@ -527,6 +527,9 @@ impl Actor {
                 {
                     return;
                 }
+                let is_text = file.file_type == "text/plain" && file.preview.is_some();
+                let text_events = self.events.clone();
+                let text_session_id = session_id.clone();
                 let receive = ReceiveFile {
                     downloads: self.downloads.clone(),
                     session: session_id.clone(),
@@ -537,6 +540,18 @@ impl Actor {
                 };
                 tasks.spawn(async move {
                     let result = receive.save(binary_rx).await;
+                    if is_text && let Ok(path) = &result {
+                        match tokio::fs::read_to_string(path).await {
+                            Ok(text) => emit(
+                                &text_events,
+                                TransferEvent::ReceivedText {
+                                    id: text_session_id,
+                                    text,
+                                },
+                            ),
+                            Err(error) => tracing::warn!(%error, "Could not read received text"),
+                        }
+                    }
                     let _ = result_tx.send(
                         result
                             .as_ref()

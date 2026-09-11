@@ -162,6 +162,8 @@ const CATALOG: &[(&str, &str)] = &[
     ),
     ("Logs…", "日志…"),
     ("Logs", "日志"),
+    ("Received text", "收到的文本"),
+    ("Show Text", "显示文本"),
     ("Copy", "复制"),
     ("No logs yet", "暂无日志"),
     ("Copied", "已复制"),

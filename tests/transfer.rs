@@ -350,3 +350,36 @@ async fn symlink_parent_cannot_escape_downloads() {
     assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(), 0);
     receiver.shutdown().await;
 }
+
+#[tokio::test]
+async fn received_message_exposes_full_text_after_acceptance() {
+    let source = tempfile::tempdir().unwrap();
+    let destination = tempfile::tempdir().unwrap();
+    let sender = node("Sender", source.path()).await;
+    let receiver = node("Receiver", destination.path()).await;
+    let text = "你好\n  long message with whitespace\n".repeat(100);
+    sender
+        .handle
+        .send(
+            receiver.device.clone(),
+            vec![Upload::text(text.clone())],
+            None,
+        )
+        .unwrap();
+    let mut received_text = None;
+    loop {
+        match event(&receiver).await {
+            TransferEvent::IncomingRequest { id, .. } => receiver.handle.decide(&id, true).unwrap(),
+            TransferEvent::ReceivedText { text, .. } => received_text = Some(text),
+            TransferEvent::Completed { paths, .. } => {
+                assert_eq!(received_text.as_deref(), Some(text.as_str()));
+                assert_eq!(std::fs::read_to_string(&paths[0]).unwrap(), text);
+                break;
+            }
+            TransferEvent::Failed { error, .. } => panic!("{error}"),
+            _ => {}
+        }
+    }
+    sender.shutdown().await;
+    receiver.shutdown().await;
+}
