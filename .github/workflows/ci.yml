@@ -82,6 +82,8 @@ jobs:
           key: ci-tests
       - name: Unix installer tests
         run: python scripts/test-install.py
+      - name: Arch package recipe tests
+        run: python scripts/test-pkgbuild.py
       - name: Unit and integration tests
         run: cargo test --locked --no-default-features
       - name: GPUI interaction tests
