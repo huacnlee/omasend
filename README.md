@@ -42,6 +42,12 @@ Keep both devices on the same network, and allow TCP and UDP port `53317` throug
 
 Supports Linux x86_64 and ARM64, macOS Apple Silicon and Intel, and Windows x86_64.
 
+**Omarchy**
+
+```sh
+omarchy pkg add omasend
+```
+
 **macOS / Linux**
 
 ```sh
