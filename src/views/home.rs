@@ -44,6 +44,9 @@ pub struct Home {
     pub preview: Option<Preview>,
     pub loading_input: bool,
     pub starting: bool,
+    /// Restarts the discovery emblem's actuation burst; see [`super::motion::discovery_logo`].
+    pub discovery_cycle: u64,
+    pub discovery_clock: Option<gpui_kit::Task<()>>,
 }
 
 impl Home {
@@ -76,6 +79,8 @@ impl Home {
             preview: None,
             loading_input: false,
             starting: false,
+            discovery_cycle: 0,
+            discovery_clock: None,
         };
         view.language.activate();
         // Earlier sessions' records belong on screen before anything new lands.
@@ -115,6 +120,35 @@ impl Home {
             }
         })
         .detach();
+    }
+
+    pub fn apply_event(&mut self, event: TransferEvent, cx: &mut Context<Self>) {
+        self.state.apply(event);
+        self.sync_discovery_clock(cx);
+    }
+
+    // The emblem's actuation burst is a oneshot animation, so GPUI schedules
+    // no frames through the rest that follows it. This clock restarts the burst
+    // once per cycle instead of the animation repeating at full frame rate.
+    fn sync_discovery_clock(&mut self, cx: &mut Context<Self>) {
+        if !self.state.discovering {
+            self.discovery_clock = None;
+        } else if self.discovery_clock.is_none() {
+            self.discovery_clock = Some(cx.spawn(async move |this, cx| {
+                loop {
+                    cx.background_executor()
+                        .timer(super::motion::DISCOVERY_CYCLE)
+                        .await;
+                    let advanced = this.update(cx, |view, cx| {
+                        view.discovery_cycle += 1;
+                        cx.notify();
+                    });
+                    if advanced.is_err() {
+                        break;
+                    }
+                }
+            }));
+        }
     }
 
     pub fn close_window(&mut self, window: &mut Window, _: &mut Context<Self>) {
@@ -213,7 +247,7 @@ impl Home {
                                     view.history_expanded = false;
                                     view.preview = None;
                                 }
-                                view.state.apply(event);
+                                view.apply_event(event, cx);
                                 if finished {
                                     omasend::model::history::save(&view.state.transfers);
                                 }
@@ -1095,6 +1129,34 @@ mod keyboard_tests {
     }
 
     #[gpui::test]
+    fn discovery_emblem_restarts_each_cycle_only_while_discovering(cx: &mut TestAppContext) {
+        with_home(cx, |view, cx| {
+            view.update(cx, |view, cx| {
+                view.apply_event(TransferEvent::DiscoveryActive(true), cx);
+            });
+            assert_eq!(view.read_with(cx, |view, _| view.discovery_cycle), 0);
+            cx.executor().advance_clock(super::motion::DISCOVERY_CYCLE);
+            cx.run_until_parked();
+            assert_eq!(view.read_with(cx, |view, _| view.discovery_cycle), 1);
+            cx.executor().advance_clock(super::motion::DISCOVERY_CYCLE);
+            cx.run_until_parked();
+            assert_eq!(view.read_with(cx, |view, _| view.discovery_cycle), 2);
+
+            view.update(cx, |view, cx| {
+                view.apply_event(TransferEvent::DiscoveryActive(false), cx);
+            });
+            cx.executor()
+                .advance_clock(super::motion::DISCOVERY_CYCLE * 3);
+            cx.run_until_parked();
+            assert_eq!(
+                view.read_with(cx, |view, _| view.discovery_cycle),
+                2,
+                "the emblem clock stops with discovery"
+            );
+        });
+    }
+
+    #[gpui::test]
     fn update_restart_preserves_outbox_and_check_does_not_interrupt_install(
         cx: &mut TestAppContext,
     ) {
@@ -1177,6 +1239,8 @@ mod keyboard_tests {
                 preview: None,
                 loading_input: false,
                 starting: false,
+                discovery_cycle: 0,
+                discovery_clock: None,
             }
         });
         cx.update(|window, cx| window.draw(cx).clear(cx));

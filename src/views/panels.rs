@@ -244,6 +244,7 @@ impl Home {
                         theme.accent,
                         self.state.discovering && !cx.reduce_motion(),
                         self.state.discovery_revision,
+                        self.discovery_cycle,
                         64.,
                     ))
                     .child(

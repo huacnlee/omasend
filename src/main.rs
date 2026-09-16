@@ -164,6 +164,8 @@ mod lifecycle_tests {
                 preview: None,
                 loading_input: false,
                 starting: false,
+                discovery_cycle: 0,
+                discovery_clock: None,
             });
             cx.set_global(DesktopSession {
                 home: Some(home.clone()),
