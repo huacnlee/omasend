@@ -75,6 +75,15 @@ fn open_or_activate_window(cx: &mut App, runtime: tokio::runtime::Handle) -> any
 }
 
 fn main() -> anyhow::Result<()> {
+    // Answer before any GUI setup, so package managers can probe the binary on
+    // a headless machine without a window opening.
+    if std::env::args()
+        .skip(1)
+        .any(|arg| arg == "--version" || arg == "-V")
+    {
+        println!("omasend {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
     let executable = std::env::current_exe()?;
     omasend::diagnostics::init();
     let runtime = tokio::runtime::Builder::new_multi_thread()
