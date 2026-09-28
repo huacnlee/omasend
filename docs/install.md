@@ -47,6 +47,24 @@ creates a Start menu shortcut. Close the app before running the installer
 again to upgrade. If local PowerShell policy prevents script execution,
 download and extract the Windows ZIP from the release page instead.
 
+## mise
+
+[mise](https://mise.jdx.dev) can install the release binary from GitHub:
+
+```sh
+mise use -g github:huacnlee/omasend
+```
+
+On macOS, point mise at the binary inside the app bundle:
+
+```sh
+mise use -g 'github:huacnlee/omasend[bin_path=OmaSend.app/Contents/MacOS]'
+```
+
+mise installs only the executable. It does not add the Linux desktop entry and
+icon, or put `OmaSend.app` in Applications. Upgrade with `mise upgrade`, not
+the in-app updater, so mise keeps track of the installed version.
+
 ## Manual installation and removal
 
 Every archive is portable. Download the archive for your platform and CPU,

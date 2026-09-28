@@ -28,8 +28,14 @@ curl -fsSL https://huacnlee.github.io/omasend/install.sh | sh
 irm https://huacnlee.github.io/omasend/install.ps1 | iex
 ```
 
+**mise**
+
+```sh
+mise use -g github:huacnlee/omasend
+```
+
 The installer selects the latest release for your device. For manual installation,
-custom locations, or removal, see the [installation guide](docs/install.md).
+custom locations, mise on macOS, or removal, see the [installation guide](docs/install.md).
 
 ## Features
 
