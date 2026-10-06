@@ -22,7 +22,7 @@ cap-std = "3"
 dirs = "6"
 futures-util = "0.3"
 gpui-omarchy = { git = "https://github.com/huacnlee/gpui-omarchy", branch = "use-gpui-fast", optional = true }
-gpui-kit = { git = "https://github.com/longbridge/gpui-kit", branch = "add-gpui-fast-feature", default-features = false, features = ["assets"], optional = true }
+gpui-kit = { git = "https://github.com/longbridge/gpui-kit", branch = "main", default-features = false, features = ["assets"], optional = true }
 localsend = { path = "vendor/localsend", features = ["discovery"] }
 if-addrs = "0.15"
 gethostname = "1.1"
