@@ -13,11 +13,6 @@ default = ["desktop"]
 desktop = ["dep:gpui-omarchy", "dep:gpui-kit"]
 ui-tests = ["desktop", "gpui-kit/test-support"]
 
-# Keep gpui-omarchy on the same unpublished Kit source as the application.
-# Remove this source override after the feature is available on crates.io.
-[patch.crates-io]
-gpui-kit = { git = "https://github.com/longbridge/gpui-kit", branch = "add-gpui-fast-feature" }
-
 [dependencies]
 anyhow = "1"
 async-channel = "2"
@@ -26,8 +21,8 @@ chrono = "0.4"
 cap-std = "3"
 dirs = "6"
 futures-util = "0.3"
-gpui-omarchy = { version = "0.2.1", optional = true }
-gpui-kit = { git = "https://github.com/longbridge/gpui-kit", branch = "add-gpui-fast-feature", default-features = false, features = ["assets", "gpui-fast"], optional = true }
+gpui-omarchy = { git = "https://github.com/huacnlee/gpui-omarchy", branch = "use-gpui-fast", optional = true }
+gpui-kit = { git = "https://github.com/longbridge/gpui-kit", branch = "add-gpui-fast-feature", default-features = false, features = ["assets"], optional = true }
 localsend = { path = "vendor/localsend", features = ["discovery"] }
 if-addrs = "0.15"
 gethostname = "1.1"

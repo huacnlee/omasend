@@ -3009,8 +3009,7 @@ dependencies = [
 [[package]]
 name = "gpui-omarchy"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41462d5f3aa1056cdce799d6b4dfb1c04b47a3649d1a4eb5e2e29d8ca3434eed"
+source = "git+https://github.com/huacnlee/gpui-omarchy?branch=use-gpui-fast#2a8d7fd0c49e7b775a497e820623f60795199d9d"
 dependencies = [
  "async-channel",
  "chrono",

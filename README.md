@@ -85,12 +85,12 @@ With a recent stable Rust toolchain and your platform’s development libraries:
 cargo run --release --locked
 ```
 
-Desktop builds enable GPUI Kit's `gpui-fast` feature on the
-[`add-gpui-fast-feature` branch](https://github.com/longbridge/gpui-kit/tree/add-gpui-fast-feature),
-which selects [GPUI Fast](https://github.com/longbridge/gpui-fast) for the core and platforms.
-A temporary `gpui-kit` source patch keeps GPUI Omarchy on the same unpublished
-Kit branch. Once the feature is released on crates.io, use that release and
-remove the patch.
+Desktop builds use GPUI Omarchy's
+[`use-gpui-fast` branch](https://github.com/huacnlee/gpui-omarchy/tree/use-gpui-fast),
+which enables `gpui-fast` by default and forwards it to GPUI Kit's
+[`add-gpui-fast-feature` branch](https://github.com/longbridge/gpui-kit/tree/add-gpui-fast-feature).
+Omasend does not need to enable the feature separately or patch crates.io.
+Once both changes are released, replace the Git dependencies with those releases.
 
 Linux builds require a C/C++ compiler, CMake, pkg-config, and development libraries
 for OpenSSL, Fontconfig, FreeType, xkbcommon, X11/XCB, Wayland, Vulkan, and Zstandard.
