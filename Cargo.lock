@@ -3009,7 +3009,7 @@ dependencies = [
 [[package]]
 name = "gpui-omarchy"
 version = "0.2.1"
-source = "git+https://github.com/huacnlee/gpui-omarchy?branch=use-gpui-fast#e6e3e52a378b64dd6962456ffa6cdfb2deaa2b08"
+source = "git+https://github.com/huacnlee/gpui-omarchy?branch=main#e63ff32b73299d4f8abd8401af5d04924b2a9d18"
 dependencies = [
  "async-channel",
  "chrono",

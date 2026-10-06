@@ -86,10 +86,9 @@ cargo run --release --locked
 ```
 
 Desktop builds use GPUI Omarchy's
-[`use-gpui-fast` branch](https://github.com/huacnlee/gpui-omarchy/tree/use-gpui-fast),
-which enables `gpui-fast` by default and forwards it to GPUI Kit's
-[`main` branch](https://github.com/longbridge/gpui-kit/tree/main),
-where the feature has been merged.
+[`main` branch](https://github.com/huacnlee/gpui-omarchy/tree/main).
+It enables `gpui-fast` by default and forwards the feature to GPUI Kit's
+[`main` branch](https://github.com/longbridge/gpui-kit/tree/main).
 Omasend does not need to enable the feature separately or patch crates.io.
 Once both changes are released, replace the Git dependencies with those releases.
 
