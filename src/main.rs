@@ -7,6 +7,9 @@
 // `omasend::i18n` decides which locale both halves resolve against.
 rust_i18n::i18n!("locales", fallback = "en");
 
+// gpui-fast macros emit paths through ::gpui.
+extern crate gpui_kit as gpui;
+
 mod views;
 
 // gpui-kit-assets embeds a default bundle for the component set; Omasend needs

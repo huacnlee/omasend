@@ -13,6 +13,10 @@ default = ["desktop"]
 desktop = ["dep:gpui-omarchy", "dep:gpui-kit"]
 ui-tests = ["desktop", "gpui-kit/test-support"]
 
+[patch.crates-io]
+gpui-pre = { path = "vendor/gpui-backend/gpui-pre" }
+gpui-pre-platform = { path = "vendor/gpui-backend/gpui-pre-platform" }
+
 [dependencies]
 anyhow = "1"
 async-channel = "2"
@@ -21,10 +25,8 @@ chrono = "0.4"
 cap-std = "3"
 dirs = "6"
 futures-util = "0.3"
-gpui-omarchy = { version = "0.2.0", optional = true }
-# gpui-kit-assets carries the shared Lucide IconName from longbridge/gpui-kit#3020.
-# Move back to a published version once that release is out.
-gpui-kit = { version = "0.7.0", default-features = false, features = ["assets"], optional = true }
+gpui-omarchy = { version = "0.2.1", optional = true }
+gpui-kit = { version = "=0.7.1", default-features = false, features = ["assets"], optional = true }
 localsend = { path = "vendor/localsend", features = ["discovery"] }
 if-addrs = "0.15"
 gethostname = "1.1"

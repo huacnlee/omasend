@@ -1,0 +1,25 @@
+[package]
+name = "gpui-pre-platform"
+version = "0.3.8"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "gpui_platform"
+path = "lib.rs"
+
+[features]
+default = ["fast/default"]
+bench-support = ["fast/bench-support"]
+font-kit = ["fast/font-kit"]
+inspector = ["gpui/inspector"]
+runtime_shaders = ["fast/runtime_shaders"]
+screen-capture = ["fast/screen-capture"]
+test-support = ["fast/test-support"]
+wayland = ["fast/wayland"]
+x11 = ["fast/x11"]
+
+[dependencies]
+fast = { package = "gpui-fast-platform", version = "=0.1.0", default-features = false }
+gpui = { package = "gpui-pre", path = "../gpui-pre", default-features = false }

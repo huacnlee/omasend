@@ -86,5 +86,5 @@ jobs:
         run: python scripts/test-pkgbuild.py
       - name: Unit and integration tests
         run: cargo test --locked --no-default-features
-      - name: GPUI interaction tests
+      - name: GPUI Fast interaction tests
         run: cargo test --locked --features ui-tests --bin omasend

@@ -85,6 +85,9 @@ With a recent stable Rust toolchain and your platform’s development libraries:
 cargo run --release --locked
 ```
 
+Desktop builds use [GPUI Fast](https://github.com/longbridge/gpui-fast) 0.1.0
+through GPUI Kit 0.7.1.
+
 Linux builds require a C/C++ compiler, CMake, pkg-config, and development libraries
 for OpenSSL, Fontconfig, FreeType, xkbcommon, X11/XCB, Wayland, Vulkan, and Zstandard.
 Install `wl-clipboard` for clipboard support on Wayland.

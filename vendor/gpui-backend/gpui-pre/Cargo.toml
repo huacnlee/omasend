@@ -1,0 +1,27 @@
+[package]
+name = "gpui-pre"
+version = "0.3.8"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "gpui"
+path = "lib.rs"
+
+[features]
+default = ["fast/default"]
+bench = ["fast/bench"]
+bench-support = ["fast/bench-support"]
+inspector = ["fast/inspector"]
+leak-detection = ["fast/leak-detection"]
+profiler = ["fast/profiler"]
+screen-capture = ["fast/screen-capture"]
+stacker = ["fast/stacker"]
+test-support = ["fast/test-support"]
+wayland = ["fast/wayland"]
+windows-manifest = ["fast/windows-manifest"]
+x11 = ["fast/x11"]
+
+[dependencies]
+fast = { package = "gpui-fast", version = "=0.1.0", default-features = false }
