@@ -652,7 +652,7 @@ dependencies = [
  "bitflags 2.13.2",
  "cexpr",
  "clang-sys",
- "itertools 0.11.0",
+ "itertools 0.13.0",
  "log",
  "prettyplease",
  "proc-macro2",
@@ -2579,7 +2579,7 @@ dependencies = [
 [[package]]
 name = "gpui-base"
 version = "0.7.1"
-source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#f7f9ceaef87a2a07358a41e309bc7d2e4f97359e"
+source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#1b95e1b19fd89de65703c840de7505ad99f27626"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -2588,7 +2588,8 @@ dependencies = [
  "chrono",
  "data-url",
  "futures",
- "gpui-kit-core",
+ "gpui-fast",
+ "gpui-pre",
  "gpui-pre-macros",
  "gpui-pre-sum-tree",
  "html5ever",
@@ -2619,7 +2620,7 @@ dependencies = [
 [[package]]
 name = "gpui-component"
 version = "0.7.1"
-source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#f7f9ceaef87a2a07358a41e309bc7d2e4f97359e"
+source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#1b95e1b19fd89de65703c840de7505ad99f27626"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2627,8 +2628,9 @@ dependencies = [
  "enum-iterator",
  "gpui-base",
  "gpui-component-macros",
+ "gpui-fast",
  "gpui-kit-assets",
- "gpui-kit-core",
+ "gpui-pre",
  "gpui-pre-macros",
  "gpui-pre-sum-tree",
  "instant",
@@ -2662,7 +2664,7 @@ dependencies = [
 [[package]]
 name = "gpui-component-macros"
 version = "0.7.1"
-source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#f7f9ceaef87a2a07358a41e309bc7d2e4f97359e"
+source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#1b95e1b19fd89de65703c840de7505ad99f27626"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -2975,58 +2977,33 @@ dependencies = [
 [[package]]
 name = "gpui-kit"
 version = "0.7.1"
-source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#f7f9ceaef87a2a07358a41e309bc7d2e4f97359e"
+source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#1b95e1b19fd89de65703c840de7505ad99f27626"
 dependencies = [
  "gpui-base",
  "gpui-component",
+ "gpui-fast",
+ "gpui-fast-platform",
+ "gpui-fast-web",
  "gpui-kit-assets",
- "gpui-kit-core",
- "gpui-kit-platform",
- "gpui-kit-web",
+ "gpui-pre",
+ "gpui-pre-macros",
+ "gpui-pre-platform",
+ "gpui-pre-web",
 ]
 
 [[package]]
 name = "gpui-kit-assets"
 version = "0.7.1"
-source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#f7f9ceaef87a2a07358a41e309bc7d2e4f97359e"
+source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#1b95e1b19fd89de65703c840de7505ad99f27626"
 dependencies = [
  "anyhow",
- "gpui-kit-core",
+ "gpui-fast",
+ "gpui-pre",
  "gpui-pre-reqwest",
  "log",
  "rust-embed",
  "wasm-bindgen",
  "wasm-bindgen-futures",
-]
-
-[[package]]
-name = "gpui-kit-core"
-version = "0.7.1"
-source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#f7f9ceaef87a2a07358a41e309bc7d2e4f97359e"
-dependencies = [
- "gpui-fast",
- "gpui-pre",
- "gpui-pre-macros",
-]
-
-[[package]]
-name = "gpui-kit-platform"
-version = "0.7.1"
-source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#f7f9ceaef87a2a07358a41e309bc7d2e4f97359e"
-dependencies = [
- "gpui-fast-platform",
- "gpui-kit-core",
- "gpui-pre-platform",
-]
-
-[[package]]
-name = "gpui-kit-web"
-version = "0.7.1"
-source = "git+https://github.com/longbridge/gpui-kit?branch=add-gpui-fast-feature#f7f9ceaef87a2a07358a41e309bc7d2e4f97359e"
-dependencies = [
- "gpui-fast-web",
- "gpui-kit-core",
- "gpui-pre-web",
 ]
 
 [[package]]
