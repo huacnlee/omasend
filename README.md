@@ -85,13 +85,6 @@ With a recent stable Rust toolchain and your platform’s development libraries:
 cargo run --release --locked
 ```
 
-Desktop builds use GPUI Omarchy's
-[`main` branch](https://github.com/huacnlee/gpui-omarchy/tree/main).
-It enables `gpui-fast` by default and forwards the feature to GPUI Kit's
-[`main` branch](https://github.com/longbridge/gpui-kit/tree/main).
-Omasend does not need to enable the feature separately or patch crates.io.
-Once both changes are released, replace the Git dependencies with those releases.
-
 Linux builds require a C/C++ compiler, CMake, pkg-config, and development libraries
 for OpenSSL, Fontconfig, FreeType, xkbcommon, X11/XCB, Wayland, Vulkan, and Zstandard.
 Install `wl-clipboard` for clipboard support on Wayland.
