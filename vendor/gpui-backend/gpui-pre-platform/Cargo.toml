@@ -21,5 +21,5 @@ wayland = ["fast/wayland"]
 x11 = ["fast/x11"]
 
 [dependencies]
-fast = { package = "gpui-fast-platform", version = "=0.1.0", default-features = false }
+fast = { package = "gpui-fast-platform", version = "0.1.0", default-features = false }
 gpui = { package = "gpui-pre", path = "../gpui-pre", default-features = false }

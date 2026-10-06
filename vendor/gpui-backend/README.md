@@ -2,7 +2,8 @@
 
 GPUI Kit 0.7.1 pins `gpui-pre` and `gpui-pre-platform` 0.3.8. These two small
 facades patch those packages and re-export the published `gpui-fast` and
-`gpui-fast-platform` packages, pinned to exactly 0.1.0. Features are forwarded
+`gpui-fast-platform` packages with a `0.1.0` version requirement, allowing compatible `0.1.x` updates
+through `cargo update`. Features are forwarded
 to GPUI Fast so GPUI Kit, assets, and native windows use the same engine.
 
 This follows the facade approach in

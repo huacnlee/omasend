@@ -24,4 +24,4 @@ windows-manifest = ["fast/windows-manifest"]
 x11 = ["fast/x11"]
 
 [dependencies]
-fast = { package = "gpui-fast", version = "=0.1.0", default-features = false }
+fast = { package = "gpui-fast", version = "0.1.0", default-features = false }
