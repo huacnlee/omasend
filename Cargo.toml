@@ -21,10 +21,8 @@ chrono = "0.4"
 cap-std = "3"
 dirs = "6"
 futures-util = "0.3"
-gpui-omarchy = { version = "0.2.0", optional = true }
-# gpui-kit-assets carries the shared Lucide IconName from longbridge/gpui-kit#3020.
-# Move back to a published version once that release is out.
-gpui-kit = { version = "0.7.0", default-features = false, features = ["assets"], optional = true }
+gpui-omarchy = { git = "https://github.com/huacnlee/gpui-omarchy", branch = "main", optional = true }
+gpui-kit = { git = "https://github.com/longbridge/gpui-kit", branch = "main", default-features = false, features = ["assets"], optional = true }
 localsend = { path = "vendor/localsend", features = ["discovery"] }
 if-addrs = "0.15"
 gethostname = "1.1"
