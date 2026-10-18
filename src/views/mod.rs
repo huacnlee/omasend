@@ -171,6 +171,18 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
     let errors = session.clone();
     let busy = session.busy;
     let notice = session.notice;
+    let notice_revision = session.notice_revision;
+    let notice_opacity = native_value(1.0);
+    let confirmation = notice_opacity.clone();
+    effect(move || {
+        notice_revision.get();
+        if notice.get().is_some() && !reduce_motion() {
+            confirmation.set(0.0);
+            confirmation.timing(1.0, 140.0, Easing::Linear);
+        } else {
+            confirmation.set(1.0);
+        }
+    });
     let identity = session.identity;
     let language = session.language;
     let history = session.clone();
@@ -301,7 +313,8 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                             .map(|key| language.get().text(key))
                             .unwrap_or_default()
                     })
-                    .text_color(move || theme().success),
+                    .text_color(move || theme().success)
+                    .bind_opacity(&notice_opacity),
                 )
                 .child(services::update_control(session.clone()))
                 .child(text(move || {
