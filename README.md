@@ -14,7 +14,7 @@ and Windows.
 
 ## Install
 
-Supports Linux x86_64 and ARM64, macOS Apple Silicon and Intel, and Windows x86_64.
+Supports Linux x86_64 and ARM64, macOS 14+ (Apple Silicon and Intel), and Windows x86_64.
 
 **macOS / Linux**
 
@@ -73,10 +73,15 @@ Use `ctrl+v` to paste, `ctrl+o` to add files, and `enter` to send.
 On macOS, `cmd+v` and `cmd+o` also work. Closing the macOS window keeps
 Omasend available from the Dock; choose **Exit** to quit.
 
+## Migration status
+
+The main application now runs on Native Shell in Rust mode. UI parity work is
+still in progress; see [migration status and verification](docs/migration.md).
+Some features described above remain to be restored in the new interface.
+
 ## Build and run
 
-Built with [GPUI Kit](https://gpui-kit.com/),
-[GPUI Omarchy](https://huacnlee.github.io/gpui-omarchy/), and the
+Built with [Native Shell](https://github.com/longbridge/nsh) in Rust mode and the
 [LocalSend Rust core](https://github.com/localsend/localsend).
 
 With a recent stable Rust toolchain and your platform’s development libraries:
@@ -85,8 +90,8 @@ With a recent stable Rust toolchain and your platform’s development libraries:
 cargo run --release --locked
 ```
 
-Linux builds require a C/C++ compiler, CMake, pkg-config, and development libraries
-for OpenSSL, Fontconfig, FreeType, xkbcommon, X11/XCB, Wayland, Vulkan, and Zstandard.
+Linux builds require a C/C++ compiler, pkg-config, GTK 4.14 or later, OpenSSL,
+and XCB development files. The native file picker uses xdg-desktop-portal.
 Install `wl-clipboard` for clipboard support on Wayland.
 
 ## License

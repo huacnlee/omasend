@@ -477,3 +477,38 @@ receive.destination:
 receive.title:
   en: "%{name} wants to send"
   zh-CN: "%{name} 想要发送文件"
+
+app.tagline:
+  en: "Copy, paste, and send to your other devices."
+  zh-CN: "复制、粘贴，发送到其他设备。"
+action.add_folder_ellipsis:
+  en: "Add folder…"
+  zh-CN: "添加文件夹…"
+action.add_message:
+  en: "Add message"
+  zh-CN: "添加文字"
+message.title:
+  en: "Message"
+  zh-CN: "文字"
+message.placeholder:
+  en: "Write a message…"
+  zh-CN: "输入要发送的文字…"
+
+theme.reload:
+  en: "Reload system theme"
+  zh-CN: "重新载入系统主题"
+action.refresh:
+  en: "Refresh"
+  zh-CN: "刷新"
+about.native_shell:
+  en: "Native interface built with Native Shell in Rust mode."
+  zh-CN: "使用 Native Shell Rust 模式构建的原生界面。"
+about.source:
+  en: "Source code"
+  zh-CN: "源代码"
+update.available:
+  en: "Version %{name} is available"
+  zh-CN: "发现新版本 %{name}"
+update.view_release:
+  en: "View release"
+  zh-CN: "查看发布版本"

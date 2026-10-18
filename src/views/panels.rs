@@ -1,596 +1,1170 @@
-use super::home::Preview;
-use super::{Home, size_label};
-use gpui_kit::{
-    AnimationExt, AnyElement, Context, ObjectFit, SharedString, div, img, prelude::*, px, rems,
-};
-use gpui_omarchy::{
-    ActiveTheme, ButtonVariant, IconName, alert_dialog, button, dialog, dialog_popup, dialog_title,
-    icon, keycap,
-};
-use omasend::model::{SendItem, TransferStatus};
-use rust_i18n::t;
+//! Keyed lists keep focus and animation nodes alive across network progress.
+use super::appearance::{self, theme};
+use super::{control, plain_control, session::Session};
+use nsh_core::ui::prelude::*;
+use omasend::model::TransferStatus;
 
-impl Home {
-    pub fn composer(&self, cx: &mut Context<Self>) -> AnyElement {
-        let theme = cx.omarchy().clone();
-        let mut list = div()
-            .id("composer-list")
-            .overflow_y_scroll()
-            .flex()
-            .flex_col()
-            .flex_1()
-            .min_h(rems(8.))
-            .gap_3();
-        // A receiver has no composer items, so an incoming transfer would run
-        // with nothing on screen. Give it the place the outbox occupies while
-        // it is in flight.
-        if let Some(transfer) = self
+#[cfg(all(test, feature = "ui-tests"))]
+pub(crate) fn content(session: Session) -> impl IntoElement {
+    view()
+        .child(nearby(session.clone()))
+        .child(outbox(session.clone()))
+        .child(activity(session))
+}
+
+pub(super) fn nearby(session: Session) -> impl IntoElement {
+    let count = session.clone();
+    let empty = session.clone();
+    let devices = session.clone();
+    let rows = session.clone();
+    let expanded = signal(false);
+    let overflow = session.clone();
+    let language = session.language;
+    view()
+        .test_id("nearby-panel")
+        .gap_2()
+        .px(px(16.0))
+        .py(px(12.0))
+        .border_b_1()
+        .border_color(appearance::divider)
+        .child(
+            view()
+                .flex_row()
+                .items_center()
+                .gap_2()
+                .child(text(session.translated("nearby.title")))
+                .child(
+                    text(move || {
+                        count.revision.get();
+                        count.state.borrow().devices.len().to_string()
+                    })
+                    .text_color(move || theme().muted_foreground),
+                )
+                .child(view().flex_1())
+                .child(If::new(
+                    move || {
+                        overflow.revision.get();
+                        overflow.state.borrow().devices.len() > nearby_columns(window().width)
+                    },
+                    move || {
+                        plain_control(
+                            move || {
+                                language.get().text(if expanded.get() {
+                                    "action.collapse"
+                                } else {
+                                    "action.expand"
+                                })
+                            },
+                            false,
+                            move || {
+                                if !reduce_motion() {
+                                    animate_layout(nsh_core::LayoutAnimation::all(
+                                        nsh_core::LayoutTransition::new(
+                                            nsh_core::LayoutCurve::EaseOut,
+                                            160.0,
+                                        ),
+                                    ));
+                                }
+                                expanded.set(!expanded.get());
+                            },
+                        )
+                        .test_id("toggle-nearby")
+                    },
+                )),
+        )
+        .child(If::new(
+            move || {
+                empty.revision.get();
+                empty.state.borrow().devices.is_empty()
+            },
+            {
+                let session = session.clone();
+                move || {
+                    text(session.translated("nearby.looking"))
+                        .text_color(move || theme().muted_foreground)
+                }
+            },
+        ))
+        .child(
+            scroll()
+                .max_h(move || px((window().height * 0.35).min(190.0)))
+                .child(view().flex_row().flex_wrap().gap_2().child(Each::new(
+                    move || {
+                        devices.revision.get();
+                        let state = devices.state.borrow();
+                        let selected = state.devices.iter().position(|device| {
+                            state.selected.as_ref() == Some(&device.fingerprint)
+                        });
+                        nearby_indices(
+                            state.devices.len(),
+                            nearby_columns(window().width),
+                            expanded.get(),
+                            selected,
+                        )
+                        .into_iter()
+                        .map(|index| state.devices[index].fingerprint.clone())
+                        .collect::<Vec<_>>()
+                    },
+                    Clone::clone,
+                    move |id, _| device_card(rows.clone(), id.get_untracked()),
+                ))),
+        )
+}
+
+fn nearby_columns(width: f32) -> usize {
+    (((width - 32.0 + 8.0) / 248.0).floor() as usize).max(1)
+}
+
+fn nearby_indices(
+    total: usize,
+    columns: usize,
+    expanded: bool,
+    selected: Option<usize>,
+) -> Vec<usize> {
+    if expanded {
+        return (0..total).collect();
+    }
+    let mut visible: Vec<_> = (0..total.min(columns)).collect();
+    if let Some(selected) = selected.filter(|&index| index < total && index >= columns)
+        && let Some(last) = visible.last_mut()
+    {
+        *last = selected;
+    }
+    visible
+}
+
+fn device_card(session: Session, id: String) -> impl IntoElement {
+    let selected_session = session.clone();
+    let selected_id = id.clone();
+    let selected = computed(move || {
+        selected_session.revision.get();
+        selected_session.state.borrow().selected.as_ref() == Some(&selected_id)
+    });
+    let labels = session.clone();
+    let label_id = id.clone();
+    let device = computed(move || {
+        labels.revision.get();
+        labels
             .state
+            .borrow()
+            .devices
+            .iter()
+            .find(|d| d.fingerprint == label_id)
+            .map(|d| (d.alias.clone(), d.model.clone()))
+    });
+    let width = move || {
+        let available = window().width - 32.0;
+        let columns = nearby_columns(window().width) as f32;
+        px((available - 8.0 * (columns - 1.0)) / columns)
+    };
+    view()
+        .flex_row()
+        .items_center()
+        .gap_3()
+        .p_3()
+        .w(width)
+        .h(px(58.0))
+        .rounded(move || px(if appearance::is_omarchy() { 0.0 } else { 4.0 }))
+        .border_1()
+        .border_color(move || {
+            if selected.get() {
+                theme().primary
+            } else {
+                theme().border
+            }
+        })
+        .bg(move || {
+            theme()
+                .foreground
+                .opacity(if selected.get() { 0.04 } else { 0.0 })
+        })
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .role(AccessibilityRole::Button)
+        .label(move || device.get().map(|d| d.0).unwrap_or_default())
+        .on_press(move |_: &()| session.select(id.clone()))
+        .child(
+            view()
+                .size(px(32.0))
+                .items_center()
+                .justify_center()
+                .border_1()
+                .border_color(move || theme().success.opacity(0.45))
+                .bg(move || theme().success.opacity(0.12))
+                .child(
+                    text(move || {
+                        device
+                            .get()
+                            .map(|d| device_initials(&d.0))
+                            .unwrap_or_default()
+                    })
+                    .text_color(move || theme().success),
+                ),
+        )
+        .child(
+            view()
+                .flex_1()
+                .child(
+                    text(move || device.get().map(|d| d.0).unwrap_or_default()).number_of_lines(1),
+                )
+                .child(
+                    text(move || {
+                        device
+                            .get()
+                            .map(|d| {
+                                if d.1.is_empty() {
+                                    "LocalSend".into()
+                                } else {
+                                    d.1
+                                }
+                            })
+                            .unwrap_or_default()
+                    })
+                    .number_of_lines(1)
+                    .text_size(px(11.0))
+                    .text_color(move || theme().muted_foreground),
+                ),
+        )
+        .child(
+            text(move || if selected.get() { "✓" } else { " " })
+                .text_color(move || theme().primary),
+        )
+}
+
+fn device_initials(name: &str) -> String {
+    let mut words = name.split_whitespace();
+    let first = words.next().unwrap_or("?");
+    match words.next() {
+        Some(second) => first
+            .chars()
+            .take(1)
+            .chain(second.chars().take(1))
+            .collect::<String>(),
+        None => first.chars().take(2).collect(),
+    }
+    .to_uppercase()
+    .chars()
+    .take(2)
+    .collect()
+}
+
+fn keycap(label: &'static str) -> impl IntoElement {
+    view()
+        .px(px(4.0))
+        .py(px(3.0))
+        .border_1()
+        .border_color(move || theme().foreground.opacity(0.25))
+        .child(text(label).text_size(px(11.0)))
+}
+
+pub(super) fn outbox(session: Session) -> impl IntoElement {
+    let items = session.clone();
+    let item_rows = session.clone();
+    let empty = session.clone();
+    let full = session.clone();
+    view()
+        .test_id("composer-area")
+        .bg(appearance::panel_background)
+        .rounded(move || px(if appearance::is_omarchy() { 0.0 } else { 4.0 }))
+        .flex_1()
+        .border_1()
+        .border_color(appearance::divider)
+        .child(If::new(
+            move || {
+                empty.revision.get();
+                empty.state.borrow().composer.is_empty()
+            },
+            {
+                let session = session.clone();
+                move || {
+                    view()
+                        .flex_1()
+                        .items_center()
+                        .justify_center()
+                        .gap_3()
+                        .child(super::motion::emblem(session.clone(), 64.0))
+                        .child(text(session.translated("composer.drop_hint")))
+                        .child(
+                            text(session.translated("composer.drop_kinds"))
+                                .text_color(move || theme().muted_foreground),
+                        )
+                        .child(
+                            view()
+                                .flex_row()
+                                .items_center()
+                                .gap_2()
+                                .child(keycap("ctrl+v"))
+                                .child(text(session.translated("action.paste")))
+                                .child(view().w(px(8.0)))
+                                .child(keycap("ctrl+o"))
+                                .child(text(session.translated("action.add_files"))),
+                        )
+                }
+            },
+        ))
+        .child(If::new(
+            move || {
+                full.revision.get();
+                !full.state.borrow().composer.is_empty()
+            },
+            move || {
+                let items = items.clone();
+                let item_rows = item_rows.clone();
+                scroll()
+                    .flex_1()
+                    .child(view().p_3().gap_2().child(Each::new(
+                        move || {
+                            items.revision.get();
+                            items
+                                .state
+                                .borrow()
+                                .composer
+                                .iter()
+                                .map(|i| i.id.clone())
+                                .collect::<Vec<_>>()
+                        },
+                        Clone::clone,
+                        move |id, _| {
+                            let id = id.get_untracked();
+                            let labels = item_rows.clone();
+                            let remover = item_rows.clone();
+                            let progress_session = item_rows.clone();
+                            let progress_id = id.clone();
+                            let previewer = item_rows.clone();
+                            let preview_id = id.clone();
+                            let previewable = item_rows.clone();
+                            let check_id = id.clone();
+                            let thumbnail_session = item_rows.clone();
+                            let thumbnail_id = id.clone();
+                            let label_id = id.clone();
+                            let summary_session = item_rows.clone();
+                            let summary_id = id.clone();
+                            let action_session = item_rows.clone();
+                            let action_id = id.clone();
+                            let active_transfer =
+                                computed(move || action_session.item_transfer(&action_id));
+                            let action_language = item_rows.language;
+                            let preview_language = item_rows.language;
+                            let summary = computed(move || {
+                                summary_session.revision.get();
+                                summary_session
+                                    .state
+                                    .borrow()
+                                    .composer
+                                    .iter()
+                                    .find(|item| item.id == summary_id)
+                                    .and_then(|item| {
+                                        if item.is_video() {
+                                            Some((true, "▶".to_owned()))
+                                        } else if let omasend::model::SendItem::Text(text) =
+                                            &item.item
+                                        {
+                                            Some((false, text.chars().take(240).collect()))
+                                        } else {
+                                            None
+                                        }
+                                    })
+                            });
+                            view()
+                                .test_id("composer-card")
+                                .p_3()
+                                .gap_2()
+                                .border_1()
+                                .border_color(appearance::divider)
+                                .rounded(move || {
+                                    px(if appearance::is_omarchy() { 0.0 } else { 4.0 })
+                                })
+                                .child(If::new(
+                                    move || summary.get().is_some(),
+                                    move || {
+                                        text(move || summary.get().map(|s| s.1).unwrap_or_default())
+                                            .test_id("composer-content-summary")
+                                            .number_of_lines(3)
+                                            .text_size(move || {
+                                                px(if summary.get().is_some_and(|s| s.0) {
+                                                    24.0
+                                                } else {
+                                                    12.0
+                                                })
+                                            })
+                                            .text_color(move || theme().muted_foreground)
+                                    },
+                                ))
+                                .child(
+                                    view()
+                                        .flex_row()
+                                        .gap_2()
+                                        .items_center()
+                                        .child(thumbnail(thumbnail_session, thumbnail_id))
+                                        .child(
+                                            text(move || {
+                                                labels.revision.get();
+                                                labels
+                                                    .state
+                                                    .borrow()
+                                                    .composer
+                                                    .iter()
+                                                    .find(|i| i.id == label_id)
+                                                    .map(|i| {
+                                                        if matches!(
+                                                            i.item,
+                                                            omasend::model::SendItem::Text(_)
+                                                        ) {
+                                                            size_label(i.size())
+                                                        } else {
+                                                            format!(
+                                                                "{} · {} · {}",
+                                                                i.name(),
+                                                                size_label(i.size()),
+                                                                labels.language.get().count(
+                                                                    i.uploads.len(),
+                                                                    "history.file_one",
+                                                                    "history.file_other",
+                                                                )
+                                                            )
+                                                        }
+                                                    })
+                                                    .unwrap_or_default()
+                                            })
+                                            .number_of_lines(1)
+                                            .flex_1(),
+                                        )
+                                        .child(If::new(
+                                            move || {
+                                                previewable.revision.get();
+                                                previewable.state.borrow().composer.iter().any(
+                                                    |item| {
+                                                        item.id == check_id
+                                                            && (item.is_image()
+                                                                || matches!(
+                                                                    item.item,
+                                                                    omasend::model::SendItem::Text(
+                                                                        _
+                                                                    )
+                                                                ))
+                                                    },
+                                                )
+                                            },
+                                            move || {
+                                                let previewer = previewer.clone();
+                                                let preview_id = preview_id.clone();
+                                                control(
+                                                    move || {
+                                                        preview_language
+                                                            .get()
+                                                            .text("action.preview")
+                                                    },
+                                                    false,
+                                                    move || previewer.preview_item(&preview_id),
+                                                )
+                                            },
+                                        ))
+                                        .child(control(
+                                            move || {
+                                                action_language.get().text(
+                                                    if active_transfer.get().is_some() {
+                                                        "action.cancel"
+                                                    } else {
+                                                        "action.remove"
+                                                    },
+                                                )
+                                            },
+                                            false,
+                                            move || {
+                                                if let Some(transfer) = remover.item_transfer(&id) {
+                                                    remover.cancel(&transfer);
+                                                } else {
+                                                    remover.remove(&id);
+                                                }
+                                            },
+                                        )),
+                                )
+                                .child(composer_progress(progress_session, progress_id))
+                        },
+                    )))
+            },
+        ))
+}
+
+fn composer_progress(session: Session, id: String) -> impl IntoElement {
+    let language = session.language;
+    let details = computed(move || {
+        session.revision.get();
+        let state = session.state.borrow();
+        let transfer = state
             .transfers
             .iter()
             .rev()
-            .find(|transfer| !transfer.sending && transfer.status == TransferStatus::Active)
-        {
-            let transfer_id = transfer.id.clone();
-            return list
-                .child(
-                    div()
-                        .id("active-receive")
-                        .debug_selector(|| "active-receive".into())
-                        .flex()
-                        .flex_col()
-                        .flex_1()
-                        .items_center()
-                        .justify_center()
-                        .bg(theme.background)
-                        .border_1()
-                        .border_color(theme.divider())
-                        .p_4()
-                        .child(
-                            div()
-                                .w(rems(28.))
-                                .max_w_full()
-                                .flex()
-                                .flex_col()
-                                .gap_3()
-                                .child(
-                                    div()
-                                        .flex()
-                                        .justify_center()
-                                        .text_color(theme.accent)
-                                        .child(icon(IconName::ArrowDown).size(rems(2.))),
-                                )
-                                .child(
-                                    div().w_full().text_center().text_color(theme.bright).child(
-                                        transfer
-                                            .files
-                                            .iter()
-                                            .map(|file| file.name.as_str())
-                                            .collect::<Vec<_>>()
-                                            .join(", "),
-                                    ),
-                                )
-                                .child(
-                                    div()
-                                        .w_full()
-                                        .text_center()
-                                        .text_color(theme.secondary)
-                                        .child(format!(
-                                            "{} · {}",
-                                            self.language.named("history.from", &transfer.peer),
-                                            size_label(transfer.total),
-                                        )),
-                                )
-                                .child(self.transfer_progress(transfer, "active-receive", None, cx))
-                                .child(
-                                    div().flex().justify_center().child(
-                                        button(
-                                            "cancel-active-receive",
-                                            t!("action.cancel"),
-                                            ButtonVariant::Outline,
-                                            cx,
-                                        )
-                                        .on_click(
-                                            cx.listener(move |view, _, _, cx| {
-                                                if let Some(node) = &view.node
-                                                    && let Err(error) =
-                                                        node.handle.cancel(&transfer_id)
-                                                {
-                                                    view.state.error = Some(error.to_string());
-                                                }
-                                                cx.notify();
-                                            }),
-                                        ),
-                                    ),
-                                ),
-                        ),
-                )
-                .into_any_element();
+            .find(|transfer| transfer.composer_ids.contains(&id))?;
+        let item = state.composer.iter().find(|item| item.id == id)?;
+        let offset: u64 = state
+            .composer
+            .iter()
+            .take_while(|item| item.id != id)
+            .filter(|item| transfer.composer_ids.contains(&item.id))
+            .map(|item| item.size())
+            .sum();
+        let size = item.size();
+        let bytes = transfer.transferred.saturating_sub(offset).min(size);
+        Some((
+            bytes,
+            size,
+            transfer.awaiting_acceptance,
+            transfer.status.clone(),
+            if transfer.transferred >= offset && transfer.transferred < offset.saturating_add(size)
+            {
+                transfer.bytes_per_second()
+            } else {
+                0
+            },
+        ))
+    });
+    let progress = native_value(0.0);
+    let driver = progress.clone();
+    effect(move || {
+        let ratio = details
+            .get()
+            .map(|(bytes, size, ..)| {
+                if size == 0 {
+                    0.0
+                } else {
+                    bytes as f32 / size as f32
+                }
+            })
+            .unwrap_or(0.0);
+        if reduce_motion() {
+            driver.set(ratio);
+        } else {
+            driver.timing(ratio, 160.0, Easing::Linear);
         }
-        if self.state.composer.is_empty()
-            && let Some(transfer) = self
-                .state
-                .transfers
-                .iter()
-                .filter(|transfer| transfer.status == TransferStatus::Completed)
-                .max_by_key(|transfer| transfer.when)
-            && self.dismissed_success.as_ref() != Some(&transfer.id)
-        {
-            let transfer_id = transfer.id.clone();
-            return list
+    });
+    If::new(
+        move || details.get().is_some(),
+        move || {
+            let progress = progress.clone();
+            view()
+                .gap_2()
                 .child(
-                    div()
-                        .id("last-completed-transfer")
-                        .debug_selector(|| "last-completed-transfer".into())
-                        .relative()
-                        .flex()
-                        .flex_col()
+                    text(move || {
+                        let Some((bytes, size, waiting, status, speed)) = details.get() else {
+                            return String::new();
+                        };
+                        match status {
+                            TransferStatus::Active if waiting => {
+                                language.get().text("status.waiting").to_string()
+                            }
+                            TransferStatus::Active => format!(
+                                "{} / {} · {:.0}% · {}/s",
+                                size_label(bytes),
+                                size_label(size),
+                                if size == 0 {
+                                    0.0
+                                } else {
+                                    bytes as f64 / size as f64 * 100.0
+                                },
+                                size_label(speed),
+                            ),
+                            TransferStatus::Completed => {
+                                language.get().text("status.sent").to_string()
+                            }
+                            TransferStatus::Cancelled => {
+                                language.get().text("status.cancelled").to_string()
+                            }
+                            TransferStatus::Failed(error) => language.get().transfer_error(&error),
+                        }
+                    })
+                    .text_size(px(11.0))
+                    .text_color(move || theme().muted_foreground),
+                )
+                .child(If::new(
+                    move || {
+                        details
+                            .get()
+                            .is_some_and(|d| !d.2 && d.3 == TransferStatus::Active)
+                    },
+                    move || {
+                        view()
+                            .test_id("composer-transfer-progress")
+                            .h(px(3.0))
+                            .bg(move || theme().border)
+                            .child(
+                                view()
+                                    .h(px(3.0))
+                                    .w_full()
+                                    .bg(move || theme().progress_bar)
+                                    .transform_origin(nsh_core::TransformOrigin {
+                                        x: nsh_core::OriginLen::Fraction(0.0),
+                                        ..Default::default()
+                                    })
+                                    .bind_transform(nsh_core::TransformKind::ScaleX, &progress),
+                            )
+                    },
+                ))
+        },
+    )
+}
+
+#[cfg(all(test, feature = "ui-tests"))]
+pub(super) fn activity(session: Session) -> impl IntoElement {
+    activity_with(session, true)
+}
+
+pub(super) fn active(session: Session) -> impl IntoElement {
+    activity_with(session, false)
+}
+
+pub(super) fn history_overlay(session: Session) -> impl IntoElement {
+    let visible = session.history_visible;
+    If::new(
+        move || visible.get(),
+        move || {
+            let session = session.clone();
+            let clear = session.clone();
+            let empty = session.clone();
+            let no_records = session.clone();
+            modal()
+                .transparent(true)
+                .animation(if reduce_motion() {
+                    ModalAnimation::None
+                } else {
+                    ModalAnimation::Slide
+                })
+                .on_request_close(move |_: &()| visible.set(false))
+                .child(
+                    view()
                         .flex_1()
-                        .items_center()
-                        .justify_center()
-                        .bg(theme.background)
-                        .border_1()
-                        .border_color(theme.divider())
-                        .p_4()
+                        .justify_end()
+                        .bg(AdaptiveColor::from(rgb(0)).opacity(0.45))
                         .child(
-                            div()
-                                .w(rems(28.))
-                                .max_w_full()
-                                .flex()
-                                .flex_col()
-                                .gap_3()
+                            view()
+                                .test_id("history-sheet")
+                                .w_full()
+                                .h(move || px(window().height * 0.55))
+                                .bg(appearance::panel_background)
+                                .border_t_1()
+                                .border_color(appearance::divider)
                                 .child(
-                                    div()
-                                        .flex()
-                                        .justify_center()
-                                        .text_color(theme.success)
-                                        .child(icon(IconName::Check).size(rems(2.))),
-                                )
-                                .child(self.transfer_summary(transfer, cx))
-                                .child(
-                                    div()
-                                        .flex()
-                                        .justify_center()
+                                    view()
+                                        .flex_row()
                                         .items_center()
                                         .gap_2()
+                                        .px_4()
+                                        .py_2()
+                                        .flex_shrink_0()
+                                        .border_b_1()
+                                        .border_color(appearance::divider)
+                                        .child(text(session.translated("history.title")).flex_1())
                                         .child(
-                                            div()
-                                                .id("dismiss-transfer-success")
-                                                .debug_selector(|| {
-                                                    "dismiss-transfer-success".into()
-                                                })
-                                                .child(
-                                                    button(
-                                                        "confirm-transfer-success",
-                                                        t!("status.done"),
-                                                        ButtonVariant::Outline,
-                                                        cx,
-                                                    )
-                                                    .on_click(cx.listener(
-                                                        move |view, _, window, cx| {
-                                                            view.dismissed_success =
-                                                                Some(transfer_id.clone());
-                                                            view.focus.focus(window, cx);
-                                                            cx.notify();
-                                                        },
-                                                    )),
-                                                ),
-                                        )
-                                        .when_some(
-                                            transfer.received_text.clone(),
-                                            |actions, text| {
-                                                actions.child(
-                                                    button(
-                                                        "show-completed-text",
-                                                        t!("action.show_text"),
-                                                        ButtonVariant::Outline,
-                                                        cx,
-                                                    )
-                                                    .debug_selector(|| "show-completed-text".into())
-                                                    .on_click(cx.listener(
-                                                        move |view, _, window, cx| {
-                                                            view.open_received_text(
-                                                                text.clone(),
-                                                                window,
-                                                                cx,
-                                                            );
-                                                        },
-                                                    )),
-                                                )
-                                            },
-                                        )
-                                        .when(transfer.received_text.is_none(), |actions| {
-                                            actions.when_some(
-                                                transfer.paths.first().cloned(),
-                                                |actions, path| {
-                                                    actions.child(
-                                                        button(
-                                                            "reveal-completed-transfer",
-                                                            t!("action.show_in_files"),
-                                                            ButtonVariant::Outline,
-                                                            cx,
-                                                        )
-                                                        .debug_selector(|| {
-                                                            "reveal-completed-transfer".into()
-                                                        })
-                                                        .on_click(move |_, _, cx| {
-                                                            cx.reveal_path(&path)
-                                                        }),
-                                                    )
+                                            plain_control(
+                                                session.translated("action.clear"),
+                                                move || {
+                                                    empty.revision.get();
+                                                    !empty
+                                                        .state
+                                                        .borrow()
+                                                        .transfers
+                                                        .iter()
+                                                        .any(|t| t.status != TransferStatus::Active)
                                                 },
+                                                move || clear.clear_history(),
                                             )
-                                        }),
+                                            .label(session.translated("action.clear_history"))
+                                            .text_color(move || theme().danger),
+                                        )
+                                        .child(
+                                            plain_control("×", false, move || visible.set(false))
+                                                .label(session.translated("action.close")),
+                                        ),
+                                )
+                                .child(
+                                    scroll().flex_1().child(
+                                        view()
+                                            .px_4()
+                                            .child(If::new(
+                                                move || {
+                                                    no_records.revision.get();
+                                                    no_records.state.borrow().transfers.is_empty()
+                                                },
+                                                {
+                                                    let session = session.clone();
+                                                    move || {
+                                                        text(session.translated("history.empty"))
+                                                            .py_3()
+                                                            .text_color(move || {
+                                                                theme().muted_foreground
+                                                            })
+                                                    }
+                                                },
+                                            ))
+                                            .child(activity_with(session, true)),
+                                    ),
                                 ),
                         ),
                 )
-                .into_any_element();
-        }
-        if self.state.composer.is_empty() {
-            list = list.child(
-                div()
-                    .id("composer-welcome")
-                    .debug_selector(|| "composer-welcome".into())
-                    .flex()
-                    .flex_col()
-                    .flex_1()
-                    .justify_center()
-                    .items_center()
-                    .gap_3()
-                    .bg(theme.background)
-                    .border_1()
-                    .border_color(theme.divider())
-                    .p_4()
-                    .child(super::motion::discovery_logo(
-                        theme.accent,
-                        self.state.discovering && !cx.reduce_motion(),
-                        self.state.discovery_revision,
-                        self.discovery_cycle,
-                        64.,
-                    ))
-                    .child(
-                        div()
-                            .text_color(theme.bright)
-                            .font_weight(gpui_kit::FontWeight::BOLD)
-                            .child(t!("composer.drop_hint")),
-                    )
-                    .child(
-                        div()
-                            .text_color(theme.secondary)
-                            .child(t!("composer.drop_kinds")),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap_2()
-                            .child(keycap("ctrl+v", cx))
-                            .child(t!("action.paste"))
-                            .child(div().w(rems(0.5)))
-                            .child(keycap("ctrl+o", cx))
-                            .child(t!("action.add_files")),
-                    ),
-            );
-        }
-        for item in &self.state.composer {
-            let id = item.id.clone();
-            let transfer = self
-                .state
-                .transfers
-                .iter()
-                .rev()
-                .find(|transfer| transfer.composer_ids.contains(&item.id));
-            let active = transfer.is_some_and(|transfer| transfer.status == TransferStatus::Active);
+        },
+    )
+}
 
-            let mut row = div()
-                .flex()
-                .flex_col()
-                .gap_2()
-                .flex_shrink_0()
-                .p_3()
-                .border_1()
-                .border_color(theme.border);
-            if item.is_video() {
-                row = row.child(
-                    div()
-                        .text_size(rems(1.5))
-                        .text_color(theme.secondary)
-                        .child("▶"),
-                );
-            } else if let SendItem::Text(text) = &item.item {
-                row = row.child(
-                    div()
-                        .text_color(theme.secondary)
-                        .child(text.chars().take(240).collect::<String>()),
-                );
-            }
-            let preview_id = id.clone();
-            row = row.child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_2()
-                    .when(item.is_image(), |header| {
-                        header.when_some(item.item.path(), |header, path| {
-                            header.child(
-                                div()
-                                    .flex_shrink_0()
-                                    .size(px(40.))
-                                    .mr_1()
-                                    .overflow_hidden()
-                                    .child(
-                                        img(path.to_path_buf())
-                                            .size_full()
-                                            .object_fit(ObjectFit::Contain),
-                                    ),
-                            )
-                        })
-                    })
-                    .child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .flex_1()
-                            .min_w_0()
-                            .gap_1()
-                            .when(!matches!(item.item, SendItem::Text(_)), |details| {
-                                details.child(
-                                    div().overflow_hidden().text_ellipsis().child(item.name()),
-                                )
-                            })
-                            .child(div().text_color(theme.secondary).child(
-                                if matches!(item.item, SendItem::Text(_)) {
-                                    size_label(item.size())
-                                } else {
-                                    format!(
-                                        "{} · {}",
-                                        size_label(item.size()),
-                                        self.language.count(
-                                            item.uploads.len(),
-                                            "history.file_one",
-                                            "history.file_other"
-                                        )
-                                    )
-                                },
-                            )),
-                    )
-                    .when(item.is_image(), |row| {
-                        row.child(
-                            button(
-                                gpui_kit::SharedString::from(format!("preview-{id}")),
-                                t!("action.preview_ellipsis"),
-                                ButtonVariant::Secondary,
-                                cx,
-                            )
-                            .on_click(cx.listener(
-                                move |view, _, window, cx| {
-                                    view.preview = Some(Preview::Composer(preview_id.clone()));
-                                    view.restore_focus = window.focused(cx);
-                                    view.modal_focus.focus(window, cx);
-                                    cx.notify();
-                                },
-                            )),
-                        )
-                    })
-                    .when(!active, |row| {
-                        row.child(
-                            button(
-                                gpui_kit::SharedString::from(format!("remove-{id}")),
-                                t!("action.remove"),
-                                ButtonVariant::Secondary,
-                                cx,
-                            )
-                            .on_click(cx.listener(
-                                move |view, _, window, cx| {
-                                    view.state.composer.retain(|item| item.id != id);
-                                    view.focus.focus(window, cx);
-                                    cx.notify();
-                                },
-                            )),
-                        )
-                    })
-                    .when(active, |row| {
-                        let transfer_id = transfer.unwrap().id.clone();
-                        row.child(
-                            button(
-                                SharedString::from(format!("cancel-item-{}", item.id)),
-                                t!("action.cancel"),
-                                ButtonVariant::Secondary,
-                                cx,
-                            )
-                            .on_click(cx.listener(
-                                move |view, _, _, cx| {
-                                    if let Some(node) = &view.node
-                                        && let Err(error) = node.handle.cancel(&transfer_id)
-                                    {
-                                        view.state.error = Some(error.to_string());
-                                    }
-                                    cx.notify();
-                                },
-                            )),
-                        )
-                    }),
-            );
-            if let Some(transfer) = transfer {
-                let offset = self
+fn activity_with(session: Session, include_finished: bool) -> impl IntoElement {
+    let requests = session.clone();
+    let request_rows = session.clone();
+    let transfers = session.clone();
+    let transfer_rows = session;
+    view()
+        .gap_2()
+        .child(Each::new(
+            move || {
+                requests.revision.get();
+                requests
                     .state
-                    .composer
-                    .iter()
-                    .take_while(|previous| previous.id != item.id)
-                    .filter(|previous| transfer.composer_ids.contains(&previous.id))
-                    .map(|previous| previous.size())
-                    .sum();
-                row = row.child(self.transfer_progress(
-                    transfer,
-                    &item.id,
-                    Some((offset, item.size())),
-                    cx,
-                ));
-            }
-
-            list = list.child(row.with_animation(
-                SharedString::from(format!("content-enter-{}", item.id)),
-                super::motion::content_enter(),
-                |row, phase| row.opacity(phase),
-            ));
-        }
-        list.into_any_element()
-    }
-
-    pub fn receive_dialog(&self, cx: &mut Context<Self>) -> AnyElement {
-        let request = self.state.incoming.as_ref().unwrap();
-        let mut files = div()
-            .id("incoming-files")
-            .overflow_y_scroll()
-            .max_h(rems(16.))
-            .flex()
-            .flex_col()
-            .gap_2();
-        for file in &request.files {
-            files = files.child(
-                div()
-                    .flex()
-                    .gap_3()
-                    .child(div().flex_1().child(file.name.clone()))
-                    .child(size_label(file.size)),
-            );
-        }
-        let popup = dialog_popup(cx)
-            .child(dialog_title(
-                self.language.named("receive.title", &request.peer.alias),
-                cx,
-            ))
-            .child(files)
-            .child(
-                div()
-                    .text_color(cx.omarchy().secondary)
-                    .child(t!("receive.destination")),
-            )
-            .child(
-                div()
-                    .flex()
-                    .justify_end()
-                    .gap_2()
+                    .borrow()
+                    .incoming
+                    .as_ref()
+                    .map(|r| vec![r.id.clone()])
+                    .unwrap_or_default()
+            },
+            Clone::clone,
+            move |id, _| {
+                let id = id.get_untracked();
+                let labels = request_rows.clone();
+                let acceptor = request_rows.clone();
+                let decliner = request_rows.clone();
+                let decline_id = id.clone();
+                let files = request_rows
+                    .state
+                    .borrow()
+                    .incoming
+                    .as_ref()
+                    .map(|request| {
+                        request
+                            .files
+                            .iter()
+                            .map(|file| format!("{} · {}", file.name, size_label(file.size)))
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+                modal()
+                    .transparent(true)
+                    .animation(if reduce_motion() {
+                        ModalAnimation::None
+                    } else {
+                        ModalAnimation::Fade
+                    })
+                    .on_request_close({
+                        let decider = request_rows.clone();
+                        let id = decline_id.clone();
+                        move |_: &()| decider.decide(&id, false)
+                    })
                     .child(
-                        button("decline", t!("action.decline"), ButtonVariant::Outline, cx)
-                            .on_click(
-                                cx.listener(|view, _, window, cx| view.decide(false, window, cx)),
+                        view()
+                            .flex_1()
+                            .items_center()
+                            .justify_center()
+                            .p_6()
+                            .bg(AdaptiveColor::from(rgb(0)).opacity(0.6))
+                            .child(
+                                view()
+                                    .w_full()
+                                    .max_w(px(420.0))
+                                    .gap_3()
+                                    .bg(appearance::panel_background)
+                                    .border_1()
+                                    .p_4()
+                                    .border_color(move || theme().border)
+                                    .child(text(move || {
+                                        labels.revision.get();
+                                        labels
+                                            .state
+                                            .borrow()
+                                            .incoming
+                                            .as_ref()
+                                            .map(|r| {
+                                                labels
+                                                    .language
+                                                    .get()
+                                                    .named("receive.title", &r.peer.alias)
+                                            })
+                                            .unwrap_or_default()
+                                    }))
+                                    .child(scroll().max_h(px(220.0)).child(
+                                        view().gap_2().children(files.into_iter().map(text)),
+                                    ))
+                                    .child(text(request_rows.translated("receive.destination")))
+                                    .child(
+                                        view()
+                                            .flex_row()
+                                            .gap_2()
+                                            .child(control(
+                                                request_rows.translated("action.accept"),
+                                                false,
+                                                move || acceptor.decide(&id, true),
+                                            ))
+                                            .child(control(
+                                                request_rows.translated("action.decline"),
+                                                false,
+                                                move || decliner.decide(&decline_id, false),
+                                            )),
+                                    ),
                             ),
                     )
-                    .child(
-                        button("accept", t!("action.accept"), ButtonVariant::Primary, cx).on_click(
-                            cx.listener(|view, _, window, cx| view.decide(true, window, cx)),
-                        ),
-                    ),
-            );
-        let ok = cx.listener(|view: &mut Self, _, window, cx| view.decide(true, window, cx));
-        alert_dialog(&self.modal_focus, cx)
-            .popup(
-                div()
-                    .size_full()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .child(
-                        div()
-                            .id("receive-popup")
-                            .debug_selector(|| "receive-popup".into())
-                            .max_w_full()
-                            .child(popup.with_animation(
-                                "popup-enter",
-                                super::motion::popup_enter(),
-                                |popup, phase| popup.opacity(phase).top(px(4. * (1. - phase))),
-                            )),
-                    ),
-            )
-            .on_ok(move |event, window, cx| {
-                ok(event, window, cx);
-                false
-            })
-            .on_close(cx.listener(|view, _, window, cx| view.decide(false, window, cx)))
-            .into_any_element()
-    }
+            },
+        ))
+        .child(Each::new(
+            move || {
+                if include_finished {
+                    transfers.visible_transfer_ids()
+                } else {
+                    transfers.revision.get();
+                    transfers
+                        .state
+                        .borrow()
+                        .transfers
+                        .iter()
+                        .filter(|t| t.status == TransferStatus::Active)
+                        .map(|t| t.id.clone())
+                        .collect()
+                }
+            },
+            Clone::clone,
+            move |id, _| transfer_row(transfer_rows.clone(), id.get_untracked()),
+        ))
+}
 
-    pub fn preview_dialog(
-        &self,
-        window: &mut gpui_kit::Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let item =
-            self.state.composer.iter().find(
-                |item| matches!(&self.preview, Some(Preview::Composer(id)) if id == &item.id),
-            );
-        let mut popup = dialog_popup(cx).w(rems(40.)).child(dialog_title(
-            item.map(|item| item.name())
-                .unwrap_or_else(|| t!("action.preview").into()),
-            cx,
-        ));
-        let mut actions = div().flex().justify_end().gap_2();
-        if let Some(Preview::ReceivedText { input, copied }) = &self.preview {
-            popup = dialog_popup(cx)
-                .w(rems(40.))
-                .child(dialog_title(t!("dialog.received_text"), cx))
-                .child(
-                    gpui_omarchy::textarea("received-text", input, window, cx)
-                        .h(rems(18.))
-                        .overflow_hidden()
-                        .debug_selector(|| "received-text".into()),
-                );
-            actions = actions.child(
-                button(
-                    "copy-received-text",
-                    t!(if *copied {
-                        "status.copied"
-                    } else {
-                        "action.copy"
-                    }),
-                    ButtonVariant::Outline,
-                    cx,
-                )
-                .debug_selector(|| "copy-received-text".into())
-                .on_click(cx.listener(|view, _, _, cx| {
-                    if let Some(Preview::ReceivedText { input, copied }) = &mut view.preview {
-                        cx.write_to_clipboard(gpui_kit::ClipboardItem::new_string(
-                            input.read(cx).value().to_string(),
-                        ));
-                        *copied = true;
-                        cx.notify();
+fn transfer_row(session: Session, id: String) -> impl IntoElement {
+    let labels = session.clone();
+    let label_id = id.clone();
+    let details = computed(move || {
+        labels.revision.get();
+        labels
+            .state
+            .borrow()
+            .transfers
+            .iter()
+            .find(|t| t.id == label_id)
+            .map(|t| {
+                let status = match &t.status {
+                    TransferStatus::Active if t.awaiting_acceptance => {
+                        labels.language.get().text("status.waiting")
                     }
-                })),
-            );
+                    TransferStatus::Active => labels.language.get().text(if t.sending {
+                        "status.sending"
+                    } else {
+                        "status.receiving"
+                    }),
+                    TransferStatus::Completed => labels.language.get().text(if t.sending {
+                        "status.sent"
+                    } else {
+                        "status.received"
+                    }),
+                    TransferStatus::Cancelled => labels.language.get().text("status.cancelled"),
+                    TransferStatus::Failed(error) => labels.language.get().transfer_error(error),
+                };
+                let when: chrono::DateTime<chrono::Local> = t.when.into();
+                let size = if t.status == TransferStatus::Active {
+                    format!("{} / {}", size_label(t.transferred), size_label(t.total))
+                } else {
+                    size_label(t.total)
+                };
+                (
+                    t.peer.clone(),
+                    status,
+                    format!("{} · {}", size, when.format("%m-%d %H:%M")),
+                    t.status.clone(),
+                )
+            })
+    });
+    let active = computed(move || details.get().is_some_and(|d| d.3 == TransferStatus::Active));
+    let updates = session.clone();
+    let update_id = id.clone();
+    let cancel = session.clone();
+    let cancel_id = id.clone();
+    let progress = native_value(0.0);
+    let driver = progress.clone();
+    effect(move || {
+        updates.revision.get();
+        let ratio = updates
+            .state
+            .borrow()
+            .transfers
+            .iter()
+            .find(|t| t.id == update_id)
+            .map(|t| {
+                if t.total > 0 {
+                    (t.transferred as f32 / t.total as f32).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                }
+            })
+            .unwrap_or(0.0);
+        if reduce_motion() {
+            driver.set(ratio);
+        } else {
+            driver.timing(ratio, 160.0, Easing::Linear);
         }
-        if let Some(path) = item.and_then(|item| item.item.path()) {
-            popup = popup.child(
-                img(path.to_path_buf())
-                    .w_full()
-                    .h(rems(24.))
-                    .object_fit(ObjectFit::Contain),
-            );
-        }
-        actions = actions.child(
-            button(
-                "close-preview",
-                t!("action.close"),
-                ButtonVariant::Outline,
-                cx,
-            )
-            .on_click(cx.listener(|view, _, window, cx| {
-                view.preview = None;
-                view.restore(window, cx);
-                cx.notify();
-            })),
-        );
-        popup = popup.child(actions);
-        dialog(&self.modal_focus, cx)
-            .popup(div().max_w_full().occlude().child(popup.with_animation(
-                "popup-enter",
-                super::motion::popup_enter(),
-                |popup, phase| popup.opacity(phase).top(px(4. * (1. - phase))),
-            )))
-            .on_close(cx.listener(|view, _, window, cx| {
-                view.preview = None;
-                view.restore(window, cx);
-                cx.notify();
-            }))
-            .into_any_element()
+    });
+    view()
+        .test_id("transfer-record")
+        .gap(px(6.0))
+        .py_3()
+        .border_b_1()
+        .border_color(appearance::divider)
+        .child(
+            view()
+                .flex_row()
+                .items_center()
+                .gap_3()
+                .child(
+                    text(move || details.get().map(|d| d.0).unwrap_or_default())
+                        .number_of_lines(1)
+                        .flex_1(),
+                )
+                .child(
+                    text(move || details.get().map(|d| d.1).unwrap_or_default())
+                        .number_of_lines(1)
+                        .text_size(px(11.0))
+                        .text_color(move || match details.get().map(|d| d.3) {
+                            Some(TransferStatus::Completed) => theme().success,
+                            Some(TransferStatus::Failed(_)) => theme().danger,
+                            _ => theme().muted_foreground,
+                        }),
+                ),
+        )
+        .child(
+            text(move || details.get().map(|d| d.2).unwrap_or_default())
+                .text_size(px(11.0))
+                .text_color(move || theme().muted_foreground),
+        )
+        .child(If::new(
+            move || active.get(),
+            move || {
+                let cancel = cancel.clone();
+                let id = cancel_id.clone();
+                view()
+                    .gap_2()
+                    .child(
+                        view()
+                            .test_id("transfer-progress")
+                            .h(px(3.0))
+                            .bg(move || theme().border)
+                            .child(
+                                view()
+                                    .h(px(3.0))
+                                    .w_full()
+                                    .bg(move || theme().progress_bar)
+                                    .transform_origin(nsh_core::TransformOrigin {
+                                        x: nsh_core::OriginLen::Fraction(0.0),
+                                        ..Default::default()
+                                    })
+                                    .bind_transform(nsh_core::TransformKind::ScaleX, &progress),
+                            ),
+                    )
+                    .child(view().flex_row().child(plain_control(
+                        cancel.translated("action.cancel"),
+                        false,
+                        move || cancel.cancel(&id),
+                    )))
+            },
+        ))
+        .child(received_actions(session, id))
+}
+
+fn received_actions(session: Session, id: String) -> impl IntoElement {
+    let paths = session.clone();
+    let path_id = id.clone();
+    let path_rows = session.clone();
+    let has_text = session.clone();
+    let text_id = id.clone();
+    let copy = session.clone();
+    let show_text = session.clone();
+    let show_id = id.clone();
+    view()
+        .gap_2()
+        .child(Each::new(
+            move || {
+                paths.revision.get();
+                paths
+                    .state
+                    .borrow()
+                    .transfers
+                    .iter()
+                    .find(|t| t.id == path_id)
+                    .map(|t| t.paths.clone())
+                    .unwrap_or_default()
+            },
+            Clone::clone,
+            move |path, _| {
+                let path = path.get_untracked();
+                let opener = path_rows.clone();
+                let revealer = path_rows.clone();
+                let reveal_path = path.clone();
+                view()
+                    .flex_row()
+                    .gap_2()
+                    .items_center()
+                    .child(
+                        text(
+                            path.file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .into_owned(),
+                        )
+                        .flex_1(),
+                    )
+                    .child(control(
+                        path_rows.translated("action.open"),
+                        false,
+                        move || opener.open_path(path.clone(), false),
+                    ))
+                    .child(control(
+                        path_rows.translated("action.show_in_files"),
+                        false,
+                        move || revealer.open_path(reveal_path.clone(), true),
+                    ))
+            },
+        ))
+        .child(If::new(
+            move || {
+                has_text.revision.get();
+                has_text
+                    .state
+                    .borrow()
+                    .transfers
+                    .iter()
+                    .any(|t| t.id == text_id && t.received_text.is_some())
+            },
+            move || {
+                let copy = copy.clone();
+                let id = id.clone();
+                let show_text = show_text.clone();
+                let show_id = show_id.clone();
+                let expanded = signal(false);
+                let language = session.language;
+                view()
+                    .gap_2()
+                    .child(If::new(move || !expanded.get(), {
+                        let show_text = show_text.clone();
+                        let show_id = show_id.clone();
+                        move || {
+                            let show_text = show_text.clone();
+                            let show_id = show_id.clone();
+                            text(move || {
+                                show_text.revision.get();
+                                show_text
+                                    .state
+                                    .borrow()
+                                    .transfers
+                                    .iter()
+                                    .find(|t| t.id == show_id)
+                                    .and_then(|t| t.received_text.clone())
+                                    .unwrap_or_default()
+                            })
+                            .number_of_lines(2)
+                            .text_size(px(11.0))
+                            .text_color(move || theme().muted_foreground)
+                        }
+                    }))
+                    .child(
+                        view()
+                            .flex_row()
+                            .gap_2()
+                            .child(plain_control(
+                                move || {
+                                    language.get().text(if expanded.get() {
+                                        "action.collapse"
+                                    } else {
+                                        "action.expand"
+                                    })
+                                },
+                                false,
+                                move || {
+                                    if !reduce_motion() {
+                                        animate_layout(nsh_core::LayoutAnimation::all(
+                                            nsh_core::LayoutTransition::new(
+                                                nsh_core::LayoutCurve::EaseOut,
+                                                140.0,
+                                            ),
+                                        ));
+                                    }
+                                    expanded.set(!expanded.get());
+                                },
+                            ))
+                            .child(plain_control(
+                                session.translated("action.copy"),
+                                false,
+                                move || copy.copy_received(&id),
+                            )),
+                    )
+                    .child(If::new(move || expanded.get(), {
+                        let show_text = show_text.clone();
+                        let show_id = show_id.clone();
+                        let title_language = session.language;
+                        move || {
+                            let show_text = show_text.clone();
+                            let show_id = show_id.clone();
+                            super::editor()
+                                .multiline(true)
+                                .editable(false)
+                                .value(move || {
+                                    show_text.revision.get();
+                                    show_text
+                                        .state
+                                        .borrow()
+                                        .transfers
+                                        .iter()
+                                        .find(|t| t.id == show_id)
+                                        .and_then(|t| t.received_text.clone())
+                                        .unwrap_or_default()
+                                })
+                                .h(move || px((window().height * 0.22).clamp(72.0, 140.0)))
+                                .label(move || title_language.get().text("message.title"))
+                        }
+                    }))
+            },
+        ))
+}
+
+fn size_label(bytes: u64) -> String {
+    let units = ["B", "KB", "MB", "GB", "TB"];
+    let mut value = bytes as f64;
+    let mut index = 0;
+    while value >= 1024.0 && index < units.len() - 1 {
+        value /= 1024.0;
+        index += 1;
     }
+    if index == 0 {
+        format!("{bytes} B")
+    } else {
+        format!("{value:.1} {}", units[index])
+    }
+}
+
+fn thumbnail(session: Session, id: String) -> impl IntoElement {
+    let visible = session.clone();
+    let check_id = id.clone();
+    If::new(
+        move || {
+            visible.revision.get();
+            visible
+                .state
+                .borrow()
+                .composer
+                .iter()
+                .any(|item| item.id == check_id && item.is_image())
+        },
+        move || {
+            let state = session.state.borrow();
+            let path = state
+                .composer
+                .iter()
+                .find(|item| item.id == id)
+                .and_then(|item| item.item.path())
+                .expect("image item has a path");
+            let uri = url::Url::from_file_path(path)
+                .map(|uri| uri.to_string())
+                .unwrap_or_else(|_| path.to_string_lossy().into_owned());
+            image(uri)
+                .size(px(48.0))
+                .resize_mode(nsh_core::ResizeMode::Contain)
+        },
+    )
 }

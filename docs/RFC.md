@@ -1,3 +1,6 @@
+> This is the original product RFC. Its GPUI framework choice is superseded by
+> the NSH Rust migration; its product behavior remains the parity baseline.
+
 下面这版可以直接保存成 `RFC-OmaSend.md`，也适合直接交给 AI Coding Agent 作为开发指引。
 
 # Omasend — Omarchy Native LocalSend Client

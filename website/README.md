@@ -1,6 +1,6 @@
 # Omasend website
 
-Static Astro site, following the Astro + Bun + GitHub Pages setup in `../gpui-omarchy/website`. Fonts are bundled locally. English lives at `/omasend/`, Simplified Chinese at `/omasend/zh-CN/`.
+Static Astro site using Bun and GitHub Pages. Fonts are bundled locally. English lives at `/omasend/`, Simplified Chinese at `/omasend/zh-CN/`.
 
 ```sh
 cd website

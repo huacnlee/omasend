@@ -444,19 +444,19 @@ mod tests {
 
     /// The interface sources, so a lookup can only reach a key that exists.
     const INTERFACE: &[&str] = &[
-        include_str!("views/home.rs"),
+        include_str!("views/mod.rs"),
         include_str!("views/panels.rs"),
-        include_str!("views/about.rs"),
-        include_str!("views/history.rs"),
-        include_str!("views/logs.rs"),
-        include_str!("views/nearby.rs"),
-        include_str!("views/updates.rs"),
+        include_str!("views/session.rs"),
+        include_str!("views/preferences.rs"),
+        include_str!("views/preview.rs"),
+        include_str!("views/utilities.rs"),
+        include_str!("views/services.rs"),
     ];
 
     /// Every key the interface asks for by name, whichever lookup it uses.
     fn keys_in(source: &str) -> Vec<&str> {
         let mut keys = Vec::new();
-        for opening in ["t!(\"", ".text(\"", ".named(\""] {
+        for opening in ["t!(\"", ".text(\"", ".named(\"", ".translated(\""] {
             for (at, matched) in source.match_indices(opening) {
                 // `format!("…")` ends in the same three characters as `t!("`.
                 if opening.starts_with('t')
@@ -491,15 +491,7 @@ mod tests {
     fn every_key_used_by_the_interface_is_translated() {
         let known: std::collections::HashSet<String> =
             catalog().into_iter().map(|(key, _)| key).collect();
-        for source in [
-            include_str!("views/home.rs"),
-            include_str!("views/panels.rs"),
-            include_str!("views/about.rs"),
-            include_str!("views/history.rs"),
-            include_str!("views/logs.rs"),
-            include_str!("views/nearby.rs"),
-            include_str!("views/updates.rs"),
-        ] {
+        for source in INTERFACE {
             for key in keys_in(source) {
                 assert!(known.contains(key), "missing translation: {key}");
             }

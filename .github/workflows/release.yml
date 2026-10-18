@@ -23,9 +23,9 @@ jobs:
             target: aarch64-apple-darwin
           - os: macos-26
             target: x86_64-apple-darwin
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
           - os: windows-2022
             target: x86_64-pc-windows-msvc
@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 90
     env:
       CARGO_TERM_COLOR: always
-      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
     defaults:
       run:
         shell: bash
@@ -55,9 +55,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang pkg-config libssl-dev libfontconfig1-dev \
-            libfreetype6-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
-            libvulkan-dev libxcb1-dev libx11-xcb-dev libzstd-dev
+          sudo apt-get install -y clang pkg-config libgtk-4-dev libssl-dev libxcb1-dev
 
       - name: Use a static Windows C runtime
         if: runner.os == 'Windows'
@@ -114,6 +112,9 @@ jobs:
         if: matrix.target != 'x86_64-apple-darwin'
         run: cargo test --locked --no-default-features --target ${{ matrix.target }}
 
+      - name: Require native NSH backends
+        run: python scripts/check-native-runtime.py
+
       - name: Build release
         run: cargo build --locked --release --bin omasend --target ${{ matrix.target }}
 
@@ -126,6 +127,19 @@ jobs:
           if [ "$RUNNER_OS" = Windows ]; then binary="$binary.exe"; fi
           python packaging/build-release.py --target "$RELEASE_TARGET" \
             --version "$RELEASE_VERSION" --binary "$binary" --output dist
+
+      - name: Verify packaged native executable
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TARGET: ${{ matrix.target }}
+        run: |
+          extension=tar.gz
+          if [ "$RUNNER_OS" = Windows ]; then extension=zip; fi
+          options=()
+          if [ "$RELEASE_TARGET" = x86_64-apple-darwin ]; then options+=(--no-run); fi
+          python packaging/check-release.py \
+            "dist/omasend-$RELEASE_VERSION-$RELEASE_TARGET.$extension" \
+            --version "$RELEASE_VERSION" "${options[@]}"
 
       - uses: actions/upload-artifact@v4
         with:

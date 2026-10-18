@@ -35,7 +35,7 @@ def package(root, binary, output, version, target):
             (contents / "MacOS/omasend").chmod(0o755)
             shutil.copy2(root / "assets/omasend.icns", contents / "Resources/omasend.icns")
             # Modern macOS wraps legacy-only icons in a pale compatibility tile.
-            # Compile the Icon Composer asset while retaining our ICNS for macOS 13–15.
+            # Compile the Icon Composer asset while retaining our ICNS for macOS 14–15.
             with tempfile.TemporaryDirectory(prefix="omasend-icon-") as icon_temporary:
                 icon_output = Path(icon_temporary)
                 subprocess.run([
@@ -45,7 +45,7 @@ def package(root, binary, output, version, target):
                     "--output-partial-info-plist", str(icon_output / "partial.plist"),
                     "--app-icon", "OmaSend", "--include-all-app-icons",
                     "--enable-on-demand-resources", "NO", "--development-region", "en",
-                    "--target-device", "mac", "--minimum-deployment-target", "13.0",
+                    "--target-device", "mac", "--minimum-deployment-target", "14.0",
                     "--platform", "macosx",
                 ], check=True)
                 shutil.copy2(icon_output / "Assets.car", contents / "Resources/Assets.car")
@@ -60,7 +60,7 @@ def package(root, binary, output, version, target):
                     "CFBundlePackageType": "APPL",
                     "CFBundleShortVersionString": version,
                     "CFBundleVersion": version.split("-")[0],
-                    "LSMinimumSystemVersion": "13.0",
+                    "LSMinimumSystemVersion": "14.0",
                     "LSApplicationCategoryType": "public.app-category.utilities",
                     "NSHighResolutionCapable": True,
                     "NSLocalNetworkUsageDescription": "Omasend discovers nearby devices and transfers files on your local network.",

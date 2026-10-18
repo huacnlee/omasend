@@ -1,3 +1,7 @@
+> Historical GPUI implementation record. The NSH migration replaces this UI;
+> current status and evidence are in [migration.md](migration.md). The verification
+> below applies to the former implementation, not to the current NSH window.
+
 # Omasend v0.1 implementation and acceptance
 
 Spec: [RFC-OmaSend.md](../RFC-OmaSend.md). The source RFC ends before listing its development order; this document supplies the sequence without reducing its scope.

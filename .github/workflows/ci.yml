@@ -14,9 +14,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  native-shell:
+    name: NSH Rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, windows-2022, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Install GTK and clipboard build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libgtk-4-dev libssl-dev libxcb1-dev
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: nsh-${{ matrix.os }}
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked --features ui-tests --lib
+      - run: cargo build --locked
+
   website:
     name: Website build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
@@ -36,7 +64,7 @@ jobs:
 
   quality:
     name: Formatting and Clippy
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -48,18 +76,18 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang pkg-config libssl-dev libfontconfig1-dev \
-            libfreetype6-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
-            libvulkan-dev libxcb1-dev libx11-xcb-dev libzstd-dev
+          sudo apt-get install -y clang pkg-config libgtk-4-dev libssl-dev libxcb1-dev
       - uses: Swatinem/rust-cache@v2
         with:
           key: ci-quality
+      - name: Require native NSH backends
+        run: python3 scripts/check-native-runtime.py
       - run: cargo fmt --all -- --check
       - run: cargo clippy --locked --all-targets --all-features -- -D warnings
 
   test:
     name: Tests (Linux)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       CARGO_TERM_COLOR: always
@@ -74,9 +102,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang pkg-config libssl-dev libfontconfig1-dev \
-            libfreetype6-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev \
-            libvulkan-dev libxcb1-dev libx11-xcb-dev libzstd-dev
+          sudo apt-get install -y clang pkg-config libgtk-4-dev libssl-dev libxcb1-dev
       - uses: Swatinem/rust-cache@v2
         with:
           key: ci-tests
@@ -86,5 +112,5 @@ jobs:
         run: python scripts/test-pkgbuild.py
       - name: Unit and integration tests
         run: cargo test --locked --no-default-features
-      - name: GPUI Fast interaction tests
-        run: cargo test --locked --features ui-tests --bin omasend
+      - name: NSH Rust interaction tests
+        run: cargo test --locked --features ui-tests --lib
