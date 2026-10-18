@@ -184,6 +184,12 @@ workflow configuration is not evidence that remote CI jobs have passed.
 - Verify packaged update installation and relaunch on each native platform.
   The engine fixture covers progress, verification failure, retry, task ownership
   after hiding its surface, and refusal to restart with an unfinished Outbox.
+  There is a known macOS lifecycle gap: the resolved NSH AppKit delegate calls
+  `NSApplication.terminate` when the window closes. AppKit termination exits the
+  process instead of returning through `run_app`, so the restart code after
+  `run_app` in `src/main.rs` cannot be relied on for macOS updates. Upstream
+  needs a graceful shutdown/return path before this behavior is complete;
+  the engine fixture does not exercise AppKit termination.
 - Preserve retained sessions on macOS window close and verify orderly network
   shutdown on application exit.
 - Verify Linux/Windows release packaging and installers against the new native
