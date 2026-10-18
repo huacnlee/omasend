@@ -2089,12 +2089,12 @@ dependencies = [
 [[package]]
 name = "nsh-animation"
 version = "0.1.1"
-source = "git+https://github.com/longbridge/nsh?branch=main#cfb41c92f1a1286cbe5edc2f95bcd367e1090602"
+source = "git+https://github.com/longbridge/nsh?branch=main#b22b16586704325cb725601989c2a41acc0cf90d"
 
 [[package]]
 name = "nsh-core"
 version = "0.1.1"
-source = "git+https://github.com/longbridge/nsh?branch=main#cfb41c92f1a1286cbe5edc2f95bcd367e1090602"
+source = "git+https://github.com/longbridge/nsh?branch=main#b22b16586704325cb725601989c2a41acc0cf90d"
 dependencies = [
  "log",
  "nsh-animation",
@@ -2109,7 +2109,7 @@ dependencies = [
 [[package]]
 name = "nsh-engine"
 version = "0.1.1"
-source = "git+https://github.com/longbridge/nsh?branch=main#cfb41c92f1a1286cbe5edc2f95bcd367e1090602"
+source = "git+https://github.com/longbridge/nsh?branch=main#b22b16586704325cb725601989c2a41acc0cf90d"
 dependencies = [
  "crossbeam-channel",
  "libc",
@@ -2124,7 +2124,7 @@ dependencies = [
 [[package]]
 name = "nsh-macros"
 version = "0.1.1"
-source = "git+https://github.com/longbridge/nsh?branch=main#cfb41c92f1a1286cbe5edc2f95bcd367e1090602"
+source = "git+https://github.com/longbridge/nsh?branch=main#b22b16586704325cb725601989c2a41acc0cf90d"
 dependencies = [
  "imagesize",
  "proc-macro2",
@@ -2136,7 +2136,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-linux"
 version = "0.1.1"
-source = "git+https://github.com/longbridge/nsh?branch=main#cfb41c92f1a1286cbe5edc2f95bcd367e1090602"
+source = "git+https://github.com/longbridge/nsh?branch=main#b22b16586704325cb725601989c2a41acc0cf90d"
 dependencies = [
  "crossbeam-channel",
  "gtk4",
@@ -2157,7 +2157,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-macos"
 version = "0.1.1"
-source = "git+https://github.com/longbridge/nsh?branch=main#cfb41c92f1a1286cbe5edc2f95bcd367e1090602"
+source = "git+https://github.com/longbridge/nsh?branch=main#b22b16586704325cb725601989c2a41acc0cf90d"
 dependencies = [
  "block2",
  "crossbeam-channel",
@@ -2184,7 +2184,7 @@ dependencies = [
 [[package]]
 name = "nsh-platform-windows"
 version = "0.1.1"
-source = "git+https://github.com/longbridge/nsh?branch=main#cfb41c92f1a1286cbe5edc2f95bcd367e1090602"
+source = "git+https://github.com/longbridge/nsh?branch=main#b22b16586704325cb725601989c2a41acc0cf90d"
 dependencies = [
  "base64 0.22.1",
  "crossbeam-channel",
@@ -2198,6 +2198,7 @@ dependencies = [
  "serde_json",
  "ttf-parser",
  "ureq",
+ "url",
  "webview2-com",
  "windows",
  "windows-core",
@@ -2207,7 +2208,7 @@ dependencies = [
 [[package]]
 name = "nsh-ui-mobile"
 version = "0.1.1"
-source = "git+https://github.com/longbridge/nsh?branch=main#cfb41c92f1a1286cbe5edc2f95bcd367e1090602"
+source = "git+https://github.com/longbridge/nsh?branch=main#b22b16586704325cb725601989c2a41acc0cf90d"
 dependencies = [
  "nsh-core",
  "serde_json",

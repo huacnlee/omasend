@@ -262,13 +262,49 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
     let item_rows = session.clone();
     let empty = session.clone();
     let full = session.clone();
+    let guard = session.clone();
+    let enabled = computed(move || !guard.input_blocked());
+    let hovering = signal(false);
+    let highlight = native_value(0.0);
+    let changing = highlight.clone();
+    effect(move || {
+        let accepts_files = enabled.get();
+        if !accepts_files {
+            hovering.set(false);
+        }
+        let active = accepts_files && hovering.get();
+        changing.timing(
+            if active { 1.0 } else { 0.0 },
+            if reduce_motion() { 0.0 } else { 110.0 },
+            Easing::Linear,
+        );
+    });
+    let receiver = session.clone();
     view()
         .test_id("composer-area")
+        .disabled(move || !enabled.get())
+        .on_file_drag_enter(move |_: &()| hovering.set(true))
+        .on_file_drag_leave(move |_: &()| hovering.set(false))
+        .on_file_drop(move |event: &FileDropEvent| {
+            hovering.set(false);
+            receiver.drop_files(event.uris.clone());
+        })
         .bg(appearance::panel_background)
         .rounded(move || px(if appearance::is_omarchy() { 0.0 } else { 4.0 }))
         .flex_1()
         .border_1()
         .border_color(appearance::divider)
+        .child(
+            view()
+                .test_id("composer-drop-highlight")
+                .absolute()
+                .inset_0()
+                .pointer_events(PointerEvents::None)
+                .border_2()
+                .border_color(move || theme().primary)
+                .rounded(move || px(if appearance::is_omarchy() { 0.0 } else { 4.0 }))
+                .bind_opacity(&highlight),
+        )
         .child(If::new(
             move || {
                 empty.revision.get();

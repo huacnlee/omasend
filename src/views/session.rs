@@ -393,6 +393,28 @@ impl Session {
         });
     }
 
+    pub fn drop_files(&self, uris: Vec<String>) {
+        self.input(async move {
+            uris.into_iter()
+                .map(|uri| {
+                    let uri = url::Url::parse(&uri).context("Invalid dropped file URL")?;
+                    anyhow::ensure!(
+                        uri.scheme() == "file"
+                            && uri.host_str().is_none_or(|host| {
+                                host.is_empty() || host.eq_ignore_ascii_case("localhost")
+                            }),
+                        "Dropped item must be a local file"
+                    );
+                    let path = uri
+                        .to_file_path()
+                        .map_err(|_| anyhow::anyhow!("Invalid dropped file path"))?;
+                    anyhow::ensure!(path.is_absolute(), "Dropped file path must be absolute");
+                    Ok(SendItem::File(path))
+                })
+                .collect()
+        });
+    }
+
     pub fn pick(&self, folders: bool) {
         let title = self.language.get().text("composer.add_to_omasend");
         self.input(async move {

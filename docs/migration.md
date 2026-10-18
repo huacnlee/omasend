@@ -171,13 +171,17 @@ workflow configuration is not evidence that remote CI jobs have passed.
   with language/theme submenus, shortcuts, separators and the original links. Verify populated
   states against the original; restored home-region geometry alone is not proof
   of complete parity. The existing emblem and theme integration are restored.
-- Add native file drag/drop. The currently resolved NSH core and its AppKit,
-  GTK and Win32 backends expose no file-drop event; this requires an upstream
-  capability, not a vendored patch. Video cards now restore the original distinct play
-  marker; text cards restore a bounded content excerpt, and all composer items
-  regain individual bordered cards. Native macOS clipboard imports of multiline
-  text and a generated MP4 were visually checked at 640×520. This verifies card
-  presentation, not video playback (which was not part of the original card).
+- Verify native file drag/drop through AppKit, GTK and Win32. Merged
+  [NSH PR #93](https://github.com/longbridge/nsh/pull/93) is consumed from main
+  at `b22b1658`. The Outbox receives local file URLs, parses them into absolute
+  paths and uses the existing asynchronous preparation pipeline for files and
+  directories. Busy state and open surfaces disable the destination. A 110 ms
+  native border highlight follows destination entry/exit and reduced motion.
+  This application integration has not been built or exercised locally. Native
+  multi-file/directory drops, escaped filenames and target invalidation remain
+  unverified. Video cards restore the play marker, text cards use a bounded
+  excerpt, and composer items have individual borders; earlier macOS clipboard
+  screenshots verify those cards, not the new drop path.
 - Finish the complete keyboard, modal isolation and focus-restoration matrix;
   improve history navigation and verify file-opening and clipboard-copy actions
   through the native OS services.
@@ -193,7 +197,7 @@ workflow configuration is not evidence that remote CI jobs have passed.
   window controls and system Quit still follow the backend's own lifecycle;
   this application-side path does not prove their network shutdown ordering.
   [NSH PR #94](https://github.com/longbridge/nsh/pull/94) is merged and is now
-  consumed from main at `cfb41c92`. The standalone macOS runner opts into
+  consumed from main at `b22b1658`. The standalone macOS runner opts into
   `keep_alive_on_close`, retaining the same window and engine when closed;
   Dock reopen restores it. Persistent sessions use `quit_app` for explicit
   Exit and update relaunch after the LocalSend stop sequence, while generic
