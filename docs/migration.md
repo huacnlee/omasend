@@ -184,6 +184,11 @@ workflow configuration is not evidence that remote CI jobs have passed.
 - Verify packaged update installation and relaunch on each native platform.
   The engine fixture covers progress, verification failure, retry, task ownership
   after hiding its surface, and refusal to restart with an unfinished Outbox.
+  The restart action now disables new input, sends the existing LocalSend stop
+  command and waits for the actor's command receiver to close before requesting
+  window closure. The receiver stays owned through discovery/server shutdown
+  and transfer-task cleanup. This ordering change has not been exercised at
+  runtime; native relaunch and port handoff still require verification.
   There is a known macOS lifecycle gap: the resolved NSH AppKit delegate calls
   `NSApplication.terminate` when the window closes. AppKit termination exits the
   process instead of returning through `run_app`, so the restart code after

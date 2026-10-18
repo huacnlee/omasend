@@ -143,9 +143,16 @@ impl Session {
                     self.fail(self.language.get().text("update.finish_first"));
                     return;
                 }
-                omasend::updates::RESTART_REQUESTED
-                    .store(true, std::sync::atomic::Ordering::SeqCst);
-                nsh_core::ui::desktop::close_window();
+                let handle = self.handle.get();
+                self.busy.set(true);
+                self.task(async move {
+                    if let Some(handle) = handle {
+                        handle.stop().await;
+                    }
+                    omasend::updates::RESTART_REQUESTED
+                        .store(true, std::sync::atomic::Ordering::SeqCst);
+                    nsh_core::ui::desktop::close_window();
+                });
             }
             UpdateState::Available { version, .. } | UpdateState::InstallFailed { version } => {
                 self.install_update(version)

@@ -79,6 +79,14 @@ pub struct Handle {
 }
 
 impl Handle {
+    /// Wait until the actor has stopped discovery, its server and transfers.
+    #[cfg(feature = "desktop")]
+    pub(crate) async fn stop(&self) {
+        let _ = self.commands.send(Command::Stop);
+        // Actor::run owns the receiver until after its shutdown sequence.
+        self.commands.closed().await;
+    }
+
     pub fn send(&self, peer: Device, uploads: Vec<Upload>, pin: Option<String>) -> Result<String> {
         ensure!(!uploads.is_empty(), "Add something to send first");
         let id = uuid::Uuid::new_v4().to_string();
