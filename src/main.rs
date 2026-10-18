@@ -26,6 +26,8 @@ fn main() -> std::process::ExitCode {
         platform::AppOptions {
             title: "Omasend".into(),
             size: (840, 630),
+            #[cfg(target_os = "macos")]
+            keep_alive_on_close: true,
             script: std::env::var("NSH_SCRIPT").ok(),
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             app_id: "omasend".into(),

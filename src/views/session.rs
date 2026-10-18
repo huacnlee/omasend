@@ -26,6 +26,7 @@ pub(crate) struct Session {
     pub notice: Signal<Option<&'static str>>,
     pub notice_revision: Signal<u64>,
     pub owner: Owner,
+    pub exit_application: Rc<dyn Fn()>,
 }
 
 impl Session {
@@ -50,6 +51,7 @@ impl Session {
             notice: signal(None),
             notice_revision: signal(0),
             owner: Owner::current(),
+            exit_application: Rc::new(nsh_core::ui::desktop::close_window),
         }
     }
 
@@ -60,6 +62,11 @@ impl Session {
     pub fn persistent() -> Self {
         let mut session = Self::new();
         session.persist = true;
+        #[cfg(target_os = "macos")]
+        {
+            // The standalone runner retains its window on ordinary close.
+            session.exit_application = Rc::new(nsh_platform_macos::quit_app);
+        }
         session.language.set(super::preferences::load_language());
         session.state.borrow_mut().transfers = omasend::model::history::load();
         session

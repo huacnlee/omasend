@@ -192,17 +192,17 @@ workflow configuration is not evidence that remote CI jobs have passed.
   The application menu's Exit action uses the same stop-and-close path. Native
   window controls and system Quit still follow the backend's own lifecycle;
   this application-side path does not prove their network shutdown ordering.
-  There is a known macOS lifecycle gap: the resolved NSH AppKit delegate calls
-  `NSApplication.terminate` when the window closes. AppKit termination exits the
-  process instead of returning through `run_app`, so the restart code after
-  `run_app` in `src/main.rs` cannot be relied on for macOS updates. Upstream
-  needs a graceful shutdown/return path before this behavior is complete;
-  the engine fixture does not exercise AppKit termination.
-  [NSH PR #94](https://github.com/longbridge/nsh/pull/94) contributes that
-  return path separately. It is a draft with native validation pending;
-  Omasend continues to resolve upstream main until it is merged.
-- Preserve retained sessions on macOS window close and verify orderly network
-  shutdown on application exit.
+  [NSH PR #94](https://github.com/longbridge/nsh/pull/94) is merged and is now
+  consumed from main at `cfb41c92`. The standalone macOS runner opts into
+  `keep_alive_on_close`, retaining the same window and engine when closed;
+  Dock reopen restores it. Persistent sessions use `quit_app` for explicit
+  Exit and update relaunch after the LocalSend stop sequence, while generic
+  sessions keep the window-close callback. The upstream runner returns to Rust
+  after explicit Quit so the existing post-run relaunch path can execute.
+  This integration has not been exercised locally; CI of upstream source does
+  not prove retained transfers, real Dock reopen or installed-update relaunch.
+- Verify retained sessions on macOS close/reopen and orderly network shutdown
+  on native system Quit, including active streaming transfers.
 - Verify Linux/Windows release packaging and installers against the new native
   executable, and run the Intel macOS package on an Intel host. ARM macOS
   packaging, isolated install/upgrade and native startup have passed locally.

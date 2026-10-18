@@ -11,6 +11,7 @@ impl Session {
 
     fn stop_and_close(&self, restart: bool) {
         let handle = self.handle.get();
+        let exit_application = self.exit_application.clone();
         self.busy.set(true);
         self.task(async move {
             if let Some(handle) = handle {
@@ -20,7 +21,7 @@ impl Session {
                 omasend::updates::RESTART_REQUESTED
                     .store(true, std::sync::atomic::Ordering::SeqCst);
             }
-            nsh_core::ui::desktop::close_window();
+            exit_application();
         });
     }
 
