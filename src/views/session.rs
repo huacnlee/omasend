@@ -98,7 +98,7 @@ impl Session {
     }
 
     pub fn preview_item(&self, id: &str) {
-        if self.state.borrow().incoming.is_some() {
+        if self.input_blocked() {
             return;
         }
         let preview = self
@@ -356,12 +356,7 @@ impl Session {
     /// One preparation at a time, with filesystem work off the engine thread.
     /// The source and its temporary files stay owned until uploads are prepared.
     pub fn input(&self, source: impl Future<Output = Result<Vec<SendItem>>> + 'static) {
-        if self.busy.get()
-            || self.preview.get().is_some()
-            || self.surface.get().is_some()
-            || self.history_visible.get()
-            || self.state.borrow().incoming.is_some()
-        {
+        if self.input_blocked() {
             return;
         }
         self.busy.set(true);
