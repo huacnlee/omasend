@@ -5,6 +5,25 @@ use omasend::updates::UpdateState;
 use std::time::Duration;
 
 impl Session {
+    pub fn exit(&self) {
+        self.stop_and_close(false);
+    }
+
+    fn stop_and_close(&self, restart: bool) {
+        let handle = self.handle.get();
+        self.busy.set(true);
+        self.task(async move {
+            if let Some(handle) = handle {
+                handle.stop().await;
+            }
+            if restart {
+                omasend::updates::RESTART_REQUESTED
+                    .store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+            nsh_core::ui::desktop::close_window();
+        });
+    }
+
     pub fn open_surface(&self, surface: Surface) {
         if self.state.borrow().incoming.is_some() {
             return;
@@ -143,16 +162,7 @@ impl Session {
                     self.fail(self.language.get().text("update.finish_first"));
                     return;
                 }
-                let handle = self.handle.get();
-                self.busy.set(true);
-                self.task(async move {
-                    if let Some(handle) = handle {
-                        handle.stop().await;
-                    }
-                    omasend::updates::RESTART_REQUESTED
-                        .store(true, std::sync::atomic::Ordering::SeqCst);
-                    nsh_core::ui::desktop::close_window();
-                });
+                self.stop_and_close(true);
             }
             UpdateState::Available { version, .. } | UpdateState::InstallFailed { version } => {
                 self.install_update(version)

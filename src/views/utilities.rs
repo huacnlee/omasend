@@ -4,10 +4,7 @@ use super::{
     control, editor, plain_control,
     session::Session,
 };
-use nsh_core::ui::{
-    desktop::{close_window, title_bar},
-    prelude::*,
-};
+use nsh_core::ui::{desktop::title_bar, prelude::*};
 use omasend::{i18n::Language, updates::UpdateState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -408,9 +405,11 @@ fn menu(session: Session, selected: Signal<Option<Submenu>>) -> impl IntoElement
             move || logs.open_surface(Surface::Logs),
         ))
         .child(divider())
-        .child(menu_row(session.translated("action.exit"), false, || {
-            close_window()
-        }))
+        .child(menu_row(
+            session.translated("action.exit"),
+            false,
+            move || session.exit(),
+        ))
 }
 
 fn theme_menu(session: Session, appearance: Controller) -> impl IntoElement {

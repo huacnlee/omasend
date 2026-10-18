@@ -189,6 +189,9 @@ workflow configuration is not evidence that remote CI jobs have passed.
   window closure. The receiver stays owned through discovery/server shutdown
   and transfer-task cleanup. This ordering change has not been exercised at
   runtime; native relaunch and port handoff still require verification.
+  The application menu's Exit action uses the same stop-and-close path. Native
+  window controls and system Quit still follow the backend's own lifecycle;
+  this application-side path does not prove their network shutdown ordering.
   There is a known macOS lifecycle gap: the resolved NSH AppKit delegate calls
   `NSApplication.terminate` when the window closes. AppKit termination exits the
   process instead of returning through `run_app`, so the restart code after
