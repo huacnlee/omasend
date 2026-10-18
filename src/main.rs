@@ -7,7 +7,7 @@ use nsh_platform_macos as platform;
 #[cfg(target_os = "windows")]
 use nsh_platform_windows as platform;
 
-fn main() -> impl std::process::Termination {
+fn main() -> std::process::ExitCode {
     if std::env::args()
         .skip(1)
         .any(|arg| arg == "--version" || arg == "-V")
@@ -41,5 +41,5 @@ fn main() -> impl std::process::Termination {
             return std::process::ExitCode::FAILURE;
         }
     }
-    status
+    std::process::Termination::report(status)
 }
