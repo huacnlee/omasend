@@ -106,7 +106,7 @@ fn verify_bundle(path: &Path) -> self_update::Result<()> {
 }
 
 // Keep the original path: Linux current_exe() can point to the old, renamed inode
-// after self-replacement. Relaunch only after GPUI and the network runtime stop.
+// after self-replacement. Relaunch only after the native UI and the network runtime stop.
 pub fn restart(executable: &Path) -> Result<()> {
     let mut command = std::process::Command::new(executable);
     #[cfg(unix)]

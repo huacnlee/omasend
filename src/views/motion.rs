@@ -1,158 +1,120 @@
-//! State-driven transitions and a segmented discovery indicator.
-//! GPUI automatically renders the final frame when reduced motion is enabled.
-use gpui_kit::Animation;
-use std::time::Duration;
+//! The existing vector emblem, with short native discovery/confirmation strokes.
+use super::{appearance::theme, session::Session};
+use nsh_core::{
+    canvas::{Path, svg_path},
+    ui::prelude::*,
+};
+use std::{sync::OnceLock, time::Duration};
 
-pub fn content_enter() -> Animation {
-    Animation::new(Duration::from_millis(120)).with_easing(ease_out)
+fn paths() -> &'static [Path] {
+    static PATHS: OnceLock<Vec<Path>> = OnceLock::new();
+    PATHS.get_or_init(|| {
+        include_str!("../../assets/logo.svg")
+            .split(" d=\"")
+            .skip(1)
+            .flat_map(|part| {
+                part.split('"')
+                    .next()
+                    .unwrap()
+                    .split('M')
+                    .filter(|part| !part.is_empty())
+                    .map(|part| svg_path(&format!("M{part}")))
+                    .collect::<Vec<_>>()
+            })
+            .collect()
+    })
 }
 
-pub fn popup_enter() -> Animation {
-    Animation::new(Duration::from_millis(140)).with_easing(ease_out)
-}
-
-fn ease_out(t: f32) -> f32 {
-    1. - (1. - t).powi(3)
-}
-
-/// One actuation burst plus the rest that follows it.
-pub const DISCOVERY_CYCLE: Duration = Duration::from_millis(2250);
-const DISCOVERY_BURST: Duration = Duration::from_millis(1550);
-
-/// Animate theme-colored segments of the shared pixel emblem.
-/// The center stays fixed through each quick actuation burst and shared rest.
-/// Each `cycle` restarts the burst as a oneshot animation, so no frames are
-/// rendered during the rest; the caller advances it every [`DISCOVERY_CYCLE`].
-pub fn discovery_logo(
-    color: gpui_kit::Hsla,
-    discovering: bool,
-    revision: u64,
-    cycle: u64,
-    size: f32,
-) -> gpui_kit::AnyElement {
-    use gpui_kit::{AnimationExt, SharedString, div, prelude::*, px};
-    let mut root = div().relative().size(px(size)).flex_shrink_0();
-    if discovering {
-        root = root.child(div().size_full().with_animation(
-            ("discovery-pixels", cycle),
-            Animation::new(DISCOVERY_BURST).with_max_fps(30.),
-            move |mut frame, phase| {
-                let cuts = [0., 10. / 32., 22. / 32., 1.];
-                // A quick clockwise actuation burst followed by a shared rest.
-                let order = [
-                    (0, 0),
-                    (1, 0),
-                    (2, 0),
-                    (2, 1),
-                    (2, 2),
-                    (1, 2),
-                    (0, 2),
-                    (0, 1),
-                ];
-                for row in 0..3 {
-                    for col in 0..3 {
-                        let (alpha, lift) = if row == 1 && col == 1 {
-                            (1., 0.)
-                        } else {
-                            let index = order.iter().position(|cell| *cell == (col, row)).unwrap();
-                            let elapsed = phase * DISCOVERY_BURST.as_millis() as f32;
-                            let turn = if elapsed < 600. {
-                                Some(elapsed / 600.)
-                            } else if elapsed < 1000. {
-                                Some((elapsed - 600.) / 400.)
-                            } else if elapsed < 1550. {
-                                Some((elapsed - 1000.) / 550.)
-                            } else {
-                                None
-                            };
-                            let local = turn.map(|turn| turn - index as f32 * 0.1);
-                            match local {
-                                Some(local) if local >= 0. => {
-                                    mechanical_stroke(local * 500. / 1200.)
-                                }
-                                _ => (0.6, 0.),
-                            }
-                        };
-                        let distance = size * if row != 1 && col != 1 { 0.0375 } else { 0.05 };
-                        let dx = (col as f32 - 1.) * distance * lift;
-                        let dy = (row as f32 - 1.) * distance * lift;
-                        frame = frame.child(
-                            div()
-                                .absolute()
-                                .left(px(cuts[col] * size + dx))
-                                .top(px(cuts[row] * size + dy))
-                                .w(px((cuts[col + 1] - cuts[col]) * size))
-                                .h(px((cuts[row + 1] - cuts[row]) * size))
-                                .overflow_hidden()
-                                .opacity(alpha)
-                                .child(
-                                    logo(size, color)
-                                        .absolute()
-                                        .left(px(-cuts[col] * size))
-                                        .top(px(-cuts[row] * size))
-                                        .size(px(size)),
-                                ),
-                        );
-                    }
-                }
-                frame
-            },
-        ));
-    } else {
-        root = root.child(logo(size, color));
+fn burst(levels: &[NativeValue], active: Memo<bool>, epoch: Signal<u64>) {
+    if !active.get_untracked() || reduce_motion() {
+        return;
     }
-    if revision > 0 {
-        root = root.child(
-            div()
-                .absolute()
-                .inset_0()
-                .child(logo(size, color))
-                .with_animation(
-                    SharedString::from(format!("device-confirmed-{revision}")),
-                    Animation::new(Duration::from_millis(420)),
-                    |overlay, phase| {
-                        overlay.opacity(if phase < 0.45 {
-                            1.
-                        } else {
-                            (1. - phase) / 0.55
-                        })
-                    },
-                ),
+    let current = epoch.get_untracked();
+    for (turn, index) in [0, 4, 1, 5, 3, 6, 2, 7].into_iter().enumerate() {
+        let level = levels[index].clone();
+        set_timeout(Duration::from_millis(turn as u64 * 55), move || {
+            if epoch.get_untracked() != current || !active.get_untracked() || reduce_motion() {
+                return;
+            }
+            level.timing(1.0, 50.0, Easing::Linear);
+            set_timeout(Duration::from_millis(85), move || {
+                if epoch.get_untracked() == current && active.get_untracked() && !reduce_motion() {
+                    level.timing(0.6, 130.0, Easing::Linear);
+                }
+            });
+        });
+    }
+}
+
+pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
+    let state = session.clone();
+    let active = computed(move || {
+        state.revision.get();
+        state.state.borrow().discovering
+    });
+    let revision = computed(move || {
+        session.revision.get();
+        session.state.borrow().discovery_revision
+    });
+    let levels = (0..9).map(|_| native_value(1.0)).collect::<Vec<_>>();
+    let changing = levels.clone();
+    let epoch = signal(0_u64);
+    effect(move || {
+        let running = active.get() && !reduce_motion();
+        epoch.update(|value| *value += 1);
+        for (index, level) in changing.iter().enumerate() {
+            level.set(if running && index != 8 { 0.6 } else { 1.0 });
+        }
+        if running {
+            burst(&changing, active, epoch);
+        }
+    });
+    let clock = levels.clone();
+    effect(move || {
+        if active.get() && !reduce_motion() {
+            let clock = clock.clone();
+            set_interval(Duration::from_millis(2250), move || {
+                burst(&clock, active, epoch)
+            });
+        }
+    });
+    let confirmed = native_value(0.0);
+    let confirmation = confirmed.clone();
+    effect(move || {
+        if revision.get() > 0 && !reduce_motion() {
+            confirmation.set(1.0);
+            confirmation.timing(0.0, 420.0, Easing::Linear);
+        } else {
+            confirmation.set(0.0);
+        }
+    });
+    let mut logo = view().relative().size(px(size));
+    for (index, path) in paths().iter().cloned().enumerate() {
+        let level = levels[index].clone();
+        logo = logo.child(
+            canvas(move || {
+                Painter::new()
+                    .scale(size / 32.0, size / 32.0)
+                    .fill_color(color(theme().link))
+                    .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
+            })
+            .absolute()
+            .size(px(size))
+            .bind_opacity(&level),
         );
     }
-    root.into_any_element()
-}
-
-/// Transparent vector emblem, tinted by the active Omarchy theme.
-pub fn logo(size: f32, color: gpui_kit::Hsla) -> gpui_kit::Svg {
-    use gpui_kit::{Styled, px, svg};
-    svg()
-        .data(include_bytes!("../../assets/logo.svg"))
+    logo.child(
+        canvas(move || {
+            let mut painter = Painter::new()
+                .scale(size / 32.0, size / 32.0)
+                .fill_color(color(theme().link));
+            for path in paths() {
+                painter = painter.fill_path(path, nsh_core::canvas::FillRule::NonZero);
+            }
+            painter
+        })
+        .absolute()
         .size(px(size))
-        .text_color(color)
-}
-
-// Independent actuators extend, flash at the detent, and retract.
-fn mechanical_stroke(phase: f32) -> (f32, f32) {
-    let lift = if phase < 0.03 {
-        0.
-    } else if phase < 0.05 {
-        0.3
-    } else if phase < 0.09 {
-        0.25
-    } else if phase < 0.12 {
-        0.1
-    } else {
-        0.
-    };
-    (
-        if lift > 0.1 {
-            1.
-        } else if lift > 0. {
-            0.85
-        } else {
-            0.6
-        },
-        lift,
+        .bind_opacity(&confirmed),
     )
 }

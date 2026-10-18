@@ -1,4 +1,6 @@
 /target/
+/native/target/
+/.nsh/
 *.panic.log
 .DS_Store
 node_modules/

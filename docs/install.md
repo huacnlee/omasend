@@ -20,6 +20,7 @@ on Linux. The defaults are `~/Applications` and `~/.local`, respectively.
 For example, append `sh -s -- --version 0.1.0` in place of `sh` in the command
 above. The same POSIX shell installer detects macOS and Linux automatically.
 
+The native macOS application requires macOS 14 or later.
 macOS releases are `.tar.gz` archives containing `OmaSend.app`. Open the
 installed app in Finder. The installer preserves the release's signing and
 quarantine behavior; it does not disable Gatekeeper.
@@ -27,7 +28,8 @@ quarantine behavior; it does not disable Gatekeeper.
 On Linux, put `~/.local/bin` on `PATH`. The installer adds the desktop entry
 and icon under the prefix's `share` directory. A custom prefix also needs its
 `share` directory on `XDG_DATA_DIRS` for launcher discovery. Install your
-distribution's graphics/Wayland runtime libraries and `wl-clipboard` for paste.
+distribution's GTK 4.14 or later and `xdg-desktop-portal` runtime packages, plus
+`wl-clipboard` for Wayland paste.
 The installer does not modify package-manager or shell configuration.
 
 Run the installer again to upgrade. Close Omasend before upgrading.

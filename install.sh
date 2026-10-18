@@ -91,5 +91,5 @@ else
   install -m644 "$source_dir/assets/omasend.png" "$destination/share/icons/hicolor/1024x1024/apps/omasend.png"
   if command -v update-desktop-database >/dev/null; then update-desktop-database "$destination/share/applications" >/dev/null 2>&1 || true; fi
   printf 'Installed %s/bin/omasend\nAdd %s/bin to PATH, then run omasend.\n' "$destination" "$destination"
-  printf '%s\n' 'Linux requires graphics drivers and desktop libraries; install wl-clipboard for paste.'
+  printf '%s\n' 'Linux requires GTK 4.14+ and xdg-desktop-portal; install wl-clipboard for Wayland paste.'
 fi

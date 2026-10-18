@@ -1,26 +1,21 @@
 # Maintainer: Jason Lee <huacnlee@gmail.com>
 pkgname=omasend
-pkgver=0.1.7
+pkgver=0.1.8
 pkgrel=1
 pkgdesc='Omarchy-native LocalSend client'
 arch=('x86_64' 'aarch64')
 url='https://github.com/huacnlee/omasend'
 license=('MIT')
 depends=(
-  'fontconfig'
-  'freetype2'
   'gcc-libs'
   'glibc'
+  'gtk4>=4.14'
   'hicolor-icon-theme'
-  'libxkbcommon'
-  'libxcb'
   'omarchy'
   'openssl'
-  'vulkan-icd-loader'
-  'wayland'
-  'zstd'
+  'xdg-desktop-portal'
 )
-makedepends=('cargo' 'clang' 'cmake' 'pkgconf')
+makedepends=('cargo' 'clang' 'pkgconf')
 optdepends=('wl-clipboard: paste clipboard content on Wayland')
 options=('!debug')
 

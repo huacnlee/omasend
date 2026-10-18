@@ -1,0 +1,6 @@
+{
+  "name": "Omasend",
+  "appearance": "system",
+  "rust": ".",
+  "root": "App"
+}
