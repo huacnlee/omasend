@@ -8,12 +8,14 @@ fn runtime_directory() -> Result<PathBuf> {
     let root = std::env::var_os("XDG_RUNTIME_DIR")
         .context("XDG_RUNTIME_DIR is not set; start Omasend in your Wayland session")?;
     let directory = PathBuf::from(root).join("omasend");
-    let mut builder = std::fs::DirBuilder::new();
+    let builder = std::fs::DirBuilder::new();
     #[cfg(unix)]
-    {
+    let builder = {
         use std::os::unix::fs::DirBuilderExt;
+        let mut builder = builder;
         builder.mode(0o700);
-    }
+        builder
+    };
     match builder.create(&directory) {
         Ok(()) => {}
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
