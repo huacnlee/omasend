@@ -190,6 +190,9 @@ workflow configuration is not evidence that remote CI jobs have passed.
   `run_app` in `src/main.rs` cannot be relied on for macOS updates. Upstream
   needs a graceful shutdown/return path before this behavior is complete;
   the engine fixture does not exercise AppKit termination.
+  [NSH PR #94](https://github.com/longbridge/nsh/pull/94) contributes that
+  return path separately. It is a draft with native validation pending;
+  Omasend continues to resolve upstream main until it is merged.
 - Preserve retained sessions on macOS window close and verify orderly network
   shutdown on application exit.
 - Verify Linux/Windows release packaging and installers against the new native
