@@ -182,9 +182,16 @@ workflow configuration is not evidence that remote CI jobs have passed.
   unverified. Video cards restore the play marker, text cards use a bounded
   excerpt, and composer items have individual borders; earlier macOS clipboard
   screenshots verify those cards, not the new drop path.
-- Finish the complete keyboard, modal isolation and focus-restoration matrix;
-  improve history navigation and verify file-opening and clipboard-copy actions
-  through the native OS services.
+- Finish the complete keyboard, modal isolation and focus-restoration matrix.
+  Merged [NSH PR #95](https://github.com/longbridge/nsh/pull/95) is consumed
+  from main at `0e362dce`. On macOS, existing pressable controls now participate
+  in Tab/Shift-Tab traversal with native text fields, receive focus styling, and
+  activate with Enter/Space before global shortcuts. Disabled controls release
+  keyboard focus. No application API changes are needed. Upstream CI passed;
+  this dependency update has not been built or exercised locally. Real native
+  traversal, modal focus restoration and activation remain unverified. Improve
+  history navigation and verify file-opening and clipboard-copy actions through
+  the native OS services.
 - Verify packaged update installation and relaunch on each native platform.
   The engine fixture covers progress, verification failure, retry, task ownership
   after hiding its surface, and refusal to restart with an unfinished Outbox.
