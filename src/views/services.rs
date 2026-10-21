@@ -1,6 +1,6 @@
 //! Root-owned asynchronous services survive closing their menu or modal.
 use super::{session::Session, utilities::Surface};
-#[cfg(not(target_os = "ios"))]
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 use anyhow::Context;
 use nsh_core::ui::prelude::*;
 use omasend::updates::UpdateState;
@@ -70,9 +70,9 @@ impl Session {
     pub fn open_url(&self, url: String) {
         let this = self.clone();
         self.task(async move {
-            #[cfg(target_os = "ios")]
-            let result = super::ios::open_url(&url).await;
-            #[cfg(not(target_os = "ios"))]
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            let result = super::mobile::open_url(&url).await;
+            #[cfg(not(any(target_os = "ios", target_os = "android")))]
             let result = blocking(move || open::that(url))
                 .await
                 .context("Link action stopped")
@@ -85,7 +85,7 @@ impl Session {
     }
 
     pub fn start_services(&self) {
-        if cfg!(target_os = "ios") {
+        if cfg!(any(target_os = "ios", target_os = "android")) {
             return;
         }
         self.check_updates_background();

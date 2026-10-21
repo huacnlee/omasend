@@ -148,10 +148,90 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  mobile:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-26
+            platform: ios
+          - os: ubuntu-24.04
+            platform: android
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: longbridge/nsh
+          ref: b090043d9315ee7f091b526852666247f19ee326
+          path: .nsh/toolchain
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-linux-android
+      - uses: actions/setup-java@v4
+        if: matrix.platform == 'android'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        if: matrix.platform == 'android'
+      - name: Install Android dependencies
+        if: matrix.platform == 'android'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang pkg-config libgtk-4-dev libssl-dev libxcb1-dev
+          sdkmanager 'ndk;27.2.12479018' 'platforms;android-35' 'build-tools;36.0.0'
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            .nsh/toolchain -> target
+          key: mobile-${{ matrix.platform }}
+      - name: Build pinned NSH CLI
+        working-directory: .nsh/toolchain
+        run: |
+          cargo build --locked --release -p nsh-cli
+          echo "$PWD/target/release" >> "$GITHUB_PATH"
+      - name: Package unsigned iOS IPA
+        if: matrix.platform == 'ios'
+        run: python scripts/ios.py
+      - name: Package signed Android APK
+        if: matrix.platform == 'android'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          NSH_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          python - <<'PY'
+          import os, base64
+          from pathlib import Path
+          path = Path(os.environ['RUNNER_TEMP']) / 'omasend-release.p12'
+          path.write_bytes(base64.b64decode(os.environ['ANDROID_KEYSTORE_BASE64']))
+          path.chmod(0o600)
+          PY
+          python scripts/android.py --keystore "$RUNNER_TEMP/omasend-release.p12"
+      - name: Remove signing material
+        if: always() && matrix.platform == 'android'
+        run: rm -f "$RUNNER_TEMP/omasend-release.p12"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
   publish:
     name: Publish release assets
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, mobile]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -166,7 +246,7 @@ jobs:
         run: |
           cd dist
           cat *.sha256 | sort -k2 > SHA256SUMS
-          test "$(wc -l < SHA256SUMS)" -eq 5
+          test "$(wc -l < SHA256SUMS)" -eq 7
           sha256sum --check SHA256SUMS
           rm -- *.sha256
 

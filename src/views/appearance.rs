@@ -49,7 +49,11 @@ pub(super) struct Metrics {
 impl Default for Metrics {
     fn default() -> Self {
         Self {
-            font_size: if cfg!(target_os = "ios") { 15.0 } else { 12.0 },
+            font_size: if cfg!(any(target_os = "ios", target_os = "android")) {
+                15.0
+            } else {
+                12.0
+            },
             family: if cfg!(any(target_os = "ios", target_os = "macos")) {
                 "Menlo"
             } else {
@@ -523,7 +527,7 @@ pub(super) fn is_omarchy() -> bool {
 
 /// The iPhone port keeps the terminal chrome without reading Linux preferences.
 pub(super) fn is_omarchy_style() -> bool {
-    is_omarchy() || cfg!(target_os = "ios")
+    is_omarchy() || cfg!(any(target_os = "ios", target_os = "android"))
 }
 
 pub(super) fn panel_background() -> AdaptiveColor {

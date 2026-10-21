@@ -81,7 +81,13 @@ pub fn downloads_directory() -> anyhow::Result<PathBuf> {
             .map(|home| home.join("Documents/Received"))
             .ok_or_else(|| anyhow::anyhow!("Cannot locate app Documents directory"));
     }
-    #[cfg(not(target_os = "ios"))]
+    #[cfg(target_os = "android")]
+    {
+        return dirs::home_dir()
+            .map(|home| home.join("Received"))
+            .ok_or_else(|| anyhow::anyhow!("Cannot locate app storage"));
+    }
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
     dirs::download_dir()
         .or_else(|| dirs::home_dir().map(|home| home.join("Downloads")))
         .ok_or_else(|| anyhow::anyhow!("Cannot locate your Downloads folder"))

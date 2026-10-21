@@ -9,7 +9,7 @@ use nsh_platform_macos as platform;
 #[cfg(target_os = "windows")]
 use nsh_platform_windows as platform;
 
-#[cfg(not(target_os = "ios"))]
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn main() -> std::process::ExitCode {
     if std::env::args()
         .skip(1)
@@ -54,3 +54,7 @@ fn main() -> ! {
         Default::default(),
     )
 }
+
+// Android launches the NSH library from its Activity.
+#[cfg(target_os = "android")]
+fn main() {}

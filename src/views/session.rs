@@ -138,13 +138,13 @@ impl Session {
     }
 
     pub fn open_path(&self, path: std::path::PathBuf, reveal: bool) {
-        #[cfg(target_os = "ios")]
+        #[cfg(any(target_os = "ios", target_os = "android"))]
         let _ = reveal;
         let this = self.clone();
         self.task(async move {
-            #[cfg(target_os = "ios")]
-            let result = super::ios::share(&path).await;
-            #[cfg(not(target_os = "ios"))]
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            let result = super::mobile::share(&path).await;
+            #[cfg(not(any(target_os = "ios", target_os = "android")))]
             let result = blocking(move || -> Result<()> {
                 let path = path
                     .canonicalize()
@@ -421,20 +421,20 @@ impl Session {
     }
 
     pub fn pick(&self, folders: bool) {
-        #[cfg(target_os = "ios")]
-        self.input(super::ios::pick(folders));
-        #[cfg(not(target_os = "ios"))]
+        #[cfg(any(target_os = "ios", target_os = "android"))]
+        self.input(super::mobile::pick(folders));
+        #[cfg(not(any(target_os = "ios", target_os = "android")))]
         self.pick_desktop(folders);
     }
 
     pub fn pick_photos(&self) {
-        #[cfg(target_os = "ios")]
-        self.input(super::ios::photos());
-        #[cfg(not(target_os = "ios"))]
+        #[cfg(any(target_os = "ios", target_os = "android"))]
+        self.input(super::mobile::photos());
+        #[cfg(not(any(target_os = "ios", target_os = "android")))]
         self.fail("The photo library is available on iOS");
     }
 
-    #[cfg(not(target_os = "ios"))]
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
     fn pick_desktop(&self, folders: bool) {
         let title = self.language.get().text("composer.add_to_omasend");
         self.input(async move {
@@ -453,9 +453,9 @@ impl Session {
     }
 
     pub fn paste(&self) {
-        #[cfg(target_os = "ios")]
-        self.input(super::ios::paste());
-        #[cfg(not(target_os = "ios"))]
+        #[cfg(any(target_os = "ios", target_os = "android"))]
+        self.input(super::mobile::paste());
+        #[cfg(not(any(target_os = "ios", target_os = "android")))]
         self.input(async {
             #[cfg(target_os = "linux")]
             if std::env::var_os("WAYLAND_DISPLAY").is_some() {

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build with NSH, add app permissions, sign, and optionally install on an iPhone."""
 import argparse
+import hashlib
 import pathlib
 import plistlib
 import shutil
@@ -17,14 +18,20 @@ def run(*args, **kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--sign", required=True, help="Apple Development signing identity or SHA-1")
-    parser.add_argument("--profile", required=True, type=pathlib.Path, help="Provisioning profile")
+    parser.add_argument("--sign", help="Apple Development signing identity or SHA-1")
+    parser.add_argument("--profile", type=pathlib.Path, help="Provisioning profile")
     parser.add_argument("--device", help="Install and launch on this device UDID")
     args = parser.parse_args()
-    profile = args.profile.expanduser().resolve()
+    if bool(args.sign) != bool(args.profile):
+        parser.error("--sign and --profile must be provided together")
+    if args.device and not args.sign:
+        parser.error("--device requires signing")
+    profile = args.profile.expanduser().resolve() if args.profile else None
     version = tomllib.loads((ROOT / "Cargo.toml").read_text())["package"]["version"]
-    run("nsh", "package", "--target", "ios", "--icon", "assets/omasend.png",
-        "--app-version", version, "--sign", args.sign, "--profile", str(profile))
+    command = ["nsh", "package", "--target", "ios", "--icon", "assets/omasend.png", "--app-version", version]
+    if profile:
+        command += ["--sign", args.sign, "--profile", str(profile)]
+    run(*command)
     app = ROOT / ".nsh/out/Omasend.app"
     info_path = app / "Info.plist"
     with info_path.open("rb") as file:
@@ -36,23 +43,34 @@ def main():
     })
     with info_path.open("wb") as file:
         plistlib.dump(info, file)
-    decoded = run("security", "cms", "-D", "-i", str(profile), capture_output=True).stdout
-    entitlements = plistlib.loads(decoded)["Entitlements"]
-    bundle_id = info["CFBundleIdentifier"]
-    prefix = entitlements["application-identifier"].split(".", 1)[0]
-    entitlements["application-identifier"] = f"{prefix}.{bundle_id}"
-    entitlements["keychain-access-groups"] = [f"{prefix}.{bundle_id}"]
-    entitlements_path = ROOT / ".nsh/out/Omasend.entitlements"
-    with entitlements_path.open("wb") as file:
-        plistlib.dump(entitlements, file)
-    shutil.copyfile(profile, app / "embedded.mobileprovision")
-    run("codesign", "--force", "--sign", args.sign, "--entitlements", str(entitlements_path), str(app))
-    run("codesign", "--verify", "--strict", str(app))
+    if profile:
+        decoded = run("security", "cms", "-D", "-i", str(profile), capture_output=True).stdout
+        entitlements = plistlib.loads(decoded)["Entitlements"]
+        bundle_id = info["CFBundleIdentifier"]
+        prefix = entitlements["application-identifier"].split(".", 1)[0]
+        entitlements["application-identifier"] = f"{prefix}.{bundle_id}"
+        entitlements["keychain-access-groups"] = [f"{prefix}.{bundle_id}"]
+        entitlements_path = ROOT / ".nsh/out/Omasend.entitlements"
+        with entitlements_path.open("wb") as file:
+            plistlib.dump(entitlements, file)
+        shutil.copyfile(profile, app / "embedded.mobileprovision")
+        run("codesign", "--force", "--sign", args.sign, "--entitlements", str(entitlements_path), str(app))
+        run("codesign", "--verify", "--strict", str(app))
+    else:
+        # Public sideload builds must contain no personal provisioning profile.
+        (app / "embedded.mobileprovision").unlink(missing_ok=True)
+        shutil.rmtree(app / "_CodeSignature", ignore_errors=True)
     ipa = ROOT / ".nsh/out/Omasend.ipa"
     with zipfile.ZipFile(ipa, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(app.rglob("*")):
             archive.write(path, pathlib.Path("Payload") / path.relative_to(app.parent))
-    print(f"Signed: {ipa}", flush=True)
+    if not profile:
+        dist = ROOT / "dist"
+        dist.mkdir(exist_ok=True)
+        output = dist / f"omasend-{version}-aarch64-apple-ios-unsigned.ipa"
+        shutil.copyfile(ipa, output)
+        output.with_name(output.name + ".sha256").write_text(f"{hashlib.sha256(output.read_bytes()).hexdigest()}  {output.name}\n")
+    print(f"Packaged: {ipa}", flush=True)
     if args.device:
         run("xcrun", "devicectl", "device", "install", "app", "--device", args.device, str(app))
         run("xcrun", "devicectl", "device", "process", "launch", "--device", args.device, bundle_id)

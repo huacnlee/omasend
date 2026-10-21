@@ -116,6 +116,30 @@ The iPhone interface uses safe areas, touch sized controls, bottom sheet menus,
 a photo-first source chooser, multi-select system photo/video and file pickers,
 and the system share sheet. Transfers run while the app is open.
 
+For a public, unsigned IPA that users can sign with their own Apple account:
+
+```sh
+python3 scripts/ios.py
+```
+
+This writes `dist/omasend-VERSION-aarch64-apple-ios-unsigned.ipa`. It contains no
+personal provisioning profile and requires signing before installation.
+
+Android ARM64 builds require JDK 17, Android SDK platform 35, build tools 36,
+NDK 27.2.12479018, and the `aarch64-linux-android` Rust target:
+
+```sh
+export ANDROID_HOME=/path/to/Android/sdk
+export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+export NSH_KEYSTORE_PASSWORD=YOUR_KEYSTORE_PASSWORD
+python3 scripts/android.py --keystore /path/to/release.p12 --alias omasend
+```
+
+The signed APK is written to `dist/`. Android uses system photo/video and document
+pickers, app-private received files, clipboard access, and read-only URI sharing.
+Release builds use the same persistent keystore for updates. GitHub Actions reads
+`ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` from repository secrets.
+
 Build the standalone release executable with:
 
 ```sh
