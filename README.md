@@ -79,15 +79,47 @@ The main application now runs on Native Shell in Rust mode. UI parity work is
 still in progress; see [migration status and verification](docs/migration.md).
 Some features described above remain to be restored in the new interface.
 
-## Build and run
+## Development and build
 
 Built with [Native Shell](https://github.com/longbridge/nsh) in Rust mode and the
 [LocalSend Rust core](https://github.com/localsend/localsend).
 
-With a recent stable Rust toolchain and your platform’s development libraries:
+With a recent stable Rust toolchain, the latest NSH CLI, and your platform’s
+development libraries, start the native development host with automatic rebuilding
+on Rust source changes:
 
 ```sh
-cargo run --release --locked
+nsh dev
+```
+
+`nsh.json` declares the Rust `App` root. The default target is the native host
+for your platform (AppKit on macOS, GTK on Linux, Win32 on Windows).
+
+For iPhone UI development, use the iOS simulator host:
+
+```sh
+nsh dev --target ios
+```
+
+With Xcode, the `aarch64-apple-ios` Rust target, an Apple Development certificate,
+and a provisioning profile containing your iPhone, build and install with:
+
+```sh
+python3 scripts/ios.py --sign "Apple Development: …" \
+  --profile /path/to/profile.mobileprovision --device YOUR_DEVICE_UDID
+```
+
+The script packages with NSH, adds the local network permission and Files access,
+signs the app, and installs and launches it. The signed IPA is `.nsh/out/Omasend.ipa`.
+Received files are available in Files → On My iPhone → Omasend → Received.
+The iPhone interface uses safe areas, touch sized controls, bottom sheet menus,
+a photo-first source chooser, multi-select system photo/video and file pickers,
+and the system share sheet. Transfers run while the app is open.
+
+Build the standalone release executable with:
+
+```sh
+cargo build --release --locked
 ```
 
 Linux builds require a C/C++ compiler, pkg-config, GTK 4.14 or later, OpenSSL,

@@ -1,5 +1,7 @@
 //! Root-owned asynchronous services survive closing their menu or modal.
 use super::{session::Session, utilities::Surface};
+#[cfg(not(target_os = "ios"))]
+use anyhow::Context;
 use nsh_core::ui::prelude::*;
 use omasend::updates::UpdateState;
 use std::time::Duration;
@@ -68,14 +70,24 @@ impl Session {
     pub fn open_url(&self, url: String) {
         let this = self.clone();
         self.task(async move {
-            match blocking(move || open::that(url)).await {
-                Ok(Ok(())) => {}
+            #[cfg(target_os = "ios")]
+            let result = super::ios::open_url(&url).await;
+            #[cfg(not(target_os = "ios"))]
+            let result = blocking(move || open::that(url))
+                .await
+                .context("Link action stopped")
+                .and_then(|result| result.map_err(Into::into));
+            match result {
+                Ok(()) => {}
                 error => this.fail(format!("Cannot open link: {error:?}")),
             }
         });
     }
 
     pub fn start_services(&self) {
+        if cfg!(target_os = "ios") {
+            return;
+        }
         self.check_updates_background();
         let this = self.clone();
         self.task(async move {
@@ -226,7 +238,7 @@ pub(super) fn update_control(session: Session) -> impl IntoElement {
     let activate = session.clone();
     view()
         .flex_row()
-        .child(If::new(
+        .child(when(
             move || actionable.update_action_available(),
             move || {
                 let label = label.clone();
@@ -237,10 +249,10 @@ pub(super) fn update_control(session: Session) -> impl IntoElement {
                     move || activate.activate_update(),
                 )
                 .py(px(0.0))
-                .text_color(move || super::appearance::theme().primary)
+                .text_color(move || super::appearance::theme().primary())
             },
         ))
-        .child(If::new(
+        .child(when(
             move || status.update_visible.get() && !status.update_action_available(),
             move || {
                 let session = session.clone();

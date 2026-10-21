@@ -1,4 +1,11 @@
-//! The actual NSH engine drives application commands into real HTTPS sockets.
+#[derive(Clone, Copy, Debug)]
+struct TestRect {
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+}
+// The actual NSH engine drives application commands into real HTTPS sockets.
 use super::{control, panels, session::Session};
 use nsh_core::{
     ApproxTextEngine, EventKind, EventPayload, MountBatch, MountItem, Size, ui::prelude::*,
@@ -55,7 +62,6 @@ fn TestApp() -> impl IntoElement {
     let sender = session.clone();
     let disabled = session.clone();
     let ready = session.clone();
-    let menu = session.clone();
     view()
         .child(
             super::editor()
@@ -93,9 +99,7 @@ fn TestApp() -> impl IntoElement {
                 previewer.preview_item(&id);
             }
         }))
-        .child(control("Settings", false, move || {
-            menu.open_surface(super::utilities::Surface::Menu)
-        }))
+        .child(super::utilities::menu_button(session.clone()))
         .child(panels::content(session.clone()))
         .child(super::preview::overlay(session.clone()))
         .child(super::utilities::overlay(session, appearance))
@@ -124,21 +128,28 @@ impl MountSink for Sink {
 struct Screen {
     texts: HashMap<u32, String>,
     labels: HashMap<u32, String>,
+    selected: HashMap<u32, bool>,
     deleted: Vec<u32>,
     inputs: HashMap<u32, nsh_core::InputConfig>,
     test_ids: HashMap<String, u32>,
-    frames: HashMap<u32, nsh_core::Rect>,
+    frames: HashMap<u32, TestRect>,
     modal_roots: std::collections::HashSet<u32>,
     parents: HashMap<u32, u32>,
     window_drag: HashMap<u32, Option<bool>>,
     desktop_commands: Vec<nsh_core::desktop::DesktopCommand>,
     keymap: Option<Arc<nsh_core::keymap::Keymap>>,
     timed_animations: usize,
+    appearance: Option<nsh_core::platform::Appearance>,
+    events: HashMap<u32, nsh_core::EventMask>,
 }
 impl Screen {
     fn apply(&mut self, batch: MountBatch) {
         for item in batch.items {
             match item {
+                MountItem::Appearance { appearance } => self.appearance = Some(appearance),
+                MountItem::Events { id, events } => {
+                    self.events.insert(id, events);
+                }
                 MountItem::Create {
                     id,
                     kind: nsh_core::ViewKind::Modal,
@@ -154,19 +165,28 @@ impl Screen {
                 } => {
                     self.desktop_commands.push(*command);
                 }
-                MountItem::Animation(nsh_core::nsh_animation::AnimationOp::Start {
-                    driver: nsh_core::nsh_animation::Driver::Timing { duration_ms, .. },
+                MountItem::Animation(nsh_core::animation::AnimationOp::Start {
+                    driver: nsh_core::animation::Driver::Timing { duration_ms, .. },
                     ..
                 }) if duration_ms > 0.0 => self.timed_animations += 1,
                 MountItem::Keymap(table) => self.keymap = Some(table),
                 MountItem::Frame { id, frame } => {
-                    self.frames.insert(id, frame);
+                    self.frames.insert(
+                        id,
+                        TestRect {
+                            x: frame.origin.x.0,
+                            y: frame.origin.y.0,
+                            width: frame.size.width.0,
+                            height: frame.size.height.0,
+                        },
+                    );
                 }
                 MountItem::Insert { parent, child, .. } => {
                     self.parents.insert(child, parent);
                 }
                 MountItem::ViewProps { id, props } => {
                     self.window_drag.insert(id, props.window_drag);
+                    self.selected.insert(id, props.accessibility.state.selected);
                     if let Some(test_id) = &props.test_id {
                         self.test_ids.insert(test_id.to_string(), id);
                     }
@@ -243,12 +263,22 @@ async fn native_round_trip_preserves_bytes_previews_translations_and_controls() 
     let engine = Engine::start(
         EngineConfig {
             app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<TestApp>()),
-            viewport: Size::new(840.0, 630.0),
+            viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
+            websocket: None,
+            filesystem: None,
+            data_dir: None,
+            storage: None,
+            clipboard: None,
+            clock: Default::default(),
+            pinned: Default::default(),
             assets: None,
-            environment: Environment::default(),
-            header_heights: (0.0, 0.0),
+            environment: Environment {
+                os: nsh_core::platform::Os::MacOs,
+                ..Environment::default()
+            },
+            header_heights: (nsh_core::Points(0.0), nsh_core::Points(0.0)),
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
@@ -279,118 +309,75 @@ async fn native_round_trip_preserves_bytes_previews_translations_and_controls() 
         .find(|(_, label)| *label == "Stable draft")
         .unwrap()
         .0;
-    let settings = *screen
-        .labels
-        .iter()
-        .find(|(_, label)| *label == "Settings")
-        .unwrap()
-        .0;
+    let settings = screen.press_target(screen.test_ids["app-menu"]);
+    let press = |label: &str, screen: &Screen| {
+        let id = *screen
+            .labels
+            .iter()
+            .find(|(_, text)| *text == label)
+            .unwrap_or_else(|| panic!("missing menu item {label}"))
+            .0;
+        engine.control().dispatch_event(
+            screen.press_target(id),
+            EventKind::Press,
+            EventPayload::None,
+        );
+    };
     engine
         .control()
         .dispatch_event(settings, EventKind::Press, EventPayload::None);
     screen.wait(&rx, Duration::from_secs(15), |s| {
-        s.labels.values().any(|label| label == "Theme")
+        s.labels.values().any(|l| l == "Theme")
     });
-    let theme = *screen
-        .labels
-        .iter()
-        .find(|(_, label)| *label == "Theme")
-        .unwrap()
-        .0;
-    engine
-        .control()
-        .dispatch_event(theme, EventKind::Press, EventPayload::None);
-    screen.wait(&rx, Duration::from_secs(15), |s| {
-        s.labels.values().any(|label| label == "Light")
-    });
-    let menu_bounds = screen.bounds("app-menu-popup");
-    let submenu_bounds = screen.bounds("app-submenu-popup");
-    assert!(
-        (menu_bounds.y - 42.0).abs() < 0.1,
-        "menu must stay under the custom title bar: {menu_bounds:?}"
+    assert_eq!(
+        screen.selected.get(&settings),
+        Some(&true),
+        "open menu trigger must stay active"
     );
-    assert!(menu_bounds.x + menu_bounds.width <= 840.0);
-    assert!(submenu_bounds.x >= 0.0);
-    assert!((submenu_bounds.x + submenu_bounds.width - menu_bounds.x).abs() < 0.1);
-    let light = *screen
-        .labels
-        .iter()
-        .find(|(_, label)| *label == "Light")
-        .unwrap()
-        .0;
-    engine
-        .control()
-        .dispatch_event(light, EventKind::Press, EventPayload::None);
+    press("Theme", &screen);
     screen.wait(&rx, Duration::from_secs(15), |s| {
-        !s.labels
-            .values()
-            .any(|label| label == "Theme" || label == "Light")
+        s.labels.values().any(|l| l == "Light")
     });
+    press("Light", &screen);
+    screen.wait(&rx, Duration::from_secs(15), |s| {
+        !s.labels.values().any(|l| l == "Theme")
+    });
+    assert_eq!(
+        screen.selected.get(&settings),
+        Some(&false),
+        "closed menu trigger must return to ghost state"
+    );
     let light_style = screen.inputs.get(&draft).unwrap().style;
     engine
         .control()
         .dispatch_event(settings, EventKind::Press, EventPayload::None);
     screen.wait(&rx, Duration::from_secs(15), |s| {
-        s.labels.values().any(|label| label == "Theme")
+        s.labels.values().any(|l| l == "Theme")
     });
-    let theme = *screen
-        .labels
-        .iter()
-        .find(|(_, label)| *label == "Theme")
-        .unwrap()
-        .0;
-    engine
-        .control()
-        .dispatch_event(theme, EventKind::Press, EventPayload::None);
+    press("Theme", &screen);
     screen.wait(&rx, Duration::from_secs(15), |s| {
-        s.labels.values().any(|label| label == "✓ Light")
+        s.labels.values().any(|l| l == "Light ✓")
     });
-    let dark = *screen
-        .labels
-        .iter()
-        .find(|(_, label)| *label == "Dark")
-        .unwrap()
-        .0;
-    engine
-        .control()
-        .dispatch_event(dark, EventKind::Press, EventPayload::None);
+    press("Dark", &screen);
     screen.wait(&rx, Duration::from_secs(15), |s| {
-        !s.labels
-            .values()
-            .any(|label| label == "Theme" || label == "Dark")
+        !s.labels.values().any(|l| l == "Theme")
     });
     assert_ne!(screen.inputs.get(&draft).unwrap().style, light_style);
     engine
         .control()
         .dispatch_event(settings, EventKind::Press, EventPayload::None);
     screen.wait(&rx, Duration::from_secs(15), |s| {
-        s.labels.values().any(|label| label == "Theme")
+        s.labels.values().any(|l| l == "About…")
     });
-    let about = *screen
-        .labels
-        .iter()
-        .find(|(_, label)| *label == "About…")
-        .unwrap()
-        .0;
-    engine
-        .control()
-        .dispatch_event(about, EventKind::Press, EventPayload::None);
+    press("About…", &screen);
     screen.wait(&rx, Duration::from_secs(15), |s| {
         s.texts
             .values()
-            .any(|text| text.contains("Native interface built with Native Shell"))
+            .any(|t| t.contains("Native interface built with Native Shell"))
     });
-    let close_settings = *screen
-        .labels
-        .iter()
-        .find(|(_, label)| *label == "Close")
-        .unwrap()
-        .0;
-    engine
-        .control()
-        .dispatch_event(close_settings, EventKind::Press, EventPayload::None);
+    press("Close", &screen);
     screen.wait(&rx, Duration::from_secs(15), |s| {
-        !s.labels.values().any(|label| label == "Close")
+        !s.labels.values().any(|l| l == "Close")
     });
     let switch = *screen
         .labels
@@ -574,7 +561,22 @@ fn LayoutApp() -> impl IntoElement {
 }
 
 impl Screen {
-    fn bounds(&self, test_id: &str) -> nsh_core::Rect {
+    fn press_target(&self, mut id: u32) -> u32 {
+        loop {
+            if self
+                .events
+                .get(&id)
+                .is_some_and(|events| events.contains(EventKind::Press))
+            {
+                return id;
+            }
+            id = *self
+                .parents
+                .get(&id)
+                .expect("a menu item has a press target");
+        }
+    }
+    fn bounds(&self, test_id: &str) -> TestRect {
         let mut id = self.test_ids[test_id];
         let mut rect = self.frames[&id];
         while let Some(parent) = self.parents.get(&id) {
@@ -598,12 +600,22 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
     let engine = Engine::start(
         EngineConfig {
             app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<LayoutApp>()),
-            viewport: Size::new(840.0, 630.0),
+            viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
+            websocket: None,
+            filesystem: None,
+            data_dir: None,
+            storage: None,
+            clipboard: None,
+            clock: Default::default(),
+            pinned: Default::default(),
             assets: None,
-            environment: Environment::default(),
-            header_heights: (0.0, 0.0),
+            environment: Environment {
+                os: nsh_core::platform::Os::MacOs,
+                ..Environment::default()
+            },
+            header_heights: (nsh_core::Points(0.0), nsh_core::Points(0.0)),
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
@@ -618,7 +630,9 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
     control.set(engine.control()).ok().unwrap();
     let mut screen = Screen::default();
     for (width, height) in [(840.0, 630.0), (640.0, 520.0)] {
-        engine.control().resize(Size::new(width, height));
+        engine
+            .control()
+            .resize(Size::new(nsh_core::Points(width), nsh_core::Points(height)));
         screen.wait(&rx, Duration::from_secs(10), |s| {
             [
                 "app-header",
@@ -641,7 +655,7 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
         let actions = screen.bounds("outbox-actions");
         let status = screen.bounds("status-bar");
         assert!(screen.desktop_commands.iter().any(|command| matches!(command,
-            nsh_core::desktop::DesktopCommand::SetTitleBar { style: nsh_core::desktop::TitleBarStyle::Hidden, height: Some(height) } if *height == 42.0)));
+            nsh_core::desktop::DesktopCommand::SetTitleBar { style: nsh_core::desktop::TitleBarStyle::Hidden, height: Some(height) } if height.0 == 42.0)));
         assert_eq!(
             screen.window_drag[&screen.test_ids["app-header"]],
             Some(true)
@@ -649,6 +663,11 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
         assert_eq!(
             screen.window_drag[&screen.test_ids["app-menu"]],
             Some(false)
+        );
+        let menu = screen.bounds("app-menu");
+        assert!(
+            (menu.width - 28.0).abs() < 0.1 && (menu.height - 28.0).abs() < 0.1,
+            "desktop menu must stay a compact ghost button: {menu:?}"
         );
         assert_eq!(header.y, 0.0);
         assert!((header.width - width).abs() < 0.1);
@@ -671,11 +690,11 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
     // caption buttons. Rust must react to these changes, including fullscreen.
     for (left, right) in [(78.0, 0.0), (0.0, 138.0), (0.0, 0.0)] {
         engine.control().set_environment(Environment {
-            title_bar: nsh_core::platform::Insets {
-                top: 42.0,
-                left,
-                right,
-                bottom: 0.0,
+            title_bar: nsh_core::geometry::Edges {
+                top: nsh_core::Points(42.0),
+                left: nsh_core::Points(left),
+                right: nsh_core::Points(right),
+                bottom: nsh_core::Points(0.0),
             },
             ..Environment::default()
         });
@@ -708,7 +727,7 @@ fn UpdateFixtureApp() -> impl IntoElement {
     let clear = session.clone();
     let errors = session.clone();
     view()
-        .child(If::new(
+        .child(when(
             move || panel.get(),
             move || super::services::update_control(content.clone()),
         ))
@@ -762,12 +781,22 @@ async fn update_progress_retry_and_restart_survive_closing_the_starting_surface(
     let engine = Engine::start(
         EngineConfig {
             app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<UpdateFixtureApp>()),
-            viewport: Size::new(840.0, 630.0),
+            viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
+            websocket: None,
+            filesystem: None,
+            data_dir: None,
+            storage: None,
+            clipboard: None,
+            clock: Default::default(),
+            pinned: Default::default(),
             assets: None,
-            environment: Environment::default(),
-            header_heights: (0.0, 0.0),
+            environment: Environment {
+                os: nsh_core::platform::Os::MacOs,
+                ..Environment::default()
+            },
+            header_heights: (nsh_core::Points(0.0), nsh_core::Points(0.0)),
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
@@ -788,9 +817,11 @@ async fn update_progress_retry_and_restart_survive_closing_the_starting_surface(
             .find(|(_, value)| value.as_str() == label)
             .unwrap_or_else(|| panic!("missing {label}: {:?}", screen.labels))
             .0;
-        engine
-            .control()
-            .dispatch_event(id, EventKind::Press, EventPayload::None);
+        engine.control().dispatch_event(
+            screen.press_target(id),
+            EventKind::Press,
+            EventPayload::None,
+        );
     }
     screen.wait(&rx, Duration::from_secs(10), |s| {
         s.labels.values().any(|t| t == "Install v9.0.0…")
@@ -870,12 +901,22 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
     let engine = Engine::start(
         EngineConfig {
             app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<NearbyFixtureApp>()),
-            viewport: Size::new(840.0, 630.0),
+            viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
+            websocket: None,
+            filesystem: None,
+            data_dir: None,
+            storage: None,
+            clipboard: None,
+            clock: Default::default(),
+            pinned: Default::default(),
             assets: None,
-            environment: Environment::default(),
-            header_heights: (0.0, 0.0),
+            environment: Environment {
+                os: nsh_core::platform::Os::MacOs,
+                ..Environment::default()
+            },
+            header_heights: (nsh_core::Points(0.0), nsh_core::Points(0.0)),
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
@@ -915,7 +956,9 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
     assert_eq!(screen.labels.get(&selected).unwrap(), "Nearby 11");
     assert!(screen.bounds("nearby-panel").height < 270.0);
     assert!(screen.bounds("composer-area").height > 150.0);
-    engine.control().resize(Size::new(640.0, 520.0));
+    engine
+        .control()
+        .resize(Size::new(nsh_core::Points(640.0), nsh_core::Points(520.0)));
     screen.wait(&rx, Duration::from_secs(10), |s| {
         (s.bounds("status-bar").y + s.bounds("status-bar").height - 520.0).abs() < 0.1
     });
@@ -944,37 +987,50 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
             EventPayload::Value(nsh_core::PayloadValue::Number(id as f64)),
         );
     };
+    let press = |label: &str, screen: &Screen| {
+        let id = *screen
+            .labels
+            .iter()
+            .find(|(_, text)| *text == label)
+            .unwrap()
+            .0;
+        engine.control().dispatch_event(
+            screen.press_target(id),
+            EventKind::Press,
+            EventPayload::None,
+        );
+    };
     engine.control().dispatch_event(
-        screen.test_ids["app-menu"],
+        screen.press_target(screen.test_ids["app-menu"]),
         EventKind::Press,
         EventPayload::None,
     );
     screen.wait(&rx, Duration::from_secs(10), |s| {
         s.labels.values().any(|l| l == "About…")
     });
+    let button = screen.bounds("app-menu");
+    let popup = screen.bounds("app-menu-popup");
+    assert!(
+        popup.y >= button.y + button.height,
+        "menu must open below its button: {popup:?} {button:?}"
+    );
+    assert!(popup.x >= 0.0 && popup.x + popup.width <= 640.1);
+    assert!(
+        (popup.x + popup.width - button.x - button.width).abs() <= 8.0,
+        "menu must align with the button's trailing edge: {popup:?} {button:?}"
+    );
     key(&screen, "left");
-    let about = *screen
-        .labels
-        .iter()
-        .find(|(_, l)| *l == "About…")
-        .unwrap()
-        .0;
-    engine
-        .control()
-        .dispatch_event(about, EventKind::Press, EventPayload::None);
+    press("About…", &screen);
     screen.wait(&rx, Duration::from_secs(10), |s| {
         s.labels.values().any(|l| l == "Close")
     });
-    let close = *screen.labels.iter().find(|(_, l)| *l == "Close").unwrap().0;
-    engine
-        .control()
-        .dispatch_event(close, EventKind::Press, EventPayload::None);
+    press("Close", &screen);
     screen.wait(&rx, Duration::from_secs(10), |s| {
         !s.labels.values().any(|l| l == "Close")
     });
     assert!(
         screen.labels.values().any(|l| l == "Nearby 11"),
-        "menu shortcut changed the selected device"
+        "menu shortcut changed selected device"
     );
     key(&screen, "right");
     screen.wait(&rx, Duration::from_secs(10), |s| {
@@ -985,31 +1041,25 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
         s.labels.values().any(|l| l == "Nearby 11")
     });
     engine.control().dispatch_event(
-        screen.test_ids["app-menu"],
+        screen.press_target(screen.test_ids["app-menu"]),
         EventKind::Press,
         EventPayload::None,
     );
     screen.wait(&rx, Duration::from_secs(10), |s| {
         s.labels.values().any(|l| l == "Theme")
     });
-    for _ in 0..4 {
-        key(&screen, "down");
-    }
-    key(&screen, "enter");
+    press("Theme", &screen);
     screen.wait(&rx, Duration::from_secs(10), |s| {
-        s.labels.values().any(|l| l == "Light")
+        s.labels.values().any(|l| l == "Dark")
     });
-    key(&screen, "left");
-    screen.wait(&rx, Duration::from_secs(10), |s| {
-        !s.labels.values().any(|l| l == "Light")
-    });
-    key(&screen, "enter");
-    screen.wait(&rx, Duration::from_secs(10), |s| {
-        s.labels.values().any(|l| l == "Light")
-    });
-    key(&screen, "down");
-    key(&screen, "down");
-    key(&screen, "enter");
+    let submenu = screen.bounds("app-submenu-popup");
+    let trigger = screen.bounds("menu-theme-trigger");
+    assert!(
+        (submenu.y - trigger.y).abs() <= 8.0,
+        "submenu must align with its trigger row: {submenu:?} {trigger:?}"
+    );
+    assert!(submenu.x >= 0.0 && submenu.x + submenu.width <= 640.1);
+    press("Dark", &screen);
     screen.wait(&rx, Duration::from_secs(10), |s| {
         !s.labels.values().any(|l| l == "Theme")
     });
@@ -1040,12 +1090,22 @@ async fn motion_preferences_stop_pending_discovery_strokes_and_button_timing() {
     let engine = Engine::start(
         EngineConfig {
             app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<MotionFixtureApp>()),
-            viewport: Size::new(640.0, 520.0),
+            viewport: Size::new(nsh_core::Points(640.0), nsh_core::Points(520.0)),
             trace: false,
             network: None,
+            websocket: None,
+            filesystem: None,
+            data_dir: None,
+            storage: None,
+            clipboard: None,
+            clock: Default::default(),
+            pinned: Default::default(),
             assets: None,
-            environment: Environment::default(),
-            header_heights: (0.0, 0.0),
+            environment: Environment {
+                os: nsh_core::platform::Os::MacOs,
+                ..Environment::default()
+            },
+            header_heights: (nsh_core::Points(0.0), nsh_core::Points(0.0)),
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
@@ -1076,10 +1136,10 @@ async fn motion_preferences_stop_pending_discovery_strokes_and_button_timing() {
         .0;
     engine
         .control()
-        .dispatch_event(button, EventKind::PressIn, EventPayload::None);
+        .dispatch_event(button, EventKind::PressDown, EventPayload::None);
     engine
         .control()
-        .dispatch_event(button, EventKind::PressOut, EventPayload::None);
+        .dispatch_event(button, EventKind::PressUp, EventPayload::None);
     // Cover all previously queued stroke timers, not just the first commit.
     let deadline = Instant::now() + Duration::from_millis(700);
     while Instant::now() < deadline {
@@ -1149,12 +1209,22 @@ async fn composer_progress_accounts_for_each_item_and_zero_length_files() {
     let engine = Engine::start(
         EngineConfig {
             app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<ProgressFixtureApp>()),
-            viewport: Size::new(840.0, 630.0),
+            viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
+            websocket: None,
+            filesystem: None,
+            data_dir: None,
+            storage: None,
+            clipboard: None,
+            clock: Default::default(),
+            pinned: Default::default(),
             assets: None,
-            environment: Environment::default(),
-            header_heights: (0.0, 0.0),
+            environment: Environment {
+                os: nsh_core::platform::Os::MacOs,
+                ..Environment::default()
+            },
+            header_heights: (nsh_core::Points(0.0), nsh_core::Points(0.0)),
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
@@ -1212,4 +1282,102 @@ async fn composer_progress_accounts_for_each_item_and_zero_length_files() {
         s.labels.values().filter(|l| *l == "Remove").count() == 3
     });
     assert!(!screen.texts.values().any(|t| t.contains(" / ")));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action() {
+    let (tx, rx) = crossbeam_channel::unbounded();
+    let control = Arc::new(OnceLock::new());
+    let engine = Engine::start(
+        EngineConfig {
+            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<LayoutApp>()),
+            viewport: Size::new(nsh_core::Points(402.0), nsh_core::Points(874.0)),
+            trace: false,
+            network: None,
+            websocket: None,
+            filesystem: None,
+            data_dir: None,
+            storage: None,
+            clipboard: None,
+            clock: Default::default(),
+            pinned: Default::default(),
+            assets: None,
+            environment: Environment {
+                os: nsh_core::platform::Os::Ios,
+                idiom: nsh_core::platform::Idiom::Phone,
+                safe_area: nsh_core::Edges {
+                    top: nsh_core::Points(62.0),
+                    bottom: nsh_core::Points(34.0),
+                    ..Default::default()
+                },
+                ..Environment::default()
+            },
+            header_heights: (nsh_core::Points(0.0), nsh_core::Points(0.0)),
+            limits: Default::default(),
+            ui_sets: Vec::new(),
+            runtime: Some(tokio::runtime::Handle::current()),
+        },
+        || ApproxTextEngine,
+        Sink {
+            tx,
+            control: control.clone(),
+        },
+    )
+    .unwrap();
+    control.set(engine.control()).ok().unwrap();
+    let mut screen = Screen::default();
+    screen.wait(&rx, Duration::from_secs(10), |s| {
+        s.test_ids.contains_key("app-menu")
+    });
+    let header = screen.bounds("app-header");
+    // Header items are laid out by UIKit; their frames are local to its slots.
+    assert!(header.width > 0.0);
+    assert!(!screen.desktop_commands.iter().any(|command| matches!(
+        command,
+        nsh_core::desktop::DesktopCommand::SetTitleBar { .. }
+    )));
+    let outbox = screen.bounds("outbox-panel");
+    assert!(outbox.y >= 62.0, "content under notch: {outbox:?}");
+    let actions = screen.bounds("outbox-actions");
+    assert!(actions.x >= 0.0 && actions.x + actions.width <= 402.1);
+    let status = screen.bounds("status-bar");
+    assert!(
+        status.y + status.height <= 840.1,
+        "status under home indicator: {status:?}"
+    );
+    let press = |screen: &Screen, label: &str| {
+        let id = *screen
+            .labels
+            .iter()
+            .find(|(_, value)| value.as_str() == label)
+            .unwrap_or_else(|| panic!("missing {label}: {:?}", screen.labels))
+            .0;
+        engine.control().dispatch_event(
+            screen.press_target(id),
+            EventKind::Press,
+            EventPayload::None,
+        );
+    };
+    engine.control().dispatch_event(
+        screen.press_target(screen.test_ids["app-menu"]),
+        EventKind::Press,
+        EventPayload::None,
+    );
+    screen.wait(&rx, Duration::from_secs(10), |s| {
+        s.labels.values().any(|v| v == "Theme")
+    });
+    assert!(
+        !screen
+            .labels
+            .values()
+            .any(|v| v == "Exit" || v == "Check for update")
+    );
+    press(&screen, "Theme");
+    screen.wait(&rx, Duration::from_secs(10), |s| {
+        s.labels.values().any(|v| v == "Back")
+    });
+    press(&screen, "Back");
+    screen.wait(&rx, Duration::from_secs(10), |s| {
+        s.labels.values().any(|v| v == "Language")
+    });
 }

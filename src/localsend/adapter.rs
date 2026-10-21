@@ -51,7 +51,12 @@ impl NodeConfig {
     pub fn desktop() -> Result<Self> {
         Ok(Self {
             alias: machine_name(),
-            port: DEFAULT_PORT,
+            // Simulators share the Mac's network stack; coexist with its client.
+            port: if cfg!(all(target_os = "ios", target_abi = "sim")) {
+                0
+            } else {
+                DEFAULT_PORT
+            },
             downloads: super::downloads_directory()?,
             discovery: true,
         })

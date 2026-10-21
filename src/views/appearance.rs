@@ -1,9 +1,7 @@
 //! Omarchy palette loading and atomic Rust-component theme changes.
 //! Native inputs explicitly bind the same palette through `editor()`.
-use nsh_core::{
-    platform::Appearance,
-    ui::{Theme, ThemeColors, prelude::*},
-};
+use nsh_base::Theme;
+use nsh_core::{platform::Appearance, ui::prelude::*};
 use std::{
     cell::RefCell,
     path::{Path, PathBuf},
@@ -51,8 +49,8 @@ pub(super) struct Metrics {
 impl Default for Metrics {
     fn default() -> Self {
         Self {
-            font_size: 12.0,
-            family: if cfg!(target_os = "macos") {
+            font_size: if cfg!(target_os = "ios") { 15.0 } else { 12.0 },
+            family: if cfg!(any(target_os = "ios", target_os = "macos")) {
                 "Menlo"
             } else {
                 "monospace"
@@ -437,7 +435,7 @@ fn startup() -> &'static Startup {
 pub(crate) fn root() -> nsh_core::ui::Root {
     let initial = startup();
     nsh_core::ui::Root::of::<super::App>()
-        .theme(initial.theme(initial.mode))
+        .tokens(initial.theme(initial.mode).into_tokens())
         .appearance(initial.appearance(initial.mode))
 }
 
@@ -514,7 +512,7 @@ impl Controller {
 pub(super) fn theme() -> Arc<Theme> {
     use_context::<Controller>()
         .map(|controller| controller.palette.get())
-        .unwrap_or_else(nsh_core::ui::prelude::theme)
+        .unwrap_or_else(|| Arc::new(nsh_base::theme()))
 }
 /// Only an actual Omarchy installation may consume Omarchy shell preferences.
 pub(super) fn is_omarchy() -> bool {
@@ -523,25 +521,24 @@ pub(super) fn is_omarchy() -> bool {
         .unwrap_or(false)
 }
 
+/// The iPhone port keeps the terminal chrome without reading Linux preferences.
+pub(super) fn is_omarchy_style() -> bool {
+    is_omarchy() || cfg!(target_os = "ios")
+}
+
 pub(super) fn panel_background() -> AdaptiveColor {
-    if is_omarchy() {
-        theme().background
+    if is_omarchy_style() {
+        theme().background()
     } else {
-        theme().group_box
+        theme().color("group_box.background").unwrap()
     }
 }
 
 pub(super) fn divider() -> AdaptiveColor {
-    if is_omarchy() {
-        theme().foreground.opacity(0.12)
+    if is_omarchy_style() {
+        theme().foreground().opacity(0.12)
     } else {
-        theme().border
-    }
-}
-
-pub(super) fn reload_system_theme() {
-    if let Some(controller) = use_context::<Controller>() {
-        controller.reload();
+        theme().border()
     }
 }
 
@@ -561,66 +558,85 @@ pub(super) fn metrics() -> Metrics {
 
 fn make_theme(light: &Palette, dark: &Palette, font_size: f32) -> Theme {
     let a = |l: u32, d: u32| AdaptiveColor::new(rgb(l), rgb(d));
-    Theme {
-        colors: ThemeColors {
-            accent: a(light.selection, dark.selection),
-            accent_foreground: a(light.foreground, dark.foreground),
-            background: a(light.background, dark.background),
-            foreground: a(light.foreground, dark.foreground),
-            border: a(light.border, dark.border),
-            caret: a(light.accent, dark.accent),
-            danger: a(light.danger, dark.danger),
-            danger_active: a(light.danger, dark.danger),
-            danger_foreground: a(ink(light.danger), ink(dark.danger)),
-            group_box: a(light.surface, dark.surface),
-            group_box_foreground: a(light.foreground, dark.foreground),
-            info: a(light.accent, dark.accent),
-            info_active: a(light.accent, dark.accent),
-            info_foreground: a(light.on_accent, dark.on_accent),
-            input: a(light.border, dark.border),
-            link: a(light.accent, dark.accent),
-            link_active: a(light.bright, dark.bright),
-            list: a(light.background, dark.background),
-            list_active: a(light.selection, dark.selection),
-            list_active_border: a(light.accent, dark.accent),
-            list_even: a(light.surface, dark.surface),
-            list_head: a(light.surface, dark.surface),
-            muted: a(light.inset, dark.inset),
-            muted_foreground: a(light.secondary, dark.secondary),
-            overlay: AdaptiveColor::from(rgb(0)).opacity(0.6),
-            popover: a(light.background, dark.background),
-            popover_foreground: a(light.foreground, dark.foreground),
-            primary: a(light.accent, dark.accent),
-            primary_active: a(light.accent, dark.accent),
-            primary_foreground: a(light.on_accent, dark.on_accent),
-            progress_bar: a(light.accent, dark.accent),
-            ring: a(light.foreground, dark.foreground),
-            secondary: a(light.surface, dark.surface),
-            secondary_active: a(light.selection, dark.selection),
-            secondary_foreground: a(light.foreground, dark.foreground),
-            selection: a(light.selection, dark.selection),
-            skeleton: a(light.inset, dark.inset),
-            slider_bar: a(light.accent, dark.accent),
-            slider_thumb: a(light.foreground, dark.foreground),
-            success: a(light.success, dark.success),
-            success_active: a(light.success, dark.success),
-            success_foreground: a(ink(light.success), ink(dark.success)),
-            switch: a(light.inset, dark.inset),
-            switch_thumb: a(light.foreground, dark.foreground),
-            tab: a(light.background, dark.background),
-            tab_active: a(light.selection, dark.selection),
-            tab_active_foreground: a(light.foreground, dark.foreground),
-            tab_bar: a(light.background, dark.background),
-            tab_bar_segmented: a(light.surface, dark.surface),
-            tab_foreground: a(light.secondary, dark.secondary),
-            warning: a(light.warning, dark.warning),
-            warning_active: a(light.warning, dark.warning),
-            warning_foreground: a(ink(light.warning), ink(dark.warning)),
-        },
-        radius: 0.0,
-        radius_lg: 0.0,
-        font_size,
-    }
+    let mut theme = Theme::default();
+    theme.set_color("accent.background", a(light.selection, dark.selection));
+    theme.set_color("accent.foreground", a(light.foreground, dark.foreground));
+    theme.set_color("background", a(light.background, dark.background));
+    theme.set_color("foreground", a(light.foreground, dark.foreground));
+    theme.set_color("border", a(light.border, dark.border));
+    theme.set_color("caret", a(light.accent, dark.accent));
+    theme.set_color("danger.background", a(light.danger, dark.danger));
+    theme.set_color("danger.active.background", a(light.danger, dark.danger));
+    theme.set_color("danger.foreground", a(ink(light.danger), ink(dark.danger)));
+    theme.set_color("group_box.background", a(light.surface, dark.surface));
+    theme.set_color("group_box.foreground", a(light.foreground, dark.foreground));
+    theme.set_color("info.background", a(light.accent, dark.accent));
+    theme.set_color("info.active.background", a(light.accent, dark.accent));
+    theme.set_color("info.foreground", a(light.on_accent, dark.on_accent));
+    theme.set_color("input.border", a(light.border, dark.border));
+    theme.set_color("link", a(light.accent, dark.accent));
+    theme.set_color("link.active", a(light.bright, dark.bright));
+    theme.set_color("list.background", a(light.background, dark.background));
+    theme.set_color("list.active.background", a(light.selection, dark.selection));
+    theme.set_color("list.active.border", a(light.accent, dark.accent));
+    theme.set_color("list.even.background", a(light.surface, dark.surface));
+    theme.set_color("list.head.background", a(light.surface, dark.surface));
+    theme.set_color("muted.background", a(light.inset, dark.inset));
+    theme.set_color("muted.foreground", a(light.secondary, dark.secondary));
+    theme.set_color("overlay", AdaptiveColor::from(rgb(0)).opacity(0.6));
+    theme.set_color("popover.background", a(light.background, dark.background));
+    theme.set_color("popover.foreground", a(light.foreground, dark.foreground));
+    theme.set_color("primary.background", a(light.accent, dark.accent));
+    theme.set_color("primary.active.background", a(light.accent, dark.accent));
+    theme.set_color("primary.foreground", a(light.on_accent, dark.on_accent));
+    theme.set_color("progress.bar.background", a(light.accent, dark.accent));
+    theme.set_color("ring", a(light.foreground, dark.foreground));
+    theme.set_color("secondary.background", a(light.surface, dark.surface));
+    theme.set_color(
+        "secondary.active.background",
+        a(light.selection, dark.selection),
+    );
+    theme.set_color("secondary.foreground", a(light.foreground, dark.foreground));
+    theme.set_color("selection.background", a(light.selection, dark.selection));
+    theme.set_color("skeleton.background", a(light.inset, dark.inset));
+    theme.set_color("slider.background", a(light.accent, dark.accent));
+    theme.set_color(
+        "slider.thumb.background",
+        a(light.foreground, dark.foreground),
+    );
+    theme.set_color("success.background", a(light.success, dark.success));
+    theme.set_color("success.active.background", a(light.success, dark.success));
+    theme.set_color(
+        "success.foreground",
+        a(ink(light.success), ink(dark.success)),
+    );
+    theme.set_color("switch.background", a(light.inset, dark.inset));
+    theme.set_color(
+        "switch.thumb.background",
+        a(light.foreground, dark.foreground),
+    );
+    theme.set_color("tab.background", a(light.background, dark.background));
+    theme.set_color("tab.active.background", a(light.selection, dark.selection));
+    theme.set_color(
+        "tab.active.foreground",
+        a(light.foreground, dark.foreground),
+    );
+    theme.set_color("tab_bar.background", a(light.background, dark.background));
+    theme.set_color(
+        "tab_bar.segmented.background",
+        a(light.surface, dark.surface),
+    );
+    theme.set_color("tab.foreground", a(light.secondary, dark.secondary));
+    theme.set_color("warning.background", a(light.warning, dark.warning));
+    theme.set_color("warning.active.background", a(light.warning, dark.warning));
+    theme.set_color(
+        "warning.foreground",
+        a(ink(light.warning), ink(dark.warning)),
+    );
+    theme.set_number("radius", 0.0);
+    theme.set_number("radius.lg", 0.0);
+    theme.set_number("font.size", font_size);
+    theme
 }
 
 #[cfg(test)]
@@ -751,8 +767,8 @@ mod tests {
         assert_eq!(omarchy.metrics.family, "Unexpected font");
         assert_eq!(omarchy.mode, Mode::System);
         assert_ne!(
-            omarchy.theme(Mode::System).colors.background,
-            standalone.theme(Mode::System).colors.background
+            omarchy.theme(Mode::System).color("background").unwrap(),
+            standalone.theme(Mode::System).color("background").unwrap()
         );
     }
 

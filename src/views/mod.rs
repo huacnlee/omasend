@@ -1,6 +1,9 @@
 //! Native Shell Rust UI. The protocol and transfer model remain platform independent.
 pub(crate) mod appearance;
+#[cfg(not(target_os = "ios"))]
 mod inputs;
+#[cfg(target_os = "ios")]
+mod ios;
 mod motion;
 mod panels;
 mod preferences;
@@ -37,22 +40,23 @@ fn control_variant(
     outlined: bool,
 ) -> nsh_core::ui::View {
     let title = title.into_reactive();
-    let scale = native_value(1.0);
-    let down = scale.clone();
-    let up = scale.clone();
-    let standalone = !appearance::is_omarchy();
+    let scale = animated_value(1.0);
+    let down = scale;
+    let up = scale;
+    let standalone = !appearance::is_omarchy_style();
     let button = view()
         .flex_row()
         .items_center()
         .justify_center()
+        .min_h(px(if is_desktop() { 0.0 } else { 44.0 }))
         .px(move || px(appearance::metrics().space(10.0)))
         .py(move || px(appearance::metrics().space(6.0)))
         .border_1()
         .border_color(move || {
             if outlined && standalone {
-                theme().border
+                theme().border()
             } else if outlined {
-                theme().foreground.opacity(0.4)
+                theme().foreground().opacity(0.4)
             } else {
                 AdaptiveColor::TRANSPARENT
             }
@@ -60,26 +64,26 @@ fn control_variant(
         .rounded(px(if standalone { 4.0 } else { 0.0 }))
         .bg(move || {
             if outlined && standalone {
-                theme().secondary
+                theme().color("secondary.background").unwrap()
             } else {
                 AdaptiveColor::TRANSPARENT
             }
         })
-        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
-        .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
+        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
         .disabled_style(|s| s.opacity(0.45))
         .disabled(disabled)
         .window_drag(false)
         .role(AccessibilityRole::Button)
         .label(title.clone())
         .bind_scale(&scale)
-        .on_press_in(move |_: &()| {
+        .on_press_down(move |_: &()| {
             if !reduce_motion() {
                 down.timing(0.98, 70.0, Easing::Linear);
             }
         })
-        .on_press_out(move |_: &()| {
+        .on_press_up(move |_: &()| {
             up.timing(
                 1.0,
                 if reduce_motion() { 0.0 } else { 110.0 },
@@ -87,7 +91,7 @@ fn control_variant(
             );
         })
         .on_press(move |_: &()| run())
-        .child(text(title).text_size(move || px(theme().font_size)));
+        .child(text(title).text_size(move || px(theme().font_size().0)));
     if standalone && outlined {
         button.shadow_sm().inset_shadow_sm()
     } else {
@@ -97,11 +101,11 @@ fn control_variant(
 
 pub(super) fn editor() -> nsh_core::ui::Input {
     input()
-        .text_color(move || theme().foreground)
-        .text_size(move || px(theme().font_size))
+        .text_color(move || theme().foreground())
+        .text_size(move || px(theme().font_size().0))
         .font_family(move || SharedString::from(appearance::metrics().family))
-        .placeholder_color(move || color(theme().muted_foreground))
-        .selection_color(move || color(theme().caret))
+        .placeholder_color(move || color(theme().muted_foreground()))
+        .selection_color(move || color(theme().color("caret").unwrap()))
 }
 
 #[component]
@@ -160,20 +164,17 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
         },
         move |_| send.send(),
     );
-    let files = session.clone();
     let paste = session.clone();
     let sender = session.clone();
-    let input_disabled = session.clone();
     let paste_disabled = session.clone();
     let send_disabled = session.clone();
     let target = session.clone();
     let status = session.clone();
-    let errors = session.clone();
     let busy = session.busy;
     let notice = session.notice;
     let notice_revision = session.notice_revision;
-    let notice_opacity = native_value(1.0);
-    let confirmation = notice_opacity.clone();
+    let notice_opacity = animated_value(1.0);
+    let confirmation = notice_opacity;
     effect(move || {
         notice_revision.get();
         if notice.get().is_some() && !reduce_motion() {
@@ -185,39 +186,19 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
     });
     let identity = session.identity;
     let language = session.language;
-    let history = session.clone();
-    view()
+    let header_session = session.clone();
+    let mobile_menu = session.clone();
+    let content = nsh_base::safe_area_view()
         .flex_1()
         .font_family(move || SharedString::from(appearance::metrics().family))
-        .text_size(move || px(theme().font_size))
-        .bg(move || theme().background)
-        .text_color(move || theme().foreground)
-        .child(titlebar::bar(session.clone()))
-        .child(If::new(
-            move || {
-                errors.revision.get();
-                errors.state.borrow().error.is_some()
-            },
-            {
-                let session = session.clone();
-                move || {
-                    let labels = session.clone();
-                    text(move || {
-                        labels.revision.get();
-                        labels
-                            .state
-                            .borrow()
-                            .error
-                            .as_ref()
-                            .map(|e| labels.language.get().error(e))
-                            .unwrap_or_default()
-                    })
-                    .px(px(16.0))
-                    .py(px(8.0))
-                    .text_color(move || theme().danger)
-                }
-            },
-        ))
+        .text_size(move || px(theme().font_size().0))
+        .bg(move || theme().background())
+        .text_color(move || theme().foreground())
+        .child(when(is_desktop, {
+            let session = session.clone();
+            move || titlebar::bar(session.clone())
+        }))
+        .child(panels::error_notice(session.clone()))
         .child(panels::nearby(session.clone()))
         .child(
             view()
@@ -244,7 +225,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                                         language.get().text("composer.choose_device")
                                     })
                             })
-                            .text_color(move || theme().muted_foreground)
+                            .text_color(move || theme().muted_foreground())
                             .flex_1(),
                         )
                         .child(text(move || {
@@ -261,27 +242,29 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                         .test_id("outbox-actions")
                         .flex_row()
                         .items_center()
-                        .gap_3()
-                        .child(control(
-                            session.translated("action.add_files_ellipsis"),
-                            move || input_disabled.input_blocked(),
-                            move || files.pick(false),
-                        ))
+                        .gap_2()
+                        .child(utilities::add_files_button(session.clone()))
                         .child(plain_control(
                             session.translated("action.paste"),
                             move || paste_disabled.input_blocked(),
                             move || paste.paste(),
                         ))
                         .child(view().flex_1())
+                        .child(when(is_desktop, {
+                            let history = session.clone();
+                            move || utilities::history_button(history.clone())
+                        }))
                         .child(
-                            plain_control("◴", false, move || history.open_history())
-                                .label(session.translated("history.title")),
-                        )
-                        .child(control(
-                            session.translated("action.send"),
-                            move || send_disabled.cannot_send(),
-                            move || sender.send(),
-                        )),
+                            control(
+                                session.translated("action.send"),
+                                move || send_disabled.cannot_send(),
+                                move || sender.send(),
+                            )
+                            .when(!is_desktop(), |v| {
+                                v.border_color(move || theme().primary())
+                                    .text_color(move || theme().primary())
+                            }),
+                        ),
                 )
                 .child(panels::active(session.clone())),
         )
@@ -297,7 +280,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                 .border_t_1()
                 .border_color(appearance::divider)
                 .text_size(px(11.0))
-                .text_color(move || theme().muted_foreground)
+                .text_color(move || theme().muted_foreground())
                 .child(
                     text(move || {
                         identity.get().map(|d| d.alias).unwrap_or_else(|| {
@@ -313,7 +296,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                             .map(|key| language.get().text(key))
                             .unwrap_or_default()
                     })
-                    .text_color(move || theme().success)
+                    .text_color(move || theme().success())
                     .bind_opacity(&notice_opacity),
                 )
                 .child(services::update_control(session.clone()))
@@ -330,7 +313,16 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
         )
         .child(panels::history_overlay(session.clone()))
         .child(preview::overlay(session.clone()))
-        .child(utilities::overlay(session, appearance))
+        .child(utilities::overlay(session, appearance));
+    if is_desktop() {
+        content.into_element()
+    } else {
+        view()
+            .flex_1()
+            .child(titlebar::mobile_page(header_session, content))
+            .child(utilities::menu_button(mobile_menu))
+            .into_element()
+    }
 }
 
 #[cfg(all(test, feature = "ui-tests"))]

@@ -1,10 +1,10 @@
 //! Auxiliary surfaces share one modal, so menus never stack over previews.
 use super::{
     appearance::{self, Controller, Mode, theme},
-    control, editor, plain_control,
+    control, editor,
     session::Session,
 };
-use nsh_core::ui::{desktop::title_bar, prelude::*};
+use nsh_core::ui::prelude::*;
 use omasend::{i18n::Language, updates::UpdateState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,25 +23,23 @@ impl Surface {
     }
 }
 
-pub(super) fn overlay(session: Session, appearance: Controller) -> impl IntoElement {
+pub(super) fn overlay(session: Session, _appearance: Controller) -> impl IntoElement {
     let surface = session.surface;
-    let popup = menu_popup(session.clone(), appearance.clone());
     let maker = session;
-    view().child(popup).child(If::new(
+    view().child(when(
         move || surface.get().is_some_and(|s| s != Surface::Menu),
         move || {
             let session = maker.clone();
             let close = session.clone();
             let title_language = session.language;
             let sections = session.clone();
-            modal()
-                .transparent(true)
+            nsh_base::dialog()
                 .animation(if reduce_motion() {
                     ModalAnimation::None
                 } else {
                     ModalAnimation::Fade
                 })
-                .on_request_close(move |_: &()| surface.set(None))
+                .on_cancel(move |_: &()| surface.set(None))
                 .child(
                     view()
                         .flex_1()
@@ -65,10 +63,10 @@ pub(super) fn overlay(session: Session, appearance: Controller) -> impl IntoElem
                                 .font_family(move || {
                                     SharedString::from(appearance::metrics().family)
                                 })
-                                .text_size(move || px(theme().font_size))
+                                .text_size(move || px(theme().font_size().0))
                                 .bg(appearance::panel_background)
-                                .text_color(move || theme().foreground)
-                                .border_color(move || theme().border)
+                                .text_color(move || theme().foreground())
+                                .border_color(move || theme().border())
                                 .child(
                                     view()
                                         .flex_row()
@@ -91,7 +89,7 @@ pub(super) fn overlay(session: Session, appearance: Controller) -> impl IntoElem
                                 )
                                 .child(
                                     scroll()
-                                        .max_h(move || px((window().height - 120.0).max(100.0)))
+                                        .max_h(move || px((window().height.0 - 120.0).max(100.0)))
                                         .child(dynamic(move || {
                                             match surface.get().unwrap_or(Surface::Menu) {
                                                 Surface::Menu => view().into_element(),
@@ -110,200 +108,353 @@ pub(super) fn overlay(session: Session, appearance: Controller) -> impl IntoElem
     ))
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Submenu {
-    Language,
-    Theme,
+pub(super) fn copy_error_button(session: Session) -> impl IntoElement {
+    let language = session.language;
+    let size = if is_desktop() { 32.0 } else { 44.0 };
+    nsh_base::button()
+        .accessibility_label(move || Some(language.get().text("action.copy_error").into()))
+        .on_press(move || {
+            if let Some(error) = session.state.borrow().error.clone() {
+                set_clipboard(error);
+                session.notify("status.copied");
+            }
+        })
+        .size(px(size))
+        .items_center()
+        .justify_center()
+        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
+        .child(
+            canvas(move || {
+                Painter::new()
+                    .stroke_color(color(theme().foreground()))
+                    .line_width(1.5)
+                    .stroke_svg("M6 6H16.5V16.5H6Z M12 3H3V12")
+            })
+            .size(px(18.0)),
+        )
 }
 
-fn menu_popup(session: Session, appearance: Controller) -> impl IntoElement {
+pub(super) fn history_button(session: Session) -> impl IntoElement {
+    let language = session.language;
+    nsh_base::button()
+        .accessibility_label(move || Some(language.get().text("history.title").into()))
+        .on_press(move || session.open_history())
+        .size(px(32.0)).items_center().justify_center()
+        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
+        .child(view().test_id("history-button").size(px(32.0)).items_center().justify_center()
+            .child(canvas(move || {
+                use nsh_core::canvas::svg_path;
+                Painter::new().stroke_color(color(theme().foreground()))
+                    .line_width(1.5)
+                    .stroke_path(&svg_path("M9 1.5 A7.5 7.5 0 1 1 1.5 9 A7.5 7.5 0 0 1 9 1.5 M9 4.5 L9 9 L12.5 10.5"))
+            }).size(px(18.0))))
+}
+
+pub(super) fn mobile_menu_trigger(session: Session) -> impl IntoElement {
     let surface = session.surface;
-    If::new(
-        move || surface.get() == Some(Surface::Menu),
-        move || {
-            let selected = signal(None::<Submenu>);
-            let session = session.clone();
-            let appearance = appearance.clone();
-            modal()
-                .transparent(true)
-                .animation(if reduce_motion() {
-                    ModalAnimation::None
-                } else {
-                    ModalAnimation::Fade
-                })
-                .on_request_close(move |_: &()| surface.set(None))
+    let language = session.language;
+    nsh_base::button()
+        .accessibility_label(move || Some(language.get().text("action.menu").into()))
+        .on_press(move || {
+            if surface.get().is_none() {
+                surface.set(Some(Surface::Menu));
+            } else if surface.get() == Some(Surface::Menu) {
+                surface.set(None);
+            }
+        })
+        .w(px(44.0))
+        .h(px(44.0))
+        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
+        .child(
+            view()
+                .test_id("app-menu")
+                .flex_1()
+                .items_center()
+                .justify_center()
                 .child(
                     view()
-                        .flex_1()
-                        .relative()
-                        .font_family(move || SharedString::from(appearance::metrics().family))
-                        .text_size(move || px(theme().font_size))
-                        .text_color(move || theme().foreground)
-                        .child(
-                            view()
-                                .absolute()
-                                .inset(px(0.0))
-                                .label(session.translated("action.close"))
-                                .on_press(move |_: &()| surface.set(None)),
-                        )
-                        .child(
-                            view()
-                                .absolute()
-                                .top(move || px(appearance::metrics().space(42.0)))
-                                .right(move || px(16.0 + title_bar().right))
-                                .child(menu(session.clone(), selected))
-                                .child(If::new(
-                                    move || selected.get().is_some(),
-                                    move || {
-                                        let session = session.clone();
-                                        let appearance = appearance.clone();
-                                        on_key("left", move |_| selected.set(None));
-                                        view()
-                                            .absolute()
-                                            .test_id("app-submenu-popup")
-                                            .right(px(248.0))
-                                            .top(move || {
-                                                px(if selected.get() == Some(Submenu::Language) {
-                                                    62.0
-                                                } else {
-                                                    92.0
-                                                })
-                                            })
-                                            .w(px(188.0))
-                                            .p_1()
-                                            .border_1()
-                                            .border_color(move || theme().foreground.opacity(0.4))
-                                            .bg(appearance::panel_background)
-                                            .child(dynamic(move || match selected.get() {
-                                                Some(Submenu::Theme) => {
-                                                    theme_menu(session.clone(), appearance.clone())
-                                                        .into_element()
-                                                }
-                                                _ => language_menu(session.clone()).into_element(),
-                                            }))
-                                    },
-                                )),
-                        ),
-                )
-        },
-    )
+                        .w(px(18.0))
+                        .h(px(14.0))
+                        .justify_between()
+                        .child(view().h(px(2.0)).bg(move || color(theme().foreground())))
+                        .child(view().h(px(2.0)).bg(move || color(theme().foreground())))
+                        .child(view().h(px(2.0)).bg(move || color(theme().foreground()))),
+                ),
+        )
 }
 
-#[derive(Clone)]
-struct MenuKeys {
-    cursor: Signal<Option<usize>>,
-    entries: std::rc::Rc<std::cell::RefCell<Vec<MenuEntry>>>,
+fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
+    let surface = session.surface;
+    let language = session.language;
+    nsh_base::button()
+        .accessibility_label(move || Some(language.get().text("action.menu").into()))
+        .selected(move || surface.get() == Some(Surface::Menu))
+        .selected_style(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .on_press(move || {
+            if surface.get() == Some(Surface::Menu) {
+                surface.set(None);
+            } else if surface.get().is_none()
+                && session.state.borrow().incoming.is_none()
+                && session.preview.get().is_none()
+                && !session.history_visible.get()
+            {
+                surface.set(Some(Surface::Menu));
+            }
+        })
+        .w(px(28.0))
+        .h(px(28.0))
+        .flex_shrink_0()
+        .rounded(move || {
+            px(if appearance::is_omarchy_style() {
+                0.0
+            } else {
+                4.0
+            })
+        })
+        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
+        .child(
+            view()
+                .test_id("app-menu")
+                .window_drag(false)
+                .w(px(28.0))
+                .h(px(28.0))
+                .items_center()
+                .justify_center()
+                .child(
+                    view()
+                        .w(px(14.0))
+                        .h(px(10.0))
+                        .justify_between()
+                        .child(view().h(px(1.5)).bg(move || color(theme().foreground())))
+                        .child(view().h(px(1.5)).bg(move || color(theme().foreground())))
+                        .child(view().h(px(1.5)).bg(move || color(theme().foreground()))),
+                ),
+        )
 }
-struct MenuEntry {
-    disabled: Reactive<bool>,
-    action: std::rc::Rc<dyn Fn()>,
-    element: ElementRef,
+
+pub(super) fn menu_button(session: Session) -> impl IntoElement {
+    let appearance = use_context::<Controller>().expect("appearance controller");
+    let surface = session.surface;
+    let guard = session.clone();
+    let content = session.clone();
+    let trigger = if is_desktop() {
+        desktop_menu_trigger(session).into_element()
+    } else {
+        view().hidden().into_element()
+    };
+    nsh_base::menu()
+        .open(move || Some(surface.get() == Some(Surface::Menu)))
+        .on_open_change(move |event: &nsh_base::MenuEvent| {
+            let nsh_base::MenuEvent::OpenChange(open, _) = event else {
+                return;
+            };
+            if *open {
+                if guard.state.borrow().incoming.is_none()
+                    && guard.preview.get().is_none()
+                    && !guard.history_visible.get()
+                    && surface.get().is_none()
+                {
+                    surface.set(Some(Surface::Menu));
+                }
+            } else if surface.get() == Some(Surface::Menu) {
+                surface.set(None);
+            }
+        })
+        .placement(Placement::Bottom)
+        .align(Align::End)
+        .offset(px(6.0))
+        .margin(px(8.0))
+        .popup_style(|s| {
+            s.p_1()
+                .pb(move || {
+                    px(if is_desktop() {
+                        4.0
+                    } else {
+                        safe_area().bottom.0 + 8.0
+                    })
+                })
+                .border_1()
+                .border_color(appearance::divider)
+                .bg(appearance::panel_background)
+                .text_color(move || theme().foreground())
+                .font_family(move || SharedString::from(appearance::metrics().family))
+                .text_size(move || px(theme().font_size().0))
+                .rounded(move || {
+                    px(if appearance::is_omarchy_style() {
+                        0.0
+                    } else {
+                        4.0
+                    })
+                })
+        })
+        .backdrop_style(|s| s.bg(AdaptiveColor::from(rgb(0)).opacity(0.6)))
+        .trigger(trigger)
+        .child(menu_contents(content, appearance))
 }
-impl MenuKeys {
-    fn install() {
-        let navigation = Self {
-            cursor: signal(None),
-            entries: Default::default(),
-        };
-        provide_context(navigation.clone());
-        for (key, delta) in [("down", 1_isize), ("up", -1)] {
-            let navigation = navigation.clone();
-            on_key(key, move |_| {
-                let entries = navigation.entries.borrow();
-                if entries.is_empty() {
-                    return;
-                }
-                let count = entries.len() as isize;
-                let start = navigation
-                    .cursor
-                    .get()
-                    .map(|i| i as isize)
-                    .unwrap_or(if delta > 0 { -1 } else { 0 });
-                for step in 1..=count {
-                    let index = (start + delta * step).rem_euclid(count) as usize;
-                    if !entries[index].disabled.get() {
-                        navigation.cursor.set(Some(index));
-                        entries[index].element.set_accessibility_focus();
-                        break;
-                    }
-                }
-            });
-        }
-        for key in ["enter", "space"] {
-            let navigation = navigation.clone();
-            on_key(key, move |_| {
-                let action = {
-                    let entries = navigation.entries.borrow();
-                    navigation
-                        .cursor
-                        .get()
-                        .and_then(|i| entries.get(i))
-                        .filter(|entry| !entry.disabled.get())
-                        .map(|entry| entry.action.clone())
-                };
-                if let Some(action) = action {
-                    action();
-                }
-            });
-        }
+
+pub(super) fn add_files_button(session: Session) -> impl IntoElement {
+    let disabled = session.clone();
+    let picker = session.clone();
+    if is_desktop() {
+        return control(
+            session.translated("action.add_files_ellipsis"),
+            move || disabled.input_blocked(),
+            move || picker.pick(false),
+        )
+        .into_element();
     }
+    let open = signal(false);
+    nsh_base::menu()
+        .open(move || Some(open.get()))
+        .on_open_change(move |event: &nsh_base::MenuEvent| {
+            if let nsh_base::MenuEvent::OpenChange(next, _) = event {
+                open.set(*next);
+            }
+        })
+        .popup_style(|s| {
+            s.p_2()
+                .pb(move || px(safe_area().bottom.0 + 8.0))
+                .border_1()
+                .border_color(appearance::divider)
+                .bg(appearance::panel_background)
+                .text_color(move || theme().foreground())
+                .font_family(move || SharedString::from(appearance::metrics().family))
+                .text_size(move || px(theme().font_size().0))
+        })
+        .backdrop_style(|s| s.bg(AdaptiveColor::from(rgb(0)).opacity(0.6)))
+        .trigger(
+            control(
+                session.translated("action.add_files_ellipsis"),
+                move || disabled.input_blocked(),
+                move || open.set(!open.get()),
+            )
+            .test_id("add-files-button"),
+        )
+        .child(media_sources(session))
+        .into_element()
+}
+
+fn media_sources(session: Session) -> impl IntoElement {
+    let photos = session.clone();
+    let files = session.clone();
+    view()
+        .test_id("add-files-menu")
+        .child(menu_row(
+            session.translated("action.photo_library"),
+            false,
+            move || photos.pick_photos(),
+        ))
+        .child(menu_row(
+            session.translated("action.browse_files"),
+            false,
+            move || files.pick(false),
+        ))
 }
 
 fn menu_row(
     title: impl IntoReactive<SharedString>,
     disabled: impl IntoReactive<bool>,
     run: impl Fn() + 'static,
-) -> nsh_core::ui::View {
-    let disabled = disabled.into_reactive();
-    let run: std::rc::Rc<dyn Fn()> = std::rc::Rc::new(run);
-    let callback = run.clone();
-    let row = plain_control(title, disabled.clone(), move || callback())
+) -> nsh_base::MenuItemElement {
+    let title = title.into_reactive();
+    let label = title.clone();
+    nsh_base::menu_item()
+        .accessibility_label(move || Some(label.get()))
+        .disabled(disabled.into_reactive())
+        .on_select(run)
+        .flex_row()
+        .items_center()
+        .gap_2()
         .justify_start()
-        .h(px(28.0))
+        .h(move || px(if is_desktop() { 28.0 } else { 44.0 }))
         .px(px(8.0))
-        .py(px(4.0));
-    if let Some(navigation) = use_context::<MenuKeys>() {
-        let element = element_ref();
-        let index = navigation.entries.borrow().len();
-        navigation.entries.borrow_mut().push(MenuEntry {
-            disabled,
-            action: run,
-            element: element.clone(),
-        });
-        row.element_ref(&element).bg(move || {
-            if navigation.cursor.get() == Some(index) {
-                theme().foreground.opacity(0.08)
+        .py(px(4.0))
+        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .child(text(title))
+}
+
+fn checked_menu_row(
+    title: impl IntoReactive<SharedString>,
+    checked: impl IntoReactive<bool>,
+    run: impl Fn() + 'static,
+) -> nsh_base::MenuItemElement {
+    let title = title.into_reactive();
+    let label = title.clone();
+    let checked = checked.into_reactive();
+    let state = checked.clone();
+    menu_row(title, false, run)
+        .accessibility_label(move || {
+            Some(if state.get() {
+                SharedString::from(format!("{} ✓", label.get()))
             } else {
-                AdaptiveColor::TRANSPARENT
-            }
+                label.get()
+            })
         })
-    } else {
-        row
-    }
+        .child(
+            text(move || if checked.get() { "✓" } else { "" })
+                .flex_1()
+                .text_right(),
+        )
+}
+
+fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::ui::View {
+    let title = title.into_reactive();
+    view()
+        .label(title.clone())
+        .flex_row()
+        .items_center()
+        .gap_2()
+        .h(move || px(if is_desktop() { 28.0 } else { 44.0 }))
+        .px(px(8.0))
+        .py(px(4.0))
+        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .child(text(title))
+        .child(text("›").flex_1().text_right())
+}
+
+fn menu_back(session: Session) -> impl IntoElement {
+    view()
+        .text_color(move || color(theme().foreground()))
+        .h(px(44.0))
+        .px(px(8.0))
+        .justify_center()
+        .label(session.translated("action.back"))
+        .child(text(move || {
+            format!("‹ {}", session.language.get().text("action.back"))
+        }))
 }
 
 fn divider() -> impl IntoElement {
-    view().h(px(1.0)).my(px(3.0)).bg(appearance::divider)
+    nsh_base::menu_separator()
+        .h(px(1.0))
+        .my(px(3.0))
+        .bg(appearance::divider)
 }
 
-fn menu(session: Session, selected: Signal<Option<Submenu>>) -> impl IntoElement {
-    MenuKeys::install();
+fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
     let paste = session.clone();
     let files = session.clone();
     let check = session.clone();
     let about = session.clone();
     let logs = session.clone();
+    let history = session.clone();
     let surface = session.surface;
     let language = session.language;
     let busy = session.busy;
     let status = session.update;
     let mut menu = view()
         .test_id("app-menu-popup")
-        .w(px(248.0))
-        .p_1()
-        .border_1()
-        .border_color(move || theme().foreground.opacity(0.4))
-        .bg(appearance::panel_background)
+        .when(is_desktop(), |v| v.w(px(248.0)))
         .child(
             menu_row(
                 session.translated("action.paste"),
@@ -314,13 +465,13 @@ fn menu(session: Session, selected: Signal<Option<Submenu>>) -> impl IntoElement
                 },
             )
             .child(
-                text("ctrl+v")
+                text(move || if is_desktop() { "ctrl+v" } else { "" })
                     .flex_1()
                     .text_right()
-                    .text_color(move || theme().muted_foreground),
+                    .text_color(move || theme().muted_foreground()),
             ),
         )
-        .child(
+        .child(if is_desktop() {
             menu_row(
                 session.translated("action.add_files_ellipsis"),
                 move || busy.get(),
@@ -330,57 +481,70 @@ fn menu(session: Session, selected: Signal<Option<Submenu>>) -> impl IntoElement
                 },
             )
             .child(
-                text("ctrl+o")
+                text(move || if is_desktop() { "ctrl+o" } else { "" })
                     .flex_1()
                     .text_right()
-                    .text_color(move || theme().muted_foreground),
-            ),
-        )
-        .child(divider())
-        .child(
-            menu_row(session.translated("action.language"), false, move || {
-                selected.set(Some(Submenu::Language))
-            })
-            .child(text("›").flex_1().text_right()),
-        )
-        .child(
-            menu_row(
-                move || {
-                    language.get().text(if appearance::is_omarchy() {
-                        "theme.reload"
-                    } else {
-                        "action.theme"
-                    })
-                },
-                false,
-                move || {
-                    if appearance::is_omarchy() {
-                        appearance::reload_system_theme();
-                    } else {
-                        selected.set(Some(Submenu::Theme));
-                    }
-                },
+                    .text_color(move || theme().muted_foreground()),
             )
-            .child(
-                text(|| if appearance::is_omarchy() { "" } else { "›" })
-                    .flex_1()
-                    .text_right(),
-            ),
-        )
-        .child(divider())
-        .child(menu_row(
-            session.translated("action.check_update"),
+            .into_element()
+        } else {
+            nsh_base::submenu()
+                .trigger(submenu_trigger(
+                    session.translated("action.add_files_ellipsis"),
+                ))
+                .back(menu_back(session.clone()))
+                .child(media_sources(session.clone()))
+                .into_element()
+        })
+        .child(when(
+            || !is_desktop(),
             move || {
-                matches!(
-                    status.get(),
-                    UpdateState::Checking | UpdateState::Installing { .. }
-                )
-            },
-            move || {
-                surface.set(None);
-                check.check_updates();
+                let history = history.clone();
+                menu_row(language.get().text("history.title"), false, move || {
+                    history.open_history()
+                })
             },
         ))
+        .child(divider())
+        .child(
+            nsh_base::submenu()
+                .trigger(submenu_trigger(session.translated("action.language")))
+                .back(menu_back(session.clone()))
+                .child(language_menu(session.clone())),
+        )
+        .child(if appearance::is_omarchy() {
+            let chooser = appearance.clone();
+            menu_row(session.translated("theme.reload"), false, move || {
+                chooser.reload()
+            })
+            .into_element()
+        } else {
+            nsh_base::submenu()
+                .trigger(
+                    submenu_trigger(session.translated("action.theme"))
+                        .test_id("menu-theme-trigger"),
+                )
+                .back(menu_back(session.clone()))
+                .child(theme_menu(session.clone(), appearance.clone()))
+                .into_element()
+        })
+        .child(when(is_desktop, divider))
+        .child(when(is_desktop, move || {
+            let check = check.clone();
+            menu_row(
+                language.get().text("action.check_update"),
+                move || {
+                    matches!(
+                        status.get(),
+                        UpdateState::Checking | UpdateState::Installing { .. }
+                    )
+                },
+                move || {
+                    surface.set(None);
+                    check.check_updates();
+                },
+            )
+        }))
         .child(divider())
         .child(menu_row(
             session.translated("action.about"),
@@ -404,81 +568,55 @@ fn menu(session: Session, selected: Signal<Option<Submenu>>) -> impl IntoElement
             false,
             move || logs.open_surface(Surface::Logs),
         ))
-        .child(divider())
-        .child(menu_row(
-            session.translated("action.exit"),
-            false,
-            move || session.exit(),
-        ))
+        .child(when(is_desktop, move || {
+            let session = session.clone();
+            view().child(divider()).child(menu_row(
+                session.translated("action.exit"),
+                false,
+                move || session.exit(),
+            ))
+        }))
 }
 
 fn theme_menu(session: Session, appearance: Controller) -> impl IntoElement {
-    MenuKeys::install();
-    let mut modes = view();
+    let mut modes = view().test_id("app-submenu-popup");
     for mode in [Mode::System, Mode::Light, Mode::Dark] {
         let chooser = appearance.clone();
         let selected = appearance.mode;
         let errors = session.clone();
         let language = session.language;
-        modes = modes.child(
-            menu_row(
-                move || -> SharedString {
-                    format!(
-                        "{}{}",
-                        if selected.get() == mode { "✓ " } else { "" },
-                        language.get().text(mode.label())
-                    )
-                    .into()
-                },
-                false,
-                move || {
-                    if let Err(error) = chooser.select(mode) {
-                        errors.fail(error);
-                    }
-                    errors.surface.set(None);
-                },
-            )
-            .accessibility_state(move || AccessibilityState {
-                selected: selected.get() == mode,
-                ..Default::default()
-            }),
-        );
+        modes = modes.child(checked_menu_row(
+            move || language.get().text(mode.label()),
+            move || selected.get() == mode,
+            move || {
+                if let Err(error) = chooser.select(mode) {
+                    errors.fail(error);
+                }
+                errors.surface.set(None);
+            },
+        ));
     }
-    modes.child(divider()).child(menu_row(
-        session.translated("theme.reload"),
-        false,
-        move || appearance.reload(),
-    ))
+    if is_desktop() {
+        modes.child(divider()).child(menu_row(
+            session.translated("theme.reload"),
+            false,
+            move || appearance.reload(),
+        ))
+    } else {
+        modes
+    }
 }
 
 fn language_menu(session: Session) -> impl IntoElement {
-    MenuKeys::install();
-    let mut menu = view();
+    let mut menu = view().test_id("app-submenu-popup");
     for (title, language) in [("English", Language::En), ("简体中文", Language::ZhCn)] {
         let chooser = session.clone();
         let selected = session.language;
-        menu = menu.child(
-            menu_row(
-                move || -> SharedString {
-                    format!(
-                        "{}{}",
-                        if selected.get() == language {
-                            "✓ "
-                        } else {
-                            ""
-                        },
-                        title
-                    )
-                    .into()
-                },
-                false,
-                move || chooser.set_language(language),
-            )
-            .accessibility_state(move || AccessibilityState {
-                selected: selected.get() == language,
-                ..Default::default()
-            }),
-        );
+        menu = menu.child(checked_menu_row(
+            title,
+            move || selected.get() == language,
+            move || chooser.set_language(language),
+        ));
     }
     menu
 }
@@ -496,9 +634,9 @@ fn logs(session: Session) -> impl IntoElement {
             editor()
                 .value(move || snapshot.get())
                 .placeholder(move || language.get().text("logs.empty"))
-                .editable(false)
+                .readonly(true)
                 .multiline(true)
-                .h(move || px((window().height - 240.0).clamp(100.0, 420.0)))
+                .h(move || px((window().height.0 - 240.0).clamp(100.0, 420.0)))
                 .label(session.translated("logs.title")),
         )
         .child(
@@ -534,7 +672,7 @@ fn logs(session: Session) -> impl IntoElement {
                     .map(|key| language.get().text(key))
                     .unwrap_or_default()
             })
-            .text_color(move || theme().success),
+            .text_color(move || theme().success()),
         )
 }
 
@@ -556,7 +694,7 @@ fn about(session: Session) -> impl IntoElement {
         .child(text(session.translated("about.credit")))
         .child(
             text(session.translated("about.native_shell"))
-                .text_color(move || theme().muted_foreground),
+                .text_color(move || theme().muted_foreground()),
         )
         .child(
             view()

@@ -10,7 +10,7 @@ the resolved dependency graph in CI, including all application features.
 Product parity and platform verification remain in progress.
 
 ```sh
-cargo run --locked
+nsh dev
 cargo test --locked --features ui-tests --lib
 cargo test --locked --no-default-features
 cargo clippy --locked --all-targets --all-features -- -D warnings
@@ -91,13 +91,36 @@ area. NSH's native backends retain system window controls and handle dragging an
 platform double-click behavior. Reactive left/right insets keep application
 content clear of those controls, including fullscreen changes. Buttons explicitly
 opt out of dragging. The Rust desktop API is contributed upstream in [NSH PR #92](https://github.com/longbridge/nsh/pull/92).
-PR #92 has merged. Omasend depends on the upstream git `main` branch;
+PR #92 has merged. Omasend depends on upstream git source;
 `Cargo.lock` records the resolved commit. It must not vendor or locally patch NSH.
 No JavaScript runtime is enabled.
 
+## NSH upstream API update
+
+The dependency lock now resolves upstream `main` at `b090043d`, including the
+merged [NSH PR #315](https://github.com/longbridge/nsh/pull/315). This fixes
+placement context for lazy Rust children without adding public API. The existing
+`nsh_base::Menu` components are used directly, with trailing selection marks.
+The application
+uses `nsh-base` in place of the removed `nsh-ui-mobile`: theme colors are tokens,
+roots receive `Tokens`, dialogs use `nsh_base::dialog`, and read-only inputs use
+`readonly`. Animation values use `AnimatedValue`; geometry uses typed points,
+and press events use down/up names. The existing 46 library/UI tests pass with
+these APIs, including the real HTTPS round trip and reduced-motion checks.
+
+Use `nsh dev` from the repository root for native development and automatic
+rebuilding when Rust sources change. The engine and channel dependencies used
+only by tests are dev dependencies, so the CLI can resolve the app's Git source
+without mistaking a disabled optional engine for a crates.io dependency.
+
+The former standalone `NSH_SCRIPT` runner option was removed upstream. The
+historical `scripts/check-macos-clipboard.swift` automation below depends on
+that option and needs migration to `nsh test` before it can be rerun. Its prior
+results do not verify this dependency update.
+
 ## Current verification
 
-On macOS, root all-feature compilation, Clippy and formatting pass. The 45 library
+On macOS, root all-feature compilation, Clippy and formatting pass. The 46 library
 and UI tests include a real NSH engine activating Send, transferring binary data
 and text through HTTPS, and receiving a reply through the actual Accept control.
 The test verifies bytes in both directions, language changes, text preview
@@ -147,13 +170,17 @@ Native scripts verified the compact history bottom sheet at 840×630 and
 progress bars; Collapse/Copy precede the adaptive-height text reader so those
 actions remain reachable in the smaller window. Clipboard copy itself still
 needs an OS-level check.
-Native scripts also exercised the restored title-bar menu, left-opening theme
-and language submenus, Escape dismissal, and the 640×520 layout. Menu groups now
-have scoped Up/Down navigation that skips disabled items, Enter/Space activation,
-and Left to return from a submenu. The current row is highlighted and receives
-an accessibility-focus command. The engine checks keyboard theme selection,
-submenu return, automatic dismissal and unchanged device selection; native
-macOS screenshots verify highlighted main/submenu rows and Left return. This
+The title-bar menu now uses the existing `nsh_base::menu`, `menu_item`,
+`menu_separator` and `submenu` components. Its popup is anchored to the button
+with bottom placement, trailing-edge alignment, a 6-point gap and an 8-point
+safe-area margin. Omasend supplies its palette, font, borders and item states;
+NSH's overlay places the popup and cascading submenus. The former Dialog-backed
+popup and manual submenu coordinates have been removed. Engine fixtures check
+placement in a 640×520 window, menu selection, theme changes, and opening About.
+`tests/ui/menu.test.tsx` passes on macOS through `nsh test --target macos`,
+covering theme/language selection and opening About. Screenshots of the menu and
+cascading submenu have been inspected at 840×630 and 640×520.
+This
 is not a complete screen-reader or Tab/focus-restoration verification. The file-picker
 path and remaining non-PNG pasteboard formats (such as GIF/WebP) still need
 native checks; JPEG and TIFF have passed. Real mouse dragging
@@ -167,7 +194,7 @@ workflow configuration is not evidence that remote CI jobs have passed.
 ## Remaining migration
 
 - Finish visual parity for populated device lists, composer cards, history, icons
-  and preview surfaces. The application menu is now anchored under the TitleBar
+  and preview surfaces. The application menu uses the themed NSH Menu anchored to its TitleBar button
   with language/theme submenus, shortcuts, separators and the original links. Verify populated
   states against the original; restored home-region geometry alone is not proof
   of complete parity. The existing emblem and theme integration are restored.
@@ -220,3 +247,34 @@ workflow configuration is not evidence that remote CI jobs have passed.
 - Exercise real Linux Wayland and Windows windows, file pickers, image/media
   clipboard formats, reduced motion and interoperability with other LocalSend
   clients.
+
+## iPhone support
+
+The Rust root also builds with the UIKit backend. iOS imports files and folders
+through a small Objective-C document picker bridge, reads clipboard images/text,
+opens links with UIApplication, and shares received files with the system share
+sheet. Received files live in the sandbox's Documents/Received directory. The
+packaging helper adds local network permission and Files visibility before final
+signing. Menu sublevels provide a Back row on touch devices. Desktop self-update
+and Exit items are hidden on phones. Use `nsh dev --target ios` for development
+and `scripts/ios.py` for signed device installation.
+
+The phone header uses `nsh_base::nav_stack` / `nav_page` and a custom title slot,
+so UIKit owns navigation and header measurement while the title and controls
+retain terminal styling. `SafeAreaView` owns insets. The iPhone port deliberately
+uses Menlo at 15 pt (17 pt header), square chrome, foreground-tinted interaction
+states, and the same neutral/green light and dark palettes as macOS, selected by system appearance.
+It does not read Linux shell configuration. Touch targets are at least 44 pt.
+The header menu trigger uses NSH Button with a geometry-based menu glyph.
+Menu sheets use a dimmed backdrop and bottom safe-area padding; selection marks
+remain on the right. The simulator uses an ephemeral LocalSend port so it can
+coexist with a desktop client.
+
+Mobile Add Files opens a styled NSH Menu with Photos and videos first, followed
+by Browse files. The app menu uses a Submenu with the same choices. UIKit only
+presents the selected Photos or Files picker; there is no native source Action Sheet.
+PhotosUI's system picker accepts multiple photos/videos; item-provider files
+are copied before their callbacks return, preserving the selection order and
+avoiding a blanket conversion to PNG. Cancelling either source returns to the
+outbox. The macOS menu trigger is a 28 pt NSH ghost Button, with hover/pressed
+feedback and a persistent selected state while its menu is open.

@@ -1,5 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
+#[cfg(target_os = "ios")]
+use nsh_platform_ios as platform;
 #[cfg(target_os = "linux")]
 use nsh_platform_linux as platform;
 #[cfg(target_os = "macos")]
@@ -7,6 +9,7 @@ use nsh_platform_macos as platform;
 #[cfg(target_os = "windows")]
 use nsh_platform_windows as platform;
 
+#[cfg(not(target_os = "ios"))]
 fn main() -> std::process::ExitCode {
     if std::env::args()
         .skip(1)
@@ -16,10 +19,7 @@ fn main() -> std::process::ExitCode {
         return std::process::ExitCode::SUCCESS;
     }
     omasend::diagnostics::init();
-    platform::set_ui_sets(vec![
-        nsh_ui_mobile::registry(),
-        omasend::__nsh_native_module(),
-    ]);
+    platform::set_ui_sets(vec![nsh_base::registry(), omasend::__nsh_native_module()]);
     let executable = std::env::current_exe();
     let status = platform::run_app(
         platform::AppSource::Rust(omasend::app_root()),
@@ -28,7 +28,6 @@ fn main() -> std::process::ExitCode {
             size: (840, 630),
             #[cfg(target_os = "macos")]
             keep_alive_on_close: true,
-            script: std::env::var("NSH_SCRIPT").ok(),
             #[cfg(any(target_os = "linux", target_os = "windows"))]
             app_id: "omasend".into(),
             ..Default::default()
@@ -44,4 +43,14 @@ fn main() -> std::process::ExitCode {
         }
     }
     std::process::Termination::report(status)
+}
+
+#[cfg(target_os = "ios")]
+fn main() -> ! {
+    omasend::diagnostics::init();
+    platform::set_ui_sets(vec![nsh_base::registry(), omasend::__nsh_native_module()]);
+    platform::run_app(
+        platform::AppSource::Rust(omasend::app_root()),
+        Default::default(),
+    )
 }

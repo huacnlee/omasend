@@ -29,8 +29,8 @@ local_nsh = sorted(
 )
 if local_nsh:
     sys.exit("NSH must use upstream dependencies, not local copies: " + ", ".join(local_nsh))
-required = {"nsh-platform-macos", "nsh-platform-linux", "nsh-platform-windows"}
+required = {"nsh-platform-macos", "nsh-platform-linux", "nsh-platform-windows", "nsh-platform-ios"}
 missing = sorted(required - names)
 if missing:
     sys.exit("Missing native backends: " + ", ".join(missing))
-print("NSH Rust runtime: AppKit / GTK / Win32; no GPUI or JavaScript runtime")
+print("NSH Rust runtime: AppKit / GTK / Win32 / UIKit; no GPUI or JavaScript runtime")

@@ -75,6 +75,13 @@ pub(crate) fn emit(events: &Events, event: TransferEvent) {
 }
 
 pub fn downloads_directory() -> anyhow::Result<PathBuf> {
+    #[cfg(target_os = "ios")]
+    {
+        return dirs::home_dir()
+            .map(|home| home.join("Documents/Received"))
+            .ok_or_else(|| anyhow::anyhow!("Cannot locate app Documents directory"));
+    }
+    #[cfg(not(target_os = "ios"))]
     dirs::download_dir()
         .or_else(|| dirs::home_dir().map(|home| home.join("Downloads")))
         .ok_or_else(|| anyhow::anyhow!("Cannot locate your Downloads folder"))

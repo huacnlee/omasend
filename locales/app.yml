@@ -512,3 +512,38 @@ update.available:
 update.view_release:
   en: "View release"
   zh-CN: "查看发布版本"
+
+action.back:
+  en: "Back"
+  zh-CN: "返回"
+
+action.share:
+  en: "Share…"
+  zh-CN: "分享…"
+
+composer.mobile_hint:
+  en: "Add files or paste to send"
+  zh-CN: "添加文件或粘贴内容以发送"
+
+action.photo_library:
+  en: "Photos and videos"
+  zh-CN: "照片与视频"
+action.browse_files:
+  en: "Browse files"
+  zh-CN: "浏览文件"
+
+error.notice_unavailable:
+  en: "LocalSend unavailable"
+  zh-CN: "LocalSend 暂不可用"
+error.notice_port:
+  en: "Another app may be using port 53317. Close it, then reopen Omasend."
+  zh-CN: "其他应用可能占用了端口 53317，关闭后重新打开 Omasend。"
+error.notice_title:
+  en: "Action failed"
+  zh-CN: "操作未完成"
+action.copy_error:
+  en: "Copy error details"
+  zh-CN: "复制错误详情"
+action.dismiss_error:
+  en: "Dismiss error"
+  zh-CN: "收起错误提示"

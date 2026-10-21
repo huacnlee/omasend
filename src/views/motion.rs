@@ -25,13 +25,13 @@ fn paths() -> &'static [Path] {
     })
 }
 
-fn burst(levels: &[NativeValue], active: Memo<bool>, epoch: Signal<u64>) {
+fn burst(levels: &[AnimatedValue], active: Memo<bool>, epoch: Signal<u64>) {
     if !active.get_untracked() || reduce_motion() {
         return;
     }
     let current = epoch.get_untracked();
     for (turn, index) in [0, 4, 1, 5, 3, 6, 2, 7].into_iter().enumerate() {
-        let level = levels[index].clone();
+        let level = levels[index];
         set_timeout(Duration::from_millis(turn as u64 * 55), move || {
             if epoch.get_untracked() != current || !active.get_untracked() || reduce_motion() {
                 return;
@@ -56,7 +56,7 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
         session.revision.get();
         session.state.borrow().discovery_revision
     });
-    let levels = (0..9).map(|_| native_value(1.0)).collect::<Vec<_>>();
+    let levels = (0..9).map(|_| animated_value(1.0)).collect::<Vec<_>>();
     let changing = levels.clone();
     let epoch = signal(0_u64);
     effect(move || {
@@ -78,8 +78,8 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
             });
         }
     });
-    let confirmed = native_value(0.0);
-    let confirmation = confirmed.clone();
+    let confirmed = animated_value(0.0);
+    let confirmation = confirmed;
     effect(move || {
         if revision.get() > 0 && !reduce_motion() {
             confirmation.set(1.0);
@@ -90,12 +90,12 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
     });
     let mut logo = view().relative().size(px(size));
     for (index, path) in paths().iter().cloned().enumerate() {
-        let level = levels[index].clone();
+        let level = levels[index];
         logo = logo.child(
             canvas(move || {
                 Painter::new()
                     .scale(size / 32.0, size / 32.0)
-                    .fill_color(color(theme().link))
+                    .fill_color(color(theme().link()))
                     .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
             })
             .absolute()
@@ -107,7 +107,7 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
         canvas(move || {
             let mut painter = Painter::new()
                 .scale(size / 32.0, size / 32.0)
-                .fill_color(color(theme().link));
+                .fill_color(color(theme().link()));
             for path in paths() {
                 painter = painter.fill_path(path, nsh_core::canvas::FillRule::NonZero);
             }

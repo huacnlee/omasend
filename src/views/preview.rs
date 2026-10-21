@@ -13,7 +13,7 @@ pub(super) enum Preview {
 pub(super) fn overlay(session: Session) -> impl IntoElement {
     let selected = session.preview;
     let closer = session.clone();
-    If::new(
+    when(
         move || selected.get().is_some(),
         move || {
             let close = closer.clone();
@@ -21,7 +21,7 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
             let content = match selected.get_untracked().expect("preview is open") {
                 Preview::Text(text) => super::editor()
                     .value(text)
-                    .editable(false)
+                    .readonly(true)
                     .multiline(true)
                     .flex_1()
                     .label(closer.translated("message.title"))
@@ -31,8 +31,8 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                     let uri = url::Url::from_file_path(path)
                         .map(|uri| uri.to_string())
                         .unwrap_or_else(|_| path.to_string_lossy().into_owned());
-                    let loaded = native_value(if reduce_motion() { 1.0 } else { 0.0 });
-                    let fade = loaded.clone();
+                    let loaded = animated_value(if reduce_motion() { 1.0 } else { 0.0 });
+                    let fade = loaded;
                     let error = signal(String::new());
                     // The modal's signal holds `item` until the preview closes.
                     view()
@@ -43,7 +43,7 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 .resize_mode(nsh_core::ResizeMode::Contain)
                                 .flex_1()
                                 .bind_opacity(&loaded)
-                                .on_load(move |_: &nsh_core::Size| {
+                                .on_load(move |_: &nsh_core::Size<nsh_core::Points>| {
                                     fade.timing(
                                         1.0,
                                         if reduce_motion() { 0.0 } else { 140.0 },
@@ -52,18 +52,17 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 })
                                 .on_error(move |reason: &str| error.set(reason.to_owned())),
                         )
-                        .child(text(move || error.get()).text_color(move || theme().danger))
+                        .child(text(move || error.get()).text_color(move || theme().danger()))
                         .into_element()
                 }
             };
-            modal()
-                .transparent(true)
+            nsh_base::dialog()
                 .animation(if reduce_motion() {
                     ModalAnimation::None
                 } else {
                     ModalAnimation::Fade
                 })
-                .on_request_close(move |_: &()| selected.set(None))
+                .on_cancel(move |_: &()| selected.set(None))
                 .child(
                     view()
                         .flex_1()
@@ -79,8 +78,8 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 .gap_4()
                                 .p_4()
                                 .border_1()
-                                .border_color(move || theme().border)
-                                .bg(move || theme().background)
+                                .border_color(move || theme().border())
+                                .bg(move || theme().background())
                                 .child(
                                     view()
                                         .flex_row()
