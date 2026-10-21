@@ -28,18 +28,22 @@ pub(crate) fn relative_path(name: &str) -> Result<PathBuf> {
     Ok(path)
 }
 
-/// Publish by hard-linking beneath an open directory capability. This is atomic
+/// Publish beneath an open directory capability. This is atomic
 /// and never replaces an existing name (including a symlink). Capability-based
 /// path resolution also prevents a raced parent symlink from escaping Downloads.
 fn publish(downloads: &Path, staging: &Path, name: &str) -> Result<PathBuf> {
     let relative = relative_path(name)?;
-    let root = Dir::open_ambient_dir(downloads, ambient_authority())?;
+    let root = Dir::open_ambient_dir(downloads, ambient_authority())
+        .context("Cannot open receive directory")?;
     let parent = relative
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
         .unwrap_or(Path::new("."));
-    root.create_dir_all(parent)?;
-    let target = root.open_dir(parent)?;
+    root.create_dir_all(parent)
+        .context("Cannot create receive subdirectory")?;
+    let target = root
+        .open_dir(parent)
+        .context("Cannot open receive subdirectory")?;
     let filename = relative.file_name().context("Missing file name")?;
     let stem = relative
         .file_stem()
@@ -56,7 +60,20 @@ fn publish(downloads: &Path, staging: &Path, name: &str) -> Result<PathBuf> {
         } else {
             format!("{stem} ({index}){extension}").into()
         };
-        match root.hard_link(source, &target, &candidate) {
+        // Android's app sandbox denies hard links. renameat2 preserves both
+        // capability-relative resolution and atomic no-replace publication.
+        #[cfg(target_os = "android")]
+        let result = rustix::fs::renameat_with(
+            &root,
+            source,
+            &target,
+            &candidate,
+            rustix::fs::RenameFlags::NOREPLACE,
+        )
+        .map_err(std::io::Error::from);
+        #[cfg(not(target_os = "android"))]
+        let result = root.hard_link(source, &target, &candidate);
+        match result {
             Ok(()) => {
                 return Ok(downloads
                     .join(relative.parent().unwrap_or(Path::new("")))

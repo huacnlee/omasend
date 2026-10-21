@@ -2739,6 +2739,7 @@ dependencies = [
  "open",
  "rfd",
  "rust-i18n",
+ "rustix",
  "rustls",
  "self_update",
  "semver",
