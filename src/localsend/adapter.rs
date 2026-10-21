@@ -141,7 +141,7 @@ impl Node {
             alias: config.alias.clone(),
             version: PROTOCOL_VERSION_V2.into(),
             device_model: Some("Omasend".into()),
-            device_type: Some(DeviceType::Desktop),
+            device_type: Some(local_device_type()),
             token: identity.fingerprint.clone(),
         };
         let server = server::start_with_port(
@@ -173,7 +173,7 @@ impl Node {
             alias: device.alias.clone(),
             version: PROTOCOL_VERSION_V2.into(),
             device_model: Some(device.model.clone()),
-            device_type: Some(DeviceType::Desktop),
+            device_type: Some(local_device_type()),
             fingerprint: device.fingerprint.clone(),
             port: device.port,
             protocol: ProtocolType::Https,
@@ -894,6 +894,14 @@ fn scan_targets(ip: std::net::Ipv4Addr, mask: std::net::Ipv4Addr) -> Vec<std::ne
             }
         })
         .collect()
+}
+
+fn local_device_type() -> DeviceType {
+    if cfg!(any(target_os = "ios", target_os = "android")) {
+        DeviceType::Mobile
+    } else {
+        DeviceType::Desktop
+    }
 }
 
 fn machine_name() -> String {
