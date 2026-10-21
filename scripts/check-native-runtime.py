@@ -12,6 +12,7 @@ result = subprocess.run(
     check=True,
     capture_output=True,
     text=True,
+    encoding="utf-8",
 )
 metadata = json.loads(result.stdout)
 names = {package["name"] for package in metadata["packages"]}
