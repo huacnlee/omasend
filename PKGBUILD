@@ -1,6 +1,6 @@
 # Maintainer: Jason Lee <huacnlee@gmail.com>
 pkgname=omasend
-pkgver=0.1.9
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Omarchy-native LocalSend client'
 arch=('x86_64' 'aarch64')

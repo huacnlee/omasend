@@ -75,13 +75,13 @@ pub(super) fn error_notice(session: Session) -> impl IntoElement {
                         ),
                 )
                 .child(super::utilities::copy_error_button(session.clone()))
-                .child(
-                    plain_control("×", false, move || {
+                .child(super::utilities::close_button(
+                    session.translated("action.dismiss_error"),
+                    move || {
                         dismiss.state.borrow_mut().error = None;
                         dismiss.changed();
-                    })
-                    .label(session.translated("action.dismiss_error")),
-                )
+                    },
+                ))
         },
     )
 }
@@ -804,10 +804,10 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
                             .label(session.translated("action.clear_history"))
                             .text_color(move || theme().danger()),
                         )
-                        .child(
-                            plain_control("×", false, move || visible.set(false))
-                                .label(session.translated("action.close")),
-                        ),
+                        .child(super::utilities::close_button(
+                            session.translated("action.close"),
+                            move || visible.set(false),
+                        )),
                 )
                 .child(
                     scroll().flex_1().child(

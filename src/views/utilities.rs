@@ -108,108 +108,60 @@ pub(super) fn overlay(session: Session, _appearance: Controller) -> impl IntoEle
     ))
 }
 
-pub(super) fn copy_error_button(session: Session) -> impl IntoElement {
-    let language = session.language;
-    let size = if is_desktop() { 32.0 } else { 44.0 };
-    nsh_base::button()
-        .accessibility_label(move || Some(language.get().text("action.copy_error").into()))
-        .on_press(move || {
-            if let Some(error) = session.state.borrow().error.clone() {
-                set_clipboard(error);
-                session.notify("status.copied");
-            }
-        })
-        .size(px(size))
+#[derive(Clone, Copy)]
+enum ToolbarIcon {
+    Menu,
+    History,
+    Copy,
+    Close,
+}
+
+fn icon_button(
+    label: impl IntoReactive<SharedString>,
+    icon: ToolbarIcon,
+    test_id: Option<&str>,
+    run: impl Fn() + 'static,
+) -> nsh_base::ButtonElement {
+    let label = label.into_reactive();
+    let (target, glyph) = if is_desktop() {
+        (28.0, 12.0)
+    } else {
+        (44.0, 16.0)
+    };
+    let path = match icon {
+        ToolbarIcon::Menu => "M0.75 3H17.25 M0.75 9H17.25 M0.75 15H17.25",
+        ToolbarIcon::History => {
+            "M9 1.5 A7.5 7.5 0 1 1 1.5 9 A7.5 7.5 0 0 1 9 1.5 M9 4.5 L9 9 L12.5 10.5"
+        }
+        ToolbarIcon::Copy => "M5.5 5.5H16.5V16.5H5.5Z M12.5 1.5H1.5V12.5",
+        ToolbarIcon::Close => "M1.5 1.5L16.5 16.5 M16.5 1.5L1.5 16.5",
+    };
+    let mut content = view()
+        .size(px(target))
+        .window_drag(false)
         .items_center()
         .justify_center()
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
         .child(
             canvas(move || {
                 Painter::new()
+                    .scale(glyph / 18.0, glyph / 18.0)
                     .stroke_color(color(theme().foreground()))
                     .line_width(1.5)
-                    .stroke_svg("M6 6H16.5V16.5H6Z M12 3H3V12")
+                    .stroke_svg(path)
             })
-            .size(px(18.0)),
-        )
-}
-
-pub(super) fn history_button(session: Session) -> impl IntoElement {
-    let language = session.language;
+            .size(px(glyph))
+            .flex_shrink_0(),
+        );
+    if let Some(id) = test_id {
+        content = content.test_id(id);
+    }
     nsh_base::button()
-        .accessibility_label(move || Some(language.get().text("history.title").into()))
-        .on_press(move || session.open_history())
-        .size(px(32.0)).items_center().justify_center()
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
-        .child(view().test_id("history-button").size(px(32.0)).items_center().justify_center()
-            .child(canvas(move || {
-                use nsh_core::canvas::svg_path;
-                Painter::new().stroke_color(color(theme().foreground()))
-                    .line_width(1.5)
-                    .stroke_path(&svg_path("M9 1.5 A7.5 7.5 0 1 1 1.5 9 A7.5 7.5 0 0 1 9 1.5 M9 4.5 L9 9 L12.5 10.5"))
-            }).size(px(18.0))))
-}
-
-pub(super) fn mobile_menu_trigger(session: Session) -> impl IntoElement {
-    let surface = session.surface;
-    let language = session.language;
-    nsh_base::button()
-        .accessibility_label(move || Some(language.get().text("action.menu").into()))
-        .on_press(move || {
-            if surface.get().is_none() {
-                surface.set(Some(Surface::Menu));
-            } else if surface.get() == Some(Surface::Menu) {
-                surface.set(None);
-            }
-        })
-        .w(px(44.0))
-        .h(px(44.0))
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
-        .child(
-            view()
-                .test_id("app-menu")
-                .flex_1()
-                .items_center()
-                .justify_center()
-                .child(
-                    view()
-                        .w(px(18.0))
-                        .h(px(14.0))
-                        .justify_between()
-                        .child(view().h(px(2.0)).bg(move || color(theme().foreground())))
-                        .child(view().h(px(2.0)).bg(move || color(theme().foreground())))
-                        .child(view().h(px(2.0)).bg(move || color(theme().foreground()))),
-                ),
-        )
-}
-
-fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
-    let surface = session.surface;
-    let language = session.language;
-    nsh_base::button()
-        .accessibility_label(move || Some(language.get().text("action.menu").into()))
-        .selected(move || surface.get() == Some(Surface::Menu))
-        .selected_style(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .on_press(move || {
-            if surface.get() == Some(Surface::Menu) {
-                surface.set(None);
-            } else if surface.get().is_none()
-                && session.state.borrow().incoming.is_none()
-                && session.preview.get().is_none()
-                && !session.history_visible.get()
-            {
-                surface.set(Some(Surface::Menu));
-            }
-        })
-        .w(px(28.0))
-        .h(px(28.0))
+        .accessibility_label(move || Some(label.get()))
+        .on_press(run)
+        .size(px(target))
         .flex_shrink_0()
+        .items_center()
+        .justify_center()
         .rounded(move || {
             px(if appearance::is_omarchy_style() {
                 0.0
@@ -220,24 +172,77 @@ fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
         .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
         .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
         .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
-        .child(
-            view()
-                .test_id("app-menu")
-                .window_drag(false)
-                .w(px(28.0))
-                .h(px(28.0))
-                .items_center()
-                .justify_center()
-                .child(
-                    view()
-                        .w(px(14.0))
-                        .h(px(10.0))
-                        .justify_between()
-                        .child(view().h(px(1.5)).bg(move || color(theme().foreground())))
-                        .child(view().h(px(1.5)).bg(move || color(theme().foreground())))
-                        .child(view().h(px(1.5)).bg(move || color(theme().foreground()))),
-                ),
-        )
+        .child(content)
+}
+
+pub(super) fn close_button(
+    label: impl IntoReactive<SharedString>,
+    run: impl Fn() + 'static,
+) -> impl IntoElement {
+    icon_button(label, ToolbarIcon::Close, None, run)
+}
+
+pub(super) fn copy_error_button(session: Session) -> impl IntoElement {
+    icon_button(
+        session.translated("action.copy_error"),
+        ToolbarIcon::Copy,
+        Some("copy-error"),
+        move || {
+            if let Some(error) = session.state.borrow().error.clone() {
+                set_clipboard(error);
+                session.notify("status.copied");
+            }
+        },
+    )
+}
+
+pub(super) fn history_button(session: Session) -> impl IntoElement {
+    icon_button(
+        session.translated("history.title"),
+        ToolbarIcon::History,
+        Some("history-button"),
+        move || session.open_history(),
+    )
+}
+
+pub(super) fn mobile_menu_trigger(session: Session) -> impl IntoElement {
+    let surface = session.surface;
+    icon_button(
+        session.translated("action.menu"),
+        ToolbarIcon::Menu,
+        Some("app-menu"),
+        move || {
+            if surface.get().is_none() {
+                surface.set(Some(Surface::Menu));
+            } else if surface.get() == Some(Surface::Menu) {
+                surface.set(None);
+            }
+        },
+    )
+    .selected(move || surface.get() == Some(Surface::Menu))
+    .selected_style(|s| s.bg(move || theme().foreground().opacity(0.08)))
+}
+
+fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
+    let surface = session.surface;
+    icon_button(
+        session.translated("action.menu"),
+        ToolbarIcon::Menu,
+        Some("app-menu"),
+        move || {
+            if surface.get() == Some(Surface::Menu) {
+                surface.set(None);
+            } else if surface.get().is_none()
+                && session.state.borrow().incoming.is_none()
+                && session.preview.get().is_none()
+                && !session.history_visible.get()
+            {
+                surface.set(Some(Surface::Menu));
+            }
+        },
+    )
+    .selected(move || surface.get() == Some(Surface::Menu))
+    .selected_style(|s| s.bg(move || theme().foreground().opacity(0.08)))
 }
 
 pub(super) fn menu_button(session: Session) -> impl IntoElement {
