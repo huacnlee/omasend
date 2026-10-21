@@ -125,8 +125,8 @@ python3 scripts/ios.py
 This writes `dist/omasend-VERSION-aarch64-apple-ios-unsigned.ipa`. It contains no
 personal provisioning profile and requires signing before installation.
 
-Android ARM64 builds require JDK 17, Android SDK platform 35, build tools 36,
-NDK 27.2.12479018, and the `aarch64-linux-android` Rust target:
+Android ARM64 and x86_64 builds require JDK 17, Android SDK platform 35, build tools 36,
+NDK 27.2.12479018, and the `aarch64-linux-android` and `x86_64-linux-android` Rust targets:
 
 ```sh
 export ANDROID_HOME=/path/to/Android/sdk

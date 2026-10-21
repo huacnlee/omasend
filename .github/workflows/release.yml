@@ -175,7 +175,7 @@ jobs:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-ios,aarch64-linux-android
+          targets: aarch64-apple-ios,aarch64-linux-android,x86_64-linux-android
       - uses: actions/setup-java@v4
         if: matrix.platform == 'android'
         with:
