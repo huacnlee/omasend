@@ -2,11 +2,11 @@
 
 Copy, paste, and send to your other devices.
 
-Omasend is a desktop file-sharing app built for [Omarchy](https://omarchy.org),
+Omasend is a file-sharing app built for [Omarchy](https://omarchy.org),
 and a native client for the [LocalSend](https://localsend.org) protocol. Send files,
 folders, screenshots, recordings, and text over your local network — to Omasend or
 to any LocalSend app — with no account or cloud upload. Available for Linux, macOS,
-and Windows.
+Windows, Android, and iOS.
 
 <img width="2546" height="1402" alt="image" src="https://github.com/user-attachments/assets/d3d942e9-c8b1-4c45-aaf4-1b1508384adf" />
 
@@ -14,7 +14,7 @@ and Windows.
 
 ## Install
 
-Supports Linux x86_64 and ARM64, macOS 14+ (Apple Silicon and Intel), and Windows x86_64.
+Supports Linux x86_64 and ARM64, macOS 14+ (Apple Silicon and Intel), Windows x86_64, Android 9+ (ARM64 and x86_64), and iOS 15+.
 
 **macOS / Linux**
 
@@ -34,6 +34,29 @@ irm https://huacnlee.github.io/omasend/install.ps1 | iex
 mise use -g github:huacnlee/omasend
 ```
 
+**Android**
+
+Download `omasend-VERSION-android.apk` from the [latest release](https://github.com/huacnlee/omasend/releases/latest)
+on your phone. Open the APK, allow **Install unknown apps → Allow from this source**
+for your browser or file manager if prompted, then tap **Install**. To update,
+install the newer APK over the existing app.
+
+**iOS / iPhone**
+
+Download `omasend-VERSION-aarch64-apple-ios-unsigned.ipa` from the
+[latest release](https://github.com/huacnlee/omasend/releases/latest).
+The IPA is unsigned and needs signing before installation; opening it in Files
+will not install the app. Use [Sideloadly](https://sideloadly.io/) on macOS or
+Windows, or [AltStore Classic](https://faq.altstore.io/altstore-classic), with your
+Apple account. Follow the tool's setup instructions, import the IPA, and install
+it on your connected iPhone. Enable **Settings → Privacy & Security → Developer Mode**
+on iOS 16+ and trust your developer account under **Settings → General → VPN & Device Management**
+when prompted. Free Apple accounts require refreshing the signature every seven days.
+See the [step-by-step mobile installation guide](docs/install.md#ios--iphone).
+
+On either phone, keep Omasend open and connect both devices to the same local
+network. Allow Local Network access on iOS when prompted.
+
 The installer selects the latest release for your device. For manual installation,
 custom locations, mise on macOS, or removal, see the [installation guide](docs/install.md).
 
@@ -42,9 +65,9 @@ custom locations, mise on macOS, or removal, see the [installation guide](docs/i
 - **Share with nearby devices.** Connect to Omasend and [LocalSend](https://localsend.org) clients on the same network.
 - **Paste or drop anything.** Add clipboard content, drag in files and folders, or use the file picker. Preview before sending.
 - **Keep transfers local.** Content travels directly between devices over an encrypted connection. You choose which incoming transfers to accept.
-- **Follow your transfers.** See progress and speed, cancel a transfer, and review the current session’s history. Received files go to Downloads without overwriting existing files.
+- **Follow your transfers.** See progress and speed, cancel a transfer, and review the current session’s history. Received files never overwrite existing files; desktop downloads go to Downloads, and mobile files can be opened or shared from history.
 - **Make it feel at home.** Follow your Omarchy theme, choose System, Light, or Dark appearance, and switch between English and 简体中文.
-- **Stay up to date.** Check for updates from the menu, install them in the app, and restart when your transfers are finished.
+- **Stay up to date on desktop.** Check for updates from the menu, install them in the app, and restart when your transfers are finished.
 
 ## Works with LocalSend
 

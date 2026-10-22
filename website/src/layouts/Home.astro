@@ -8,6 +8,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const asset = (path: string) => `${base}/${path}`;
 const repo = 'https://github.com/huacnlee/omasend';
 const canonical = new URL(asset(language === 'en' ? '' : 'zh-CN/'), Astro.site);
+const mobileVersion = '0.2.0';
+const mobileRelease = `${repo}/releases/download/v${mobileVersion}`;
 const shellCommand = 'curl -fsSL https://huacnlee.github.io/omasend/install.sh | sh';
 const commands = [
   { id: 'linux', label: 'macOS / Linux', file: 'install.sh', command: shellCommand },
@@ -102,6 +104,24 @@ const logoSegments = [
           <div class="install-meta"><p>{t.installNote}</p><a class="script-link" href={`${repo}/blob/main/${file}`}>{t.script} ↗</a></div>
         </div>)}
         <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
+        <div class="mobile-install" aria-labelledby="mobile-install-title">
+          <h2 id="mobile-install-title">{t.mobile}</h2>
+          <div class="mobile-platforms">
+            <article aria-labelledby="android-title">
+              <h3 id="android-title">Android</h3><p class="mobile-support">{t.androidSupport}</p>
+              <a class="text-link mobile-download" href={`${mobileRelease}/omasend-${mobileVersion}-android.apk`}>{t.androidDownload} · v{mobileVersion} ↓</a>
+              <ol>{t.androidSteps.map(step => <li>{step}</li>)}</ol>
+              <a class="text-link" href="https://support.google.com/pixelphone/answer/7391672">{t.androidHelp} ↗</a>
+            </article>
+            <article aria-labelledby="ios-title">
+              <h3 id="ios-title">iOS / iPhone</h3><p class="mobile-support">{t.iosSupport}</p>
+              <a class="text-link mobile-download" href={`${mobileRelease}/omasend-${mobileVersion}-aarch64-apple-ios-unsigned.ipa`}>{t.iosDownload} · v{mobileVersion} ↓</a>
+              <ol>{t.iosSteps.map(step => <li>{step}</li>)}</ol>
+              <div class="mobile-help"><a class="text-link" href="https://sideloadly.io/">Sideloadly ↗</a><a class="text-link" href="https://faq.altstore.io/altstore-classic">AltStore Classic ↗</a><a class="text-link" href="https://sideloadly.io/faq">{t.signingHelp} ↗</a></div>
+            </article>
+          </div>
+          <p class="mobile-network">{t.mobileNetwork} <a class="text-link" href={`${repo}/blob/main/docs/install.md#android`}>{t.mobileGuide} ↗</a></p>
+        </div>
       </section>
       <figure class="app-screenshot">
         <img src={asset('screenshot.png')} width="2546" height="1402" loading="lazy" decoding="async" alt={t.screenshot} />

@@ -198,3 +198,21 @@ test('Chinese headings have no trailing full stop', async ({ page }) => {
     expect(text.trim()).not.toMatch(/。/);
   }
 });
+
+test('mobile installation explains APK setup and unsigned IPA signing in both languages', async ({ page }) => {
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const route of ['./', './zh-CN/']) {
+      await page.goto(route);
+      const mobile = page.locator('.mobile-install');
+      await mobile.scrollIntoViewIfNeeded();
+      await expect(mobile.locator('a[href$="-android.apk"]')).toHaveAttribute('href', 'https://github.com/huacnlee/omasend/releases/download/v0.2.0/omasend-0.2.0-android.apk');
+      await expect(mobile.locator('a[href$="-ios-unsigned.ipa"]')).toHaveAttribute('href', 'https://github.com/huacnlee/omasend/releases/download/v0.2.0/omasend-0.2.0-aarch64-apple-ios-unsigned.ipa');
+      await expect(mobile).toContainText(route.includes('zh') ? '需要自行签名' : 'signing required');
+      await expect(mobile).toContainText(route.includes('zh') ? '每七天' : 'every seven days');
+      await expect(mobile.getByRole('link', { name: 'Sideloadly ↗', exact: true })).toHaveAttribute('href', 'https://sideloadly.io/');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      await mobile.screenshot({ path: `/tmp/omasend-mobile-guide-${width}-${route.includes('zh') ? 'zh' : 'en'}.png` });
+    }
+  }
+});
