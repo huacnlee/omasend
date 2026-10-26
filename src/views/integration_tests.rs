@@ -8,7 +8,7 @@ struct TestRect {
 // The actual NSH engine drives application commands into real HTTPS sockets.
 use super::{control, panels, session::Session};
 use nsh_core::{
-    ApproxTextEngine, EventKind, EventPayload, MountBatch, MountItem, Size, ui::prelude::*,
+    ApproxTextEngine, EventKind, EventPayload, MountBatch, MountItem, Size, prelude::*,
 };
 use nsh_engine::{Engine, EngineConfig, EngineControl, Environment, MountSink};
 use omasend::{
@@ -129,6 +129,7 @@ struct Screen {
     texts: HashMap<u32, String>,
     labels: HashMap<u32, String>,
     selected: HashMap<u32, bool>,
+    backgrounds: HashMap<u32, nsh_core::Color>,
     deleted: Vec<u32>,
     inputs: HashMap<u32, nsh_core::InputConfig>,
     test_ids: HashMap<String, u32>,
@@ -183,6 +184,9 @@ impl Screen {
                 }
                 MountItem::Insert { parent, child, .. } => {
                     self.parents.insert(child, parent);
+                }
+                MountItem::ViewStyle { id, style } => {
+                    self.backgrounds.insert(id, style.background_color);
                 }
                 MountItem::ViewProps { id, props } => {
                     self.window_drag.insert(id, props.window_drag);
@@ -262,7 +266,11 @@ async fn native_round_trip_preserves_bytes_previews_translations_and_controls() 
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<TestApp>()),
+            app: nsh_engine::App::Rust(nsh_core::element::Root::of::<TestApp>()),
+            cache: nsh_engine::CacheOptions::off(),
+            context: Default::default(),
+            host: Default::default(),
+            picker: None,
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -358,6 +366,7 @@ async fn native_round_trip_preserves_bytes_previews_translations_and_controls() 
     screen.wait(&rx, Duration::from_secs(15), |s| {
         s.labels.values().any(|l| l == "Light ✓")
     });
+    assert!(screen.test_ids.contains_key("menu-check-icon"));
     press("Dark", &screen);
     screen.wait(&rx, Duration::from_secs(15), |s| {
         !s.labels.values().any(|l| l == "Theme")
@@ -599,7 +608,11 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<LayoutApp>()),
+            app: nsh_engine::App::Rust(nsh_core::element::Root::of::<LayoutApp>()),
+            cache: nsh_engine::CacheOptions::off(),
+            context: Default::default(),
+            host: Default::default(),
+            picker: None,
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -780,7 +793,11 @@ async fn update_progress_retry_and_restart_survive_closing_the_starting_surface(
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<UpdateFixtureApp>()),
+            app: nsh_engine::App::Rust(nsh_core::element::Root::of::<UpdateFixtureApp>()),
+            cache: nsh_engine::CacheOptions::off(),
+            context: Default::default(),
+            host: Default::default(),
+            picker: None,
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -900,7 +917,11 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<NearbyFixtureApp>()),
+            app: nsh_engine::App::Rust(nsh_core::element::Root::of::<NearbyFixtureApp>()),
+            cache: nsh_engine::CacheOptions::off(),
+            context: Default::default(),
+            host: Default::default(),
+            picker: None,
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -1069,8 +1090,6 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
 #[component]
 fn MotionFixtureApp() -> impl IntoElement {
     super::appearance::install_for_test();
-    let session = Session::new();
-    session.state.borrow_mut().discovering = true;
     view()
         .child(text(|| {
             if reduce_motion() {
@@ -1079,17 +1098,21 @@ fn MotionFixtureApp() -> impl IntoElement {
                 "Full motion"
             }
         }))
-        .child(super::motion::emblem(session, 64.0))
+        .child(super::motion::emblem(64.0))
         .child(control("Motion button", false, || {}))
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn motion_preferences_stop_pending_discovery_strokes_and_button_timing() {
+async fn central_waiting_logo_animates_and_respects_reduced_motion() {
     let (tx, rx) = crossbeam_channel::unbounded();
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<MotionFixtureApp>()),
+            app: nsh_engine::App::Rust(nsh_core::element::Root::of::<MotionFixtureApp>()),
+            cache: nsh_engine::CacheOptions::off(),
+            context: Default::default(),
+            host: Default::default(),
+            picker: None,
             viewport: Size::new(nsh_core::Points(640.0), nsh_core::Points(520.0)),
             trace: false,
             network: None,
@@ -1120,6 +1143,10 @@ async fn motion_preferences_stop_pending_discovery_strokes_and_button_timing() {
     control.set(engine.control()).ok().unwrap();
     let mut screen = Screen::default();
     screen.wait(&rx, Duration::from_secs(10), |s| s.timed_animations > 0);
+    // Waiting for a transfer still runs two complete stroke cycles without a pause.
+    screen.wait(&rx, Duration::from_millis(1200), |s| {
+        s.timed_animations >= 32
+    });
     engine.control().set_environment(Environment {
         reduce_motion: true,
         ..Environment::default()
@@ -1208,7 +1235,11 @@ async fn composer_progress_accounts_for_each_item_and_zero_length_files() {
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<ProgressFixtureApp>()),
+            app: nsh_engine::App::Rust(nsh_core::element::Root::of::<ProgressFixtureApp>()),
+            cache: nsh_engine::CacheOptions::off(),
+            context: Default::default(),
+            host: Default::default(),
+            picker: None,
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -1290,7 +1321,11 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<LayoutApp>()),
+            app: nsh_engine::App::Rust(nsh_core::element::Root::of::<LayoutApp>()),
+            cache: nsh_engine::CacheOptions::off(),
+            context: Default::default(),
+            host: Default::default(),
+            picker: None,
             viewport: Size::new(nsh_core::Points(402.0), nsh_core::Points(874.0)),
             trace: false,
             network: None,
@@ -1328,6 +1363,32 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
     let mut screen = Screen::default();
     screen.wait(&rx, Duration::from_secs(10), |s| {
         s.test_ids.contains_key("app-menu")
+    });
+    let add_files = screen.test_ids["add-files-button"];
+    let idle = screen.backgrounds[&add_files];
+    engine
+        .control()
+        .dispatch_event(add_files, EventKind::PressDown, EventPayload::None);
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.backgrounds[&add_files] != idle
+    });
+    engine
+        .control()
+        .dispatch_event(add_files, EventKind::PressUp, EventPayload::None);
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.backgrounds[&add_files] == idle
+    });
+    engine
+        .control()
+        .dispatch_event(add_files, EventKind::Press, EventPayload::None);
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.backgrounds[&add_files] != idle && s.test_ids.contains_key("add-files-menu")
+    });
+    engine
+        .control()
+        .dispatch_event(add_files, EventKind::Press, EventPayload::None);
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.backgrounds[&add_files] == idle
     });
     let header = screen.bounds("app-header");
     // Header items are laid out by UIKit; their frames are local to its slots.
@@ -1376,8 +1437,165 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
     screen.wait(&rx, Duration::from_secs(10), |s| {
         s.labels.values().any(|v| v == "Back")
     });
+    let back = screen.bounds("menu-back");
+    let light = *screen
+        .labels
+        .iter()
+        .find(|(_, label)| *label == "Light")
+        .unwrap()
+        .0;
+    let mut id = light;
+    let mut light_y = 0.0;
+    while let Some(parent) = screen.parents.get(&id) {
+        if let Some(frame) = screen.frames.get(&id) {
+            light_y += frame.y;
+        }
+        id = *parent;
+    }
+    assert!(
+        back.y < light_y,
+        "Back must be above the submenu options: {back:?}, option y={light_y}"
+    );
     press(&screen, "Back");
     screen.wait(&rx, Duration::from_secs(10), |s| {
         s.labels.values().any(|v| v == "Language")
+    });
+}
+
+#[component]
+fn ReceivedImageFixtureApp() -> impl IntoElement {
+    let appearance = super::appearance::install_for_test();
+    let session = Session::new();
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("received-photo.png");
+    image::RgbaImage::new(1, 1).save(&path).unwrap();
+    cleanup(move || drop(directory));
+    session.state.borrow_mut().apply(TransferEvent::Started {
+        id: "received-photo".into(),
+        peer: "Phone".into(),
+        sending: false,
+        files: Vec::new(),
+        total: 4,
+    });
+    let complete = session.clone();
+    view()
+        .flex_1()
+        .child(super::shell(session, appearance))
+        .child(control("Finish receiving", false, move || {
+            complete.state.borrow_mut().apply(TransferEvent::Completed {
+                id: "received-photo".into(),
+                paths: vec![path.clone()],
+            });
+            complete.changed();
+        }))
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn received_image_stays_on_home_and_previews_without_opening_history() {
+    let (tx, rx) = crossbeam_channel::unbounded();
+    let control = Arc::new(OnceLock::new());
+    let engine = Engine::start(
+        EngineConfig {
+            viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
+            environment: Environment {
+                os: nsh_core::platform::Os::MacOs,
+                ..Environment::default()
+            },
+            runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(nsh_core::element::Root::of::<
+                ReceivedImageFixtureApp,
+            >()))
+        },
+        || ApproxTextEngine,
+        Sink {
+            tx,
+            control: control.clone(),
+        },
+    )
+    .unwrap();
+    control.set(engine.control()).ok().unwrap();
+    let mut screen = Screen::default();
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.labels.values().any(|label| label == "Finish receiving")
+    });
+    let finish = *screen
+        .labels
+        .iter()
+        .find(|(_, label)| *label == "Finish receiving")
+        .unwrap()
+        .0;
+    engine
+        .control()
+        .dispatch_event(finish, EventKind::Press, EventPayload::None);
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.texts.values().any(|text| text == "received-photo.png")
+    });
+    assert!(!screen.test_ids.contains_key("history-sheet"));
+    assert!(screen.test_ids.contains_key("received-image-thumbnail"));
+    let composer = screen.bounds("composer-area");
+    let image = screen.bounds("received-image-thumbnail");
+    assert!(
+        image.y >= composer.y && image.y + image.height <= composer.y + composer.height + 0.1,
+        "received image must be inside the central content area: {image:?} {composer:?}"
+    );
+    assert!(
+        !screen
+            .texts
+            .values()
+            .any(|text| text == "Drop something here")
+    );
+    engine
+        .control()
+        .resize(Size::new(nsh_core::Points(640.0), nsh_core::Points(520.0)));
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        let area = s.bounds("composer-area");
+        let record = s.bounds("transfer-record");
+        area.width < 640.0 && record.y + record.height <= area.y + area.height
+    });
+    let preview = *screen
+        .labels
+        .iter()
+        .find(|(_, label)| *label == "Preview")
+        .expect("received image has a preview action")
+        .0;
+    engine
+        .control()
+        .dispatch_event(preview, EventKind::Press, EventPayload::None);
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.labels.values().any(|label| label == "Close")
+    });
+    assert!(!screen.test_ids.contains_key("history-sheet"));
+    let close = *screen
+        .labels
+        .iter()
+        .find(|(_, label)| *label == "Close")
+        .unwrap()
+        .0;
+    engine
+        .control()
+        .dispatch_event(close, EventKind::Press, EventPayload::None);
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        !s.labels.values().any(|label| label == "Close")
+    });
+    let dismiss = *screen
+        .labels
+        .iter()
+        .find(|(_, label)| *label == "Dismiss")
+        .unwrap()
+        .0;
+    engine
+        .control()
+        .dispatch_event(dismiss, EventKind::Press, EventPayload::None);
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.texts.values().any(|text| text == "Drop something here")
+            && !s.texts.values().any(|text| text == "received-photo.png")
+    });
+    engine.control().dispatch_event(
+        screen.press_target(screen.test_ids["history-button"]),
+        EventKind::Press,
+        EventPayload::None,
+    );
+    screen.wait(&rx, Duration::from_secs(5), |s| {
+        s.texts.values().any(|text| text == "received-photo.png")
     });
 }

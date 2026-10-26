@@ -2,10 +2,8 @@
 use super::{appearance, appearance::theme, motion, session::Session, utilities};
 use nsh_core::{
     desktop::TitleBarStyle,
-    ui::{
-        desktop::{set_title_bar, title_bar},
-        prelude::*,
-    },
+    element::desktop::{set_title_bar, title_bar},
+    prelude::*,
 };
 
 pub(super) fn install() {
@@ -33,14 +31,14 @@ pub(super) fn bar(session: Session) -> impl IntoElement {
         .flex_shrink_0()
         .bg(move || {
             if appearance::is_omarchy_style() {
-                theme().background()
+                theme().background
             } else {
                 theme().color("group_box.background").unwrap()
             }
         })
         .border_b_1()
         .border_color(appearance::divider)
-        .child(motion::emblem(session.clone(), 24.0))
+        .child(motion::static_emblem(24.0))
         .child(text("Omasend").test_id("app-title").flex_1())
         .child(utilities::menu_button(session))
 }
@@ -53,9 +51,9 @@ pub(super) fn mobile_page(session: Session, content: impl IntoElement) -> impl I
             .title("Omasend")
             .header_large_title(false)
             .header_style_with(|s| {
-                s.bg(move || color(theme().background()))
-                    .text_color(move || color(theme().foreground()))
-                    .tint_color(move || color(theme().foreground()))
+                s.bg(move || color(theme().background))
+                    .text_color(move || color(theme().foreground))
+                    .tint_color(move || color(theme().foreground))
             })
             .header_title(
                 view()
@@ -69,7 +67,7 @@ pub(super) fn mobile_page(session: Session, content: impl IntoElement) -> impl I
                             .w(px(44.0))
                             .items_center()
                             .justify_center()
-                            .child(motion::emblem(session.clone(), 22.0)),
+                            .child(motion::static_emblem(22.0)),
                     )
                     .child(
                         text("Omasend")
@@ -79,7 +77,7 @@ pub(super) fn mobile_page(session: Session, content: impl IntoElement) -> impl I
                             .font_family("Menlo")
                             .text_size(px(17.0))
                             .font_weight(FontWeight::BOLD)
-                            .text_color(move || color(theme().foreground())),
+                            .text_color(move || color(theme().foreground)),
                     )
                     .child(utilities::mobile_menu_trigger(session)),
             )

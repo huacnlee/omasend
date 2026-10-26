@@ -1,7 +1,7 @@
 //! Omarchy palette loading and atomic Rust-component theme changes.
 //! Native inputs explicitly bind the same palette through `editor()`.
 use nsh_base::Theme;
-use nsh_core::{platform::Appearance, ui::prelude::*};
+use nsh_core::{platform::Appearance, prelude::*};
 use std::{
     cell::RefCell,
     path::{Path, PathBuf},
@@ -436,9 +436,9 @@ fn startup() -> &'static Startup {
     STARTUP.get_or_init(Startup::load)
 }
 
-pub(crate) fn root() -> nsh_core::ui::Root {
+pub(crate) fn root() -> nsh_core::element::Root {
     let initial = startup();
-    nsh_core::ui::Root::of::<super::App>()
+    nsh_core::element::Root::of::<super::App>()
         .tokens(initial.theme(initial.mode).into_tokens())
         .appearance(initial.appearance(initial.mode))
 }
@@ -516,7 +516,7 @@ impl Controller {
 pub(super) fn theme() -> Arc<Theme> {
     use_context::<Controller>()
         .map(|controller| controller.palette.get())
-        .unwrap_or_else(|| Arc::new(nsh_base::theme()))
+        .unwrap_or_else(nsh_base::theme)
 }
 /// Only an actual Omarchy installation may consume Omarchy shell preferences.
 pub(super) fn is_omarchy() -> bool {
@@ -532,7 +532,7 @@ pub(super) fn is_omarchy_style() -> bool {
 
 pub(super) fn panel_background() -> AdaptiveColor {
     if is_omarchy_style() {
-        theme().background()
+        theme().background
     } else {
         theme().color("group_box.background").unwrap()
     }
@@ -540,9 +540,9 @@ pub(super) fn panel_background() -> AdaptiveColor {
 
 pub(super) fn divider() -> AdaptiveColor {
     if is_omarchy_style() {
-        theme().foreground().opacity(0.12)
+        theme().foreground.opacity(0.12)
     } else {
-        theme().border()
+        theme().border
     }
 }
 
@@ -563,13 +563,13 @@ pub(super) fn metrics() -> Metrics {
 fn make_theme(light: &Palette, dark: &Palette, font_size: f32) -> Theme {
     let a = |l: u32, d: u32| AdaptiveColor::new(rgb(l), rgb(d));
     let mut theme = Theme::default();
-    theme.set_color("accent.background", a(light.selection, dark.selection));
-    theme.set_color("accent.foreground", a(light.foreground, dark.foreground));
+    theme.set_color("accent", a(light.selection, dark.selection));
+    theme.set_color("accent-foreground", a(light.foreground, dark.foreground));
     theme.set_color("background", a(light.background, dark.background));
     theme.set_color("foreground", a(light.foreground, dark.foreground));
     theme.set_color("border", a(light.border, dark.border));
     theme.set_color("caret", a(light.accent, dark.accent));
-    theme.set_color("danger.background", a(light.danger, dark.danger));
+    theme.set_color("destructive", a(light.danger, dark.danger));
     theme.set_color("danger.active.background", a(light.danger, dark.danger));
     theme.set_color("danger.foreground", a(ink(light.danger), ink(dark.danger)));
     theme.set_color("group_box.background", a(light.surface, dark.surface));
@@ -577,7 +577,7 @@ fn make_theme(light: &Palette, dark: &Palette, font_size: f32) -> Theme {
     theme.set_color("info.background", a(light.accent, dark.accent));
     theme.set_color("info.active.background", a(light.accent, dark.accent));
     theme.set_color("info.foreground", a(light.on_accent, dark.on_accent));
-    theme.set_color("input.border", a(light.border, dark.border));
+    theme.set_color("input", a(light.border, dark.border));
     theme.set_color("link", a(light.accent, dark.accent));
     theme.set_color("link.active", a(light.bright, dark.bright));
     theme.set_color("list.background", a(light.background, dark.background));
@@ -585,22 +585,22 @@ fn make_theme(light: &Palette, dark: &Palette, font_size: f32) -> Theme {
     theme.set_color("list.active.border", a(light.accent, dark.accent));
     theme.set_color("list.even.background", a(light.surface, dark.surface));
     theme.set_color("list.head.background", a(light.surface, dark.surface));
-    theme.set_color("muted.background", a(light.inset, dark.inset));
-    theme.set_color("muted.foreground", a(light.secondary, dark.secondary));
+    theme.set_color("muted", a(light.inset, dark.inset));
+    theme.set_color("muted-foreground", a(light.secondary, dark.secondary));
     theme.set_color("overlay", AdaptiveColor::from(rgb(0)).opacity(0.6));
-    theme.set_color("popover.background", a(light.background, dark.background));
-    theme.set_color("popover.foreground", a(light.foreground, dark.foreground));
-    theme.set_color("primary.background", a(light.accent, dark.accent));
+    theme.set_color("popover", a(light.background, dark.background));
+    theme.set_color("popover-foreground", a(light.foreground, dark.foreground));
+    theme.set_color("primary", a(light.accent, dark.accent));
     theme.set_color("primary.active.background", a(light.accent, dark.accent));
-    theme.set_color("primary.foreground", a(light.on_accent, dark.on_accent));
+    theme.set_color("primary-foreground", a(light.on_accent, dark.on_accent));
     theme.set_color("progress.bar.background", a(light.accent, dark.accent));
     theme.set_color("ring", a(light.foreground, dark.foreground));
-    theme.set_color("secondary.background", a(light.surface, dark.surface));
+    theme.set_color("secondary", a(light.surface, dark.surface));
     theme.set_color(
         "secondary.active.background",
         a(light.selection, dark.selection),
     );
-    theme.set_color("secondary.foreground", a(light.foreground, dark.foreground));
+    theme.set_color("secondary-foreground", a(light.foreground, dark.foreground));
     theme.set_color("selection.background", a(light.selection, dark.selection));
     theme.set_color("skeleton.background", a(light.inset, dark.inset));
     theme.set_color("slider.background", a(light.accent, dark.accent));
