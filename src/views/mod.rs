@@ -18,14 +18,14 @@ mod titlebar;
 mod utilities;
 
 use appearance::theme;
-use nsh_core::{keymap::When, ui::prelude::*};
+use nsh_core::{keymap::When, prelude::*};
 use session::Session;
 
 pub(crate) fn control(
     title: impl IntoReactive<SharedString>,
     disabled: impl IntoReactive<bool>,
     run: impl Fn() + 'static,
-) -> nsh_core::ui::View {
+) -> nsh_core::element::View {
     control_variant(title, disabled, run, true)
 }
 
@@ -33,7 +33,7 @@ fn plain_control(
     title: impl IntoReactive<SharedString>,
     disabled: impl IntoReactive<bool>,
     run: impl Fn() + 'static,
-) -> nsh_core::ui::View {
+) -> nsh_core::element::View {
     control_variant(title, disabled, run, false)
 }
 
@@ -42,13 +42,12 @@ fn control_variant(
     disabled: impl IntoReactive<bool>,
     run: impl Fn() + 'static,
     outlined: bool,
-) -> nsh_core::ui::View {
+) -> nsh_core::element::View {
     let title = title.into_reactive();
     let scale = animated_value(1.0);
     let down = scale;
     let up = scale;
-    let standalone = !appearance::is_omarchy_style();
-    let button = view()
+    view()
         .flex_row()
         .items_center()
         .justify_center()
@@ -57,25 +56,17 @@ fn control_variant(
         .py(move || px(appearance::metrics().space(6.0)))
         .border_1()
         .border_color(move || {
-            if outlined && standalone {
-                theme().border()
-            } else if outlined {
-                theme().foreground().opacity(0.4)
+            if outlined {
+                theme().foreground.opacity(0.4)
             } else {
                 AdaptiveColor::TRANSPARENT
             }
         })
-        .rounded(px(if standalone { 4.0 } else { 0.0 }))
-        .bg(move || {
-            if outlined && standalone {
-                theme().color("secondary.background").unwrap()
-            } else {
-                AdaptiveColor::TRANSPARENT
-            }
-        })
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
+        .rounded_none()
+        .bg(AdaptiveColor::TRANSPARENT)
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
         .disabled_style(|s| s.opacity(0.45))
         .disabled(disabled)
         .window_drag(false)
@@ -95,20 +86,15 @@ fn control_variant(
             );
         })
         .on_press(move |_: &()| run())
-        .child(text(title).text_size(move || px(theme().font_size().0)));
-    if standalone && outlined {
-        button.shadow_sm().inset_shadow_sm()
-    } else {
-        button
-    }
+        .child(text(title).text_size(move || px(theme().number("font.size").unwrap())))
 }
 
-pub(super) fn editor() -> nsh_core::ui::Input {
-    input()
-        .text_color(move || theme().foreground())
-        .text_size(move || px(theme().font_size().0))
+pub(super) fn editor() -> nsh_base::Input {
+    nsh_base::input()
+        .text_color(move || theme().foreground)
+        .text_size(move || px(theme().number("font.size").unwrap()))
         .font_family(move || SharedString::from(appearance::metrics().family))
-        .placeholder_color(move || color(theme().muted_foreground()))
+        .placeholder_color(move || color(theme().muted_foreground))
         .selection_color(move || color(theme().color("caret").unwrap()))
 }
 
@@ -192,12 +178,13 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
     let language = session.language;
     let header_session = session.clone();
     let mobile_menu = session.clone();
-    let content = nsh_base::safe_area_view()
+    let content = view()
+        .p_safe_area()
         .flex_1()
         .font_family(move || SharedString::from(appearance::metrics().family))
-        .text_size(move || px(theme().font_size().0))
-        .bg(move || theme().background())
-        .text_color(move || theme().foreground())
+        .text_size(move || px(theme().number("font.size").unwrap()))
+        .bg(move || theme().background)
+        .text_color(move || theme().foreground)
         .child(when(is_desktop, {
             let session = session.clone();
             move || titlebar::bar(session.clone())
@@ -229,7 +216,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                                         language.get().text("composer.choose_device")
                                     })
                             })
-                            .text_color(move || theme().muted_foreground())
+                            .text_color(move || theme().muted_foreground)
                             .flex_1(),
                         )
                         .child(text(move || {
@@ -265,8 +252,8 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                                 move || sender.send(),
                             )
                             .when(!is_desktop(), |v| {
-                                v.border_color(move || theme().primary())
-                                    .text_color(move || theme().primary())
+                                v.border_color(move || theme().primary)
+                                    .text_color(move || theme().primary)
                             }),
                         ),
                 )
@@ -284,7 +271,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                 .border_t_1()
                 .border_color(appearance::divider)
                 .text_size(px(11.0))
-                .text_color(move || theme().muted_foreground())
+                .text_color(move || theme().muted_foreground)
                 .child(
                     text(move || {
                         identity.get().map(|d| d.alias).unwrap_or_else(|| {
@@ -300,7 +287,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                             .map(|key| language.get().text(key))
                             .unwrap_or_default()
                     })
-                    .text_color(move || theme().success())
+                    .text_color(move || theme().color("success.background").unwrap())
                     .bind_opacity(&notice_opacity),
                 )
                 .child(services::update_control(session.clone()))

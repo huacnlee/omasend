@@ -4,7 +4,7 @@ use super::{
     control, editor,
     session::Session,
 };
-use nsh_core::ui::prelude::*;
+use nsh_core::prelude::*;
 use omasend::{i18n::Language, updates::UpdateState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -63,10 +63,10 @@ pub(super) fn overlay(session: Session, _appearance: Controller) -> impl IntoEle
                                 .font_family(move || {
                                     SharedString::from(appearance::metrics().family)
                                 })
-                                .text_size(move || px(theme().font_size().0))
+                                .text_size(move || px(theme().number("font.size").unwrap()))
                                 .bg(appearance::panel_background)
-                                .text_color(move || theme().foreground())
-                                .border_color(move || theme().border())
+                                .text_color(move || theme().foreground)
+                                .border_color(move || theme().border)
                                 .child(
                                     view()
                                         .flex_row()
@@ -145,7 +145,7 @@ fn icon_button(
             canvas(move || {
                 Painter::new()
                     .scale(glyph / 18.0, glyph / 18.0)
-                    .stroke_color(color(theme().foreground()))
+                    .stroke_color(color(theme().foreground))
                     .line_width(1.5)
                     .stroke_svg(path)
             })
@@ -162,16 +162,10 @@ fn icon_button(
         .flex_shrink_0()
         .items_center()
         .justify_center()
-        .rounded(move || {
-            px(if appearance::is_omarchy_style() {
-                0.0
-            } else {
-                4.0
-            })
-        })
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
+        .rounded_none()
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
         .child(content)
 }
 
@@ -220,7 +214,7 @@ pub(super) fn mobile_menu_trigger(session: Session) -> impl IntoElement {
         },
     )
     .selected(move || surface.get() == Some(Surface::Menu))
-    .selected_style(|s| s.bg(move || theme().foreground().opacity(0.08)))
+    .selected_style(|s| s.bg(move || theme().foreground.opacity(0.08)))
 }
 
 fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
@@ -242,7 +236,7 @@ fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
         },
     )
     .selected(move || surface.get() == Some(Surface::Menu))
-    .selected_style(|s| s.bg(move || theme().foreground().opacity(0.08)))
+    .selected_style(|s| s.bg(move || theme().foreground.opacity(0.08)))
 }
 
 pub(super) fn menu_button(session: Session) -> impl IntoElement {
@@ -289,16 +283,10 @@ pub(super) fn menu_button(session: Session) -> impl IntoElement {
                 .border_1()
                 .border_color(appearance::divider)
                 .bg(appearance::panel_background)
-                .text_color(move || theme().foreground())
+                .text_color(move || theme().foreground)
                 .font_family(move || SharedString::from(appearance::metrics().family))
-                .text_size(move || px(theme().font_size().0))
-                .rounded(move || {
-                    px(if appearance::is_omarchy_style() {
-                        0.0
-                    } else {
-                        4.0
-                    })
-                })
+                .text_size(move || px(theme().number("font.size").unwrap()))
+                .rounded_none()
         })
         .backdrop_style(|s| s.bg(AdaptiveColor::from(rgb(0)).opacity(0.6)))
         .trigger(trigger)
@@ -317,6 +305,7 @@ pub(super) fn add_files_button(session: Session) -> impl IntoElement {
         .into_element();
     }
     let open = signal(false);
+    let pressed = signal(false);
     nsh_base::menu()
         .open(move || Some(open.get()))
         .on_open_change(move |event: &nsh_base::MenuEvent| {
@@ -330,9 +319,9 @@ pub(super) fn add_files_button(session: Session) -> impl IntoElement {
                 .border_1()
                 .border_color(appearance::divider)
                 .bg(appearance::panel_background)
-                .text_color(move || theme().foreground())
+                .text_color(move || theme().foreground)
                 .font_family(move || SharedString::from(appearance::metrics().family))
-                .text_size(move || px(theme().font_size().0))
+                .text_size(move || px(theme().number("font.size").unwrap()))
         })
         .backdrop_style(|s| s.bg(AdaptiveColor::from(rgb(0)).opacity(0.6)))
         .trigger(
@@ -341,7 +330,18 @@ pub(super) fn add_files_button(session: Session) -> impl IntoElement {
                 move || disabled.input_blocked(),
                 move || open.set(!open.get()),
             )
-            .test_id("add-files-button"),
+            .test_id("add-files-button")
+            .on_press_down(move |_: &()| pressed.set(true))
+            .on_press_up(move |_: &()| pressed.set(false))
+            .bg(move || {
+                theme().foreground.opacity(if pressed.get() {
+                    0.22
+                } else if open.get() {
+                    0.18
+                } else {
+                    0.0
+                })
+            }),
         )
         .child(media_sources(session))
         .into_element()
@@ -382,9 +382,20 @@ fn menu_row(
         .h(move || px(if is_desktop() { 28.0 } else { 44.0 }))
         .px(px(8.0))
         .py(px(4.0))
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
         .child(text(title))
+}
+
+pub(super) fn check_icon() -> impl IntoElement {
+    canvas(move || {
+        Painter::new()
+            .stroke_color(color(theme().foreground))
+            .line_width(1.5)
+            .stroke_svg("M2 6L5 9L11 3")
+    })
+    .size(px(12.0))
 }
 
 fn checked_menu_row(
@@ -404,14 +415,13 @@ fn checked_menu_row(
                 label.get()
             })
         })
-        .child(
-            text(move || if checked.get() { "✓" } else { "" })
-                .flex_1()
-                .text_right(),
-        )
+        .child(view().flex_1().items_end().child(when(
+            move || checked.get(),
+            || view().test_id("menu-check-icon").child(check_icon()),
+        )))
 }
 
-fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::ui::View {
+fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::element::View {
     let title = title.into_reactive();
     view()
         .label(title.clone())
@@ -421,15 +431,17 @@ fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::ui::View
         .h(move || px(if is_desktop() { 28.0 } else { 44.0 }))
         .px(px(8.0))
         .py(px(4.0))
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
         .child(text(title))
         .child(text("›").flex_1().text_right())
 }
 
 fn menu_back(session: Session) -> impl IntoElement {
     view()
-        .text_color(move || color(theme().foreground()))
+        .test_id("menu-back")
+        .text_color(move || color(theme().foreground))
         .h(px(44.0))
         .px(px(8.0))
         .justify_center()
@@ -437,6 +449,10 @@ fn menu_back(session: Session) -> impl IntoElement {
         .child(text(move || {
             format!("‹ {}", session.language.get().text("action.back"))
         }))
+}
+
+fn submenu_contents(content: impl IntoElement) -> impl IntoElement {
+    view().child(content)
 }
 
 fn divider() -> impl IntoElement {
@@ -473,7 +489,7 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
                 text(move || if is_desktop() { "ctrl+v" } else { "" })
                     .flex_1()
                     .text_right()
-                    .text_color(move || theme().muted_foreground()),
+                    .text_color(move || theme().muted_foreground),
             ),
         )
         .child(if is_desktop() {
@@ -489,16 +505,17 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
                 text(move || if is_desktop() { "ctrl+o" } else { "" })
                     .flex_1()
                     .text_right()
-                    .text_color(move || theme().muted_foreground()),
+                    .text_color(move || theme().muted_foreground),
             )
             .into_element()
         } else {
             nsh_base::submenu()
+                .when(!is_desktop(), |v| v.flex_col_reverse())
                 .trigger(submenu_trigger(
                     session.translated("action.add_files_ellipsis"),
                 ))
                 .back(menu_back(session.clone()))
-                .child(media_sources(session.clone()))
+                .child(submenu_contents(media_sources(session.clone())))
                 .into_element()
         })
         .child(when(
@@ -513,9 +530,10 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
         .child(divider())
         .child(
             nsh_base::submenu()
+                .when(!is_desktop(), |v| v.flex_col_reverse())
                 .trigger(submenu_trigger(session.translated("action.language")))
                 .back(menu_back(session.clone()))
-                .child(language_menu(session.clone())),
+                .child(submenu_contents(language_menu(session.clone()))),
         )
         .child(if appearance::is_omarchy() {
             let chooser = appearance.clone();
@@ -525,12 +543,16 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
             .into_element()
         } else {
             nsh_base::submenu()
+                .when(!is_desktop(), |v| v.flex_col_reverse())
                 .trigger(
                     submenu_trigger(session.translated("action.theme"))
                         .test_id("menu-theme-trigger"),
                 )
                 .back(menu_back(session.clone()))
-                .child(theme_menu(session.clone(), appearance.clone()))
+                .child(submenu_contents(theme_menu(
+                    session.clone(),
+                    appearance.clone(),
+                )))
                 .into_element()
         })
         .child(when(is_desktop, divider))
@@ -677,7 +699,7 @@ fn logs(session: Session) -> impl IntoElement {
                     .map(|key| language.get().text(key))
                     .unwrap_or_default()
             })
-            .text_color(move || theme().success()),
+            .text_color(move || theme().color("success.background").unwrap()),
         )
 }
 
@@ -699,7 +721,7 @@ fn about(session: Session) -> impl IntoElement {
         .child(text(session.translated("about.credit")))
         .child(
             text(session.translated("about.native_shell"))
-                .text_color(move || theme().muted_foreground()),
+                .text_color(move || theme().muted_foreground),
         )
         .child(
             view()

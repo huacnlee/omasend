@@ -2,7 +2,7 @@
 use super::{session::Session, utilities::Surface};
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use anyhow::Context;
-use nsh_core::ui::prelude::*;
+use nsh_core::prelude::*;
 use omasend::updates::UpdateState;
 use std::time::Duration;
 
@@ -249,7 +249,7 @@ pub(super) fn update_control(session: Session) -> impl IntoElement {
                     move || activate.activate_update(),
                 )
                 .py(px(0.0))
-                .text_color(move || super::appearance::theme().primary())
+                .text_color(move || super::appearance::theme().primary)
             },
         ))
         .child(when(

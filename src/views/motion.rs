@@ -1,8 +1,8 @@
-//! The existing vector emblem, with short native discovery/confirmation strokes.
-use super::{appearance::theme, session::Session};
+//! The central waiting emblem animates continuously; title-bar emblems stay static.
+use super::appearance::theme;
 use nsh_core::{
     canvas::{Path, svg_path},
-    ui::prelude::*,
+    prelude::*,
 };
 use std::{sync::OnceLock, time::Duration};
 
@@ -46,16 +46,21 @@ fn burst(levels: &[AnimatedValue], active: Memo<bool>, epoch: Signal<u64>) {
     }
 }
 
-pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
-    let state = session.clone();
-    let active = computed(move || {
-        state.revision.get();
-        state.state.borrow().discovering
-    });
-    let revision = computed(move || {
-        session.revision.get();
-        session.state.borrow().discovery_revision
-    });
+pub(super) fn static_emblem(size: f32) -> impl IntoElement {
+    canvas(move || {
+        let mut painter = Painter::new()
+            .scale(size / 32.0, size / 32.0)
+            .fill_color(color(theme().color("link").unwrap()));
+        for path in paths() {
+            painter = painter.fill_path(path, nsh_core::canvas::FillRule::NonZero);
+        }
+        painter
+    })
+    .size(px(size))
+}
+
+pub(super) fn emblem(size: f32) -> impl IntoElement {
+    let active = computed(|| !reduce_motion());
     let levels = (0..9).map(|_| animated_value(1.0)).collect::<Vec<_>>();
     let changing = levels.clone();
     let epoch = signal(0_u64);
@@ -73,19 +78,9 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
     effect(move || {
         if active.get() && !reduce_motion() {
             let clock = clock.clone();
-            set_interval(Duration::from_millis(2250), move || {
+            set_interval(Duration::from_millis(440), move || {
                 burst(&clock, active, epoch)
             });
-        }
-    });
-    let confirmed = animated_value(0.0);
-    let confirmation = confirmed;
-    effect(move || {
-        if revision.get() > 0 && !reduce_motion() {
-            confirmation.set(1.0);
-            confirmation.timing(0.0, 420.0, Easing::Linear);
-        } else {
-            confirmation.set(0.0);
         }
     });
     let mut logo = view().relative().size(px(size));
@@ -95,7 +90,7 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
             canvas(move || {
                 Painter::new()
                     .scale(size / 32.0, size / 32.0)
-                    .fill_color(color(theme().link()))
+                    .fill_color(color(theme().color("link").unwrap()))
                     .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
             })
             .absolute()
@@ -103,18 +98,5 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
             .bind_opacity(&level),
         );
     }
-    logo.child(
-        canvas(move || {
-            let mut painter = Painter::new()
-                .scale(size / 32.0, size / 32.0)
-                .fill_color(color(theme().link()));
-            for path in paths() {
-                painter = painter.fill_path(path, nsh_core::canvas::FillRule::NonZero);
-            }
-            painter
-        })
-        .absolute()
-        .size(px(size))
-        .bind_opacity(&confirmed),
-    )
+    logo
 }
