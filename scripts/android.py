@@ -12,10 +12,24 @@ import tomllib
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+ANDROID_TARGETS = {'arm64-v8a': 'aarch64-linux-android', 'x86_64': 'x86_64-linux-android'}
 
 
 def run(*args, **kwargs):
     return subprocess.run([str(arg) for arg in args], cwd=ROOT, check=True, **kwargs)
+
+
+def supported_abis(runtime):
+    available = {name.split('/')[1] for name in runtime.namelist()
+                 if name.startswith('lib/') and name.endswith('/libnsh.so')}
+    missing = ANDROID_TARGETS.keys() - available
+    if missing:
+        raise SystemExit(f'Android runtime is missing supported ABIs: {", ".join(sorted(missing))}')
+    return ANDROID_TARGETS
+
+
+def include_runtime_entry(name):
+    return name.startswith('assets/') or (name.startswith('lib/') and name.split('/')[1] in ANDROID_TARGETS)
 
 
 def main():
@@ -31,7 +45,7 @@ def main():
     sdk = Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Library/Android/sdk')))
     tools = max((sdk / 'build-tools').iterdir(), key=lambda path: tuple(map(int, path.name.split('.'))))
     android_jar = sdk / 'platforms/android-35/android.jar'
-    # NSH builds the Rust app and the ARM64 Android runtime.
+    # NSH builds the Rust app and Android runtime.
     run('nsh', 'package', '--target', 'android', '--app-version', version,
         '--build', version_code, '--icon', 'assets/omasend.png',
         '--keystore', args.keystore, '--key-alias', args.alias)
@@ -41,9 +55,8 @@ def main():
     native_tools = ndk / 'toolchains/llvm/prebuilt' / host / 'bin'
     libraries = {}
     with zipfile.ZipFile(ROOT / '.nsh/out/Omasend.apk') as runtime:
-        abis = [name.split('/')[1] for name in runtime.namelist() if name.startswith('lib/') and name.endswith('/libnsh.so')]
-    for abi in abis:
-        triple = {'arm64-v8a': 'aarch64-linux-android', 'x86_64': 'x86_64-linux-android'}[abi]
+        abis = supported_abis(runtime)
+    for abi, triple in abis.items():
         target = triple.replace('-', '_')
         compiler = native_tools / f'{triple}28-clang'
         build_env = os.environ.copy()
@@ -109,7 +122,7 @@ def main():
         output.write(work / 'classes.dex', 'classes.dex')
         with zipfile.ZipFile(ROOT / '.nsh/out/Omasend.apk') as runtime:
             for entry in runtime.infolist():
-                if entry.filename.startswith(('lib/', 'assets/')):
+                if include_runtime_entry(entry.filename):
                     output.writestr(entry.filename, libraries[entry.filename].read_bytes() if entry.filename in libraries else runtime.read(entry), compress_type=zipfile.ZIP_STORED if entry.filename.endswith('.so') else zipfile.ZIP_DEFLATED)
     dist = ROOT / 'dist'
     dist.mkdir(exist_ok=True)

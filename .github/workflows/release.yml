@@ -204,6 +204,9 @@ jobs:
         run: |
           cargo build --locked --release -p nsh-cli
           echo "$PWD/target/release" >> "$GITHUB_PATH"
+      - name: Test Android packaging
+        if: matrix.platform == 'android'
+        run: python scripts/test-android.py
       - name: Package unsigned iOS IPA
         if: matrix.platform == 'ios'
         run: python scripts/ios.py
