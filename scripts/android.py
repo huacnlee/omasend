@@ -46,8 +46,10 @@ def main():
     tools = max((sdk / 'build-tools').iterdir(), key=lambda path: tuple(map(int, path.name.split('.'))))
     android_jar = sdk / 'platforms/android-35/android.jar'
     # NSH builds the Rust app and Android runtime.
+    # NSH packages only phones' ABIs unless told; keep the emulator's x86_64.
     run('nsh', 'package', '--target', 'android', '--app-version', version,
         '--build', version_code, '--icon', 'assets/omasend.png',
+        '--abi', ','.join(ANDROID_TARGETS),
         '--keystore', args.keystore, '--key-alias', args.alias)
     # Relink only the runner with 16 KB ELF segments for newer Android devices.
     ndk = Path(os.environ['ANDROID_NDK_HOME'])
