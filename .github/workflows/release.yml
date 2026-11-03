@@ -167,7 +167,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: longbridge/nsh
-          ref: v0.3.0
+          ref: 545df5add9ee2ab7fa2f3fa69f4e4119eec3fdab
           path: .nsh/toolchain
           persist-credentials: false
       - uses: actions/setup-python@v5

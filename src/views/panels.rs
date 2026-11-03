@@ -418,7 +418,10 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                         .items_center()
                         .justify_center()
                         .gap_3()
-                        .child(super::motion::emblem(64.0))
+                        .child(super::motion::emblem(64.0, {
+                            let surface = session.surface;
+                            move || surface.get().is_some()
+                        }))
                         .child(text(session.translated(if is_desktop() {
                             "composer.drop_hint"
                         } else {
@@ -1198,7 +1201,7 @@ fn received_actions(
                                     })
                                 })
                                 .flex_shrink_0()
-                                .resize_mode(nsh_core::ResizeMode::Contain)
+                                .object_fit(nsh_core::ResizeMode::Contain)
                         }
                     }))
                     .child(
@@ -1384,7 +1387,7 @@ fn thumbnail(session: Session, id: String) -> impl IntoElement {
                 .unwrap_or_else(|_| path.to_string_lossy().into_owned());
             image(uri)
                 .size(px(48.0))
-                .resize_mode(nsh_core::ResizeMode::Contain)
+                .object_fit(nsh_core::ResizeMode::Contain)
         },
     )
 }

@@ -208,6 +208,14 @@ impl Session {
                     this.identity.set(Some(node.device.clone()));
                     this.handle.set(Some(node.handle.clone()));
                     while let Ok(event) = node.events.recv().await {
+                        // Discovery reports its activity on every 3s pass; an
+                        // unchanged flag must not rerun everything reading the
+                        // revision.
+                        if let TransferEvent::DiscoveryActive(active) = event
+                            && this.state.borrow().discovering == active
+                        {
+                            continue;
+                        }
                         if matches!(
                             event,
                             TransferEvent::DeviceFound(_)

@@ -275,6 +275,8 @@ async fn native_round_trip_preserves_bytes_previews_translations_and_controls() 
             trace: false,
             network: None,
             websocket: None,
+            refuse_connections: None,
+            speech: None,
             filesystem: None,
             data_dir: None,
             storage: None,
@@ -617,6 +619,8 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
             trace: false,
             network: None,
             websocket: None,
+            refuse_connections: None,
+            speech: None,
             filesystem: None,
             data_dir: None,
             storage: None,
@@ -802,6 +806,8 @@ async fn update_progress_retry_and_restart_survive_closing_the_starting_surface(
             trace: false,
             network: None,
             websocket: None,
+            refuse_connections: None,
+            speech: None,
             filesystem: None,
             data_dir: None,
             storage: None,
@@ -926,6 +932,8 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
             trace: false,
             network: None,
             websocket: None,
+            refuse_connections: None,
+            speech: None,
             filesystem: None,
             data_dir: None,
             storage: None,
@@ -1045,6 +1053,10 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
     screen.wait(&rx, Duration::from_secs(10), |s| {
         s.labels.values().any(|l| l == "Close")
     });
+    assert!(
+        screen.texts.values().any(|t| t == "About Omasend"),
+        "the About dialog title must not carry the menu item's ellipsis"
+    );
     press("Close", &screen);
     screen.wait(&rx, Duration::from_secs(10), |s| {
         !s.labels.values().any(|l| l == "Close")
@@ -1080,6 +1092,10 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
         "submenu must align with its trigger row: {submenu:?} {trigger:?}"
     );
     assert!(submenu.x >= 0.0 && submenu.x + submenu.width <= 640.1);
+    assert!(
+        submenu.width >= 160.0,
+        "submenu must leave room between labels and check marks: {submenu:?}"
+    );
     press("Dark", &screen);
     screen.wait(&rx, Duration::from_secs(10), |s| {
         !s.labels.values().any(|l| l == "Theme")
@@ -1098,7 +1114,7 @@ fn MotionFixtureApp() -> impl IntoElement {
                 "Full motion"
             }
         }))
-        .child(super::motion::emblem(64.0))
+        .child(super::motion::emblem(64.0, || false))
         .child(control("Motion button", false, || {}))
 }
 
@@ -1117,6 +1133,8 @@ async fn central_waiting_logo_animates_and_respects_reduced_motion() {
             trace: false,
             network: None,
             websocket: None,
+            refuse_connections: None,
+            speech: None,
             filesystem: None,
             data_dir: None,
             storage: None,
@@ -1244,6 +1262,8 @@ async fn composer_progress_accounts_for_each_item_and_zero_length_files() {
             trace: false,
             network: None,
             websocket: None,
+            refuse_connections: None,
+            speech: None,
             filesystem: None,
             data_dir: None,
             storage: None,
@@ -1330,6 +1350,8 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
             trace: false,
             network: None,
             websocket: None,
+            refuse_connections: None,
+            speech: None,
             filesystem: None,
             data_dir: None,
             storage: None,
