@@ -375,6 +375,9 @@ dialog.received_text:
   en: "Received text"
   zh-CN: "收到的文本"
 
+about.title:
+  en: "About Omasend"
+  zh-CN: "关于 Omasend"
 about.protocol:
   en: "Native client for the LocalSend protocol %{name}"
   zh-CN: "LocalSend 协议 %{name} 的原生客户端"

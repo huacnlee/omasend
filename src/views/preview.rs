@@ -40,10 +40,10 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                         .gap_2()
                         .child(
                             image(uri)
-                                .resize_mode(nsh_core::ResizeMode::Contain)
+                                .object_fit(nsh_core::ResizeMode::Contain)
                                 .flex_1()
                                 .bind_opacity(&loaded)
-                                .on_load(move |_: &nsh_core::Size<nsh_core::Points>| {
+                                .on_load(move |_: &nsh_core::Size<DevicePixels>| {
                                     fade.timing(
                                         1.0,
                                         if reduce_motion() { 0.0 } else { 140.0 },

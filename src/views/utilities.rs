@@ -18,7 +18,7 @@ impl Surface {
         match self {
             Self::Menu => "action.menu",
             Self::Logs => "logs.title",
-            Self::About => "action.about",
+            Self::About => "about.title",
         }
     }
 }
@@ -217,23 +217,15 @@ pub(super) fn mobile_menu_trigger(session: Session) -> impl IntoElement {
     .selected_style(|s| s.bg(move || theme().foreground.opacity(0.08)))
 }
 
+/// The menu opens and closes itself from its trigger's presses (its
+/// `on_open_change` guards when it may), so the button only shows it.
 fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
     let surface = session.surface;
     icon_button(
         session.translated("action.menu"),
         ToolbarIcon::Menu,
         Some("app-menu"),
-        move || {
-            if surface.get() == Some(Surface::Menu) {
-                surface.set(None);
-            } else if surface.get().is_none()
-                && session.state.borrow().incoming.is_none()
-                && session.preview.get().is_none()
-                && !session.history_visible.get()
-            {
-                surface.set(Some(Surface::Menu));
-            }
-        },
+        || {},
     )
     .selected(move || surface.get() == Some(Surface::Menu))
     .selected_style(|s| s.bg(move || theme().foreground.opacity(0.08)))
@@ -415,7 +407,8 @@ fn checked_menu_row(
                 label.get()
             })
         })
-        .child(view().flex_1().items_end().child(when(
+        .child(view().flex_1())
+        .child(view().size(px(12.0)).ml(px(12.0)).child(when(
             move || checked.get(),
             || view().test_id("menu-check-icon").child(check_icon()),
         )))
@@ -449,6 +442,13 @@ fn menu_back(session: Session) -> impl IntoElement {
         .child(text(move || {
             format!("‹ {}", session.language.get().text("action.back"))
         }))
+}
+
+/// Desktop submenus share a width, so a check mark keeps clear of its label.
+fn submenu_popup() -> nsh_core::element::View {
+    view()
+        .test_id("app-submenu-popup")
+        .when(is_desktop(), |v| v.min_w(px(160.0)))
 }
 
 fn submenu_contents(content: impl IntoElement) -> impl IntoElement {
@@ -606,7 +606,7 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
 }
 
 fn theme_menu(session: Session, appearance: Controller) -> impl IntoElement {
-    let mut modes = view().test_id("app-submenu-popup");
+    let mut modes = submenu_popup();
     for mode in [Mode::System, Mode::Light, Mode::Dark] {
         let chooser = appearance.clone();
         let selected = appearance.mode;
@@ -635,7 +635,7 @@ fn theme_menu(session: Session, appearance: Controller) -> impl IntoElement {
 }
 
 fn language_menu(session: Session) -> impl IntoElement {
-    let mut menu = view().test_id("app-submenu-popup");
+    let mut menu = submenu_popup();
     for (title, language) in [("English", Language::En), ("简体中文", Language::ZhCn)] {
         let chooser = session.clone();
         let selected = session.language;

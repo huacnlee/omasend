@@ -1,4 +1,4 @@
-//! The central waiting emblem animates continuously; title-bar emblems stay static.
+//! The central waiting emblem animates while visible; title-bar emblems stay static.
 use super::appearance::theme;
 use nsh_core::{
     canvas::{Path, svg_path},
@@ -59,25 +59,25 @@ pub(super) fn static_emblem(size: f32) -> impl IntoElement {
     .size(px(size))
 }
 
-pub(super) fn emblem(size: f32) -> impl IntoElement {
-    let active = computed(|| !reduce_motion());
+/// Animates only while someone can see it: the window is in front, no
+/// overlay covers it (`paused`), and the system allows motion. Pausing
+/// reruns the effect, which disposes the interval and pending bursts.
+pub(super) fn emblem(size: f32, paused: impl Fn() -> bool + 'static) -> impl IntoElement {
+    let active = computed(move || {
+        !paused() && !reduce_motion() && lifecycle() == nsh_core::platform::Lifecycle::Active
+    });
     let levels = (0..9).map(|_| animated_value(1.0)).collect::<Vec<_>>();
     let changing = levels.clone();
     let epoch = signal(0_u64);
     effect(move || {
-        let running = active.get() && !reduce_motion();
+        let running = active.get();
         epoch.update(|value| *value += 1);
         for (index, level) in changing.iter().enumerate() {
             level.set(if running && index != 8 { 0.6 } else { 1.0 });
         }
         if running {
             burst(&changing, active, epoch);
-        }
-    });
-    let clock = levels.clone();
-    effect(move || {
-        if active.get() && !reduce_motion() {
-            let clock = clock.clone();
+            let clock = changing.clone();
             set_interval(Duration::from_millis(440), move || {
                 burst(&clock, active, epoch)
             });
