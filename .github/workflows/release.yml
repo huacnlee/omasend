@@ -161,6 +161,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     steps:
+      # The Android build (two ABIs, plus the nsh toolchain) outgrows the
+      # Ubuntu runner's free disk; drop preinstalled toolchains it never uses.
+      - name: Free disk space
+        if: matrix.platform == 'android'
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost /usr/share/swift /usr/local/share/powershell /usr/local/julia*
+          sudo docker image prune --all --force >/dev/null || true
+          df -h /
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
