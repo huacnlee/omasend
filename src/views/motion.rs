@@ -86,16 +86,20 @@ pub(super) fn emblem(size: f32, paused: impl Fn() -> bool + 'static) -> impl Int
     let mut logo = view().relative().size(px(size));
     for (index, path) in paths().iter().cloned().enumerate() {
         let level = levels[index];
+        // Fade a plain wrapper, not the canvas: on macOS an animated value
+        // on a canvas redraws its drawing every frame, and a canvas painted
+        // that often moves the process onto Core Animation's drawing
+        // threads, which holds ~50 MB of graphics memory.
         logo = logo.child(
-            canvas(move || {
-                Painter::new()
-                    .scale(size / 32.0, size / 32.0)
-                    .fill_color(color(theme().color("link").unwrap()))
-                    .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
-            })
-            .absolute()
-            .size(px(size))
-            .bind_opacity(&level),
+            view().absolute().size(px(size)).bind_opacity(&level).child(
+                canvas(move || {
+                    Painter::new()
+                        .scale(size / 32.0, size / 32.0)
+                        .fill_color(color(theme().color("link").unwrap()))
+                        .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
+                })
+                .size(px(size)),
+            ),
         );
     }
     logo
