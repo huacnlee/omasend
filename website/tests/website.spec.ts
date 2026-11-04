@@ -39,7 +39,8 @@ test('related projects close the page with GitHub links and descriptions', async
   await expect(related).toContainText('Hold Super to see a shortcut guide');
   await expect(related).toContainText('A native disk-space explorer');
   await expect(related.getByRole('link', { name: 'Disktree' })).toHaveAttribute('href', 'https://huacnlee.github.io/disktree/');
-  await expect(related.getByRole('link', { name: 'noop' })).toHaveAttribute('href', 'https://huacnlee.github.io/noop/');
+  await expect(related.getByRole('link', { name: 'Noop' })).toHaveAttribute('href', 'https://huacnlee.github.io/noop/');
+  await expect(related.getByRole('link', { name: 'huacnlee/cargo' })).toHaveAttribute('href', 'https://huacnlee.github.io/cargo/');
   await expect(related.getByRole('link', { name: 'Omamail' })).toHaveAttribute(
     'href',
     'https://github.com/huacnlee/omamail',
