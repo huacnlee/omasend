@@ -31,12 +31,15 @@ test('English and Chinese routes keep correct links, language and metadata', asy
   expect(errors).toEqual([]);
 });
 
-test('related Omarchy projects close the page with GitHub links and descriptions', async ({ page }) => {
+test('related projects close the page with GitHub links and descriptions', async ({ page }) => {
   await page.goto('./');
-  const related = page.getByRole('region', { name: 'More Omarchy projects' });
-  await expect(related).toContainText('Read and manage email right from the desktop.');
+  const related = page.getByRole('region', { name: 'More projects' });
+  await expect(related).toContainText('A native email and calendar app');
   await expect(related).toContainText('Monitor your proxy');
   await expect(related).toContainText('Hold Super to see a shortcut guide');
+  await expect(related).toContainText('A native disk-space explorer');
+  await expect(related.getByRole('link', { name: 'Disktree' })).toHaveAttribute('href', 'https://huacnlee.github.io/disktree/');
+  await expect(related.getByRole('link', { name: 'noop' })).toHaveAttribute('href', 'https://huacnlee.github.io/noop/');
   await expect(related.getByRole('link', { name: 'Omamail' })).toHaveAttribute(
     'href',
     'https://github.com/huacnlee/omamail',
