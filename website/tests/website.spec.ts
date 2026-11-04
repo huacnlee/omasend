@@ -220,3 +220,25 @@ test('mobile installation explains APK setup and unsigned IPA signing in both la
     }
   }
 });
+
+test('every page asks for sponsorship with a visible button', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  for (const [route, text, nav, button] of [['./', 'If this helps you, please sponsor me.', 'Sponsor me', 'Sponsor on GitHub'], ['./zh-CN/', '如果这个项目帮到了你，请赞助我。', '赞助作者', '在 GitHub 上赞助']]) {
+    await page.goto(route);
+    await expect(page.locator('.sponsor p')).toHaveText(text);
+    await expect(page.locator('.sponsor .sponsor-button')).toHaveText(button);
+    await expect(page.locator('nav .sponsor-button')).toHaveText(nav);
+    await expect(page.locator('nav .sponsor-button')).toBeVisible();
+    for (const link of await page.locator('.sponsor-button').all()) {
+      await expect(link).toHaveAttribute('href', 'https://github.com/sponsors/huacnlee');
+      await expect(link).toHaveAttribute('target', '_blank');
+    }
+  }
+});
+
+test('the sponsor card follows install and stays on phones', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto('./');
+  await expect(page.locator('#install + .sponsor')).toBeVisible();
+  await expect(page.locator('nav .sponsor-button')).toBeHidden();
+});

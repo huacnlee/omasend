@@ -1,7 +1,7 @@
 export const copy = {
   en: {
     description: 'Omasend is a file-sharing app built for Omarchy. It speaks the LocalSend protocol, so it sends files, screenshots, recordings and text to any LocalSend app on your local network.',
-    skip: 'Skip to content', download: 'Download', source: 'Source', theme: 'Theme', language: 'Language', darkMode: 'Dark mode', nav: 'Main navigation',
+    skip: 'Skip to content', sponsor: 'Sponsor me', sponsorText: 'If this helps you, please sponsor me.', sponsorButton: 'Sponsor on GitHub', download: 'Download', source: 'Source', theme: 'Theme', language: 'Language', darkMode: 'Dark mode', nav: 'Main navigation',
     eyebrow: 'Made for Omarchy', title: 'Copy. Paste. Send.',
     intro: 'Omasend brings files, screenshots and text from your Omarchy desktop to your other devices. It speaks the LocalSend protocol, so every LocalSend app is already a device you can reach.',
     get: 'Get Omasend', explore: 'See how it works', note: 'LocalSend protocol · Local network · No account',
@@ -57,7 +57,7 @@ export const copy = {
   },
   'zh-CN': {
     description: 'Omasend 是为 Omarchy 打造的文件分享应用，使用 LocalSend 协议，通过局域网将文件、截图、录屏和文字发送到任意 LocalSend 客户端。',
-    skip: '跳转到内容', download: '下载', source: '源码', theme: '主题', language: '语言', darkMode: '深色模式', nav: '主导航',
+    skip: '跳转到内容', sponsor: '赞助作者', sponsorText: '如果这个项目帮到了你，请赞助我。', sponsorButton: '在 GitHub 上赞助', download: '下载', source: '源码', theme: '主题', language: '语言', darkMode: '深色模式', nav: '主导航',
     eyebrow: '为 Omarchy 而生', title: '复制 粘贴 发送',
     intro: '用 Omasend，把 Omarchy 桌面上的文件、截图和文字送到另一台设备。它使用 LocalSend 协议，所以每一个 LocalSend 客户端都是你可以直接发送的设备。',
     get: '获取 Omasend', explore: '了解使用方式', note: 'LocalSend 协议 · 局域网传输 · 无需账号',

@@ -12,6 +12,8 @@ Windows, Android, and iOS.
 
 [Website](https://huacnlee.github.io/omasend/) · [Download](https://github.com/huacnlee/omasend/releases) · [Installation guide](docs/install.md)
 
+**If this helps you, please [sponsor me](https://github.com/sponsors/huacnlee).**
+
 ## Install
 
 Supports Linux x86_64 and ARM64, macOS 14+ (Apple Silicon and Intel), Windows x86_64, Android 9+ (ARM64 and x86_64), and iOS 15+.
