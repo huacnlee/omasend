@@ -85,7 +85,7 @@ pub struct Handle {
 
 impl Handle {
     /// Wait until the actor has stopped discovery, its server and transfers.
-    #[cfg(feature = "desktop")]
+    #[cfg(feature = "ui")]
     pub(crate) async fn stop(&self) {
         let _ = self.commands.send(Command::Stop);
         // Actor::run owns the receiver until after its shutdown sequence.

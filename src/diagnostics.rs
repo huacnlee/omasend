@@ -60,7 +60,9 @@ impl Write for EventWriter {
 impl Drop for EventWriter {
     fn drop(&mut self) {
         if !self.0.is_empty() {
-            let _ = std::io::stderr().write_all(&self.0);
+            if !crate::terminal_binary() {
+                let _ = std::io::stderr().write_all(&self.0);
+            }
             append(&String::from_utf8_lossy(&self.0));
         }
     }

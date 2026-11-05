@@ -19,14 +19,22 @@ TARGETS = {
 }
 
 
-def package(root, binary, output, version, target):
+def package(root, binary, output, version, target, variant="desktop"):
     platform = TARGETS[target]
     output.mkdir(parents=True, exist_ok=True)
     extension = "zip" if platform == "windows" else "tar.gz"
-    archive = output / f"omasend-{version}-{target}.{extension}"
+    name = "omasend-tui" if variant == "tui" else "omasend"
+    archive = output / f"{name}-{version}-{target}.{extension}"
     with tempfile.TemporaryDirectory(prefix="omasend-package-") as temporary:
         stage = Path(temporary)
-        if platform == "macos":
+        if variant == "tui":
+            executable = stage / (name + (".exe" if platform == "windows" else ""))
+            shutil.copy2(binary, executable)
+            executable.chmod(0o755)
+            if platform == "macos":
+                subprocess.run(["codesign", "--force", "--sign", "-", str(executable)], check=True)
+                subprocess.run(["codesign", "--verify", "--strict", str(executable)], check=True)
+        elif platform == "macos":
             app = stage / "OmaSend.app"
             contents = app / "Contents"
             (contents / "MacOS").mkdir(parents=True)
@@ -105,6 +113,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", required=True, choices=TARGETS)
     parser.add_argument("--version", required=True)
+    parser.add_argument("--variant", choices=("desktop", "tui"), default="desktop")
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("dist"))
     args = parser.parse_args()
@@ -113,4 +122,4 @@ if __name__ == "__main__":
     import re
     if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", args.version):
         parser.error("version must be a SemVer release version without a leading v")
-    package(Path(__file__).resolve().parent.parent, args.binary.resolve(), args.output.resolve(), args.version, args.target)
+    package(Path(__file__).resolve().parent.parent, args.binary.resolve(), args.output.resolve(), args.version, args.target, args.variant)

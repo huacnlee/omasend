@@ -10,11 +10,17 @@ exclude = ["vendor/localsend"]
 
 [features]
 default = ["desktop"]
-desktop = ["dep:nsh-core", "dep:nsh-base", "dep:nsh-platform-macos", "dep:nsh-platform-ios", "dep:jni", "dep:nsh-platform-linux", "dep:nsh-platform-windows", "dep:rfd", "dep:arboard", "dep:image", "dep:open", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:toml"]
+ui = ["dep:nsh-core", "dep:nsh-base", "dep:rfd", "dep:arboard", "dep:image", "dep:open", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:toml"]
+desktop = ["ui", "dep:nsh-platform-macos", "dep:nsh-platform-ios", "dep:jni", "dep:nsh-platform-linux", "dep:nsh-platform-windows"]
+tui = ["ui", "dep:nsh-platform-tui", "dep:ratatui-core", "dep:ratatui-crossterm", "dep:crossterm"]
 mobile = ["desktop"]
 ui-tests = ["desktop"]
 
 [dependencies]
+nsh-platform-tui = { git = "https://github.com/longbridge/nsh", rev = "88987268529fee91c2787608c0b985c5b8cd52cd", default-features = false, features = ["run-app"], optional = true }
+ratatui-core = { version = "0.1.2", optional = true }
+ratatui-crossterm = { version = "0.1.2", optional = true }
+crossterm = { version = "0.29", optional = true }
 anyhow = "1"
 async-channel = "2"
 bytes = "1"
@@ -70,6 +76,11 @@ crossbeam-channel = "0.5"
 name = "omasend"
 path = "src/main.rs"
 required-features = ["desktop"]
+
+[[bin]]
+name = "omasend-tui"
+path = "src/tui.rs"
+required-features = ["tui"]
 
 [profile.dev]
 debug = "limited"

@@ -171,7 +171,19 @@ Build the standalone release executable with:
 cargo build --release --locked
 ```
 
-Linux builds require a C/C++ compiler, pkg-config, GTK 4.14 or later, OpenSSL,
+The releases also include `omasend-tui` archives for macOS, Linux, and Windows.
+Extract the archive and run `./omasend-tui` (`omasend-tui.exe` on Windows).
+Build the standalone terminal version with:
+
+```sh
+cargo build --release --locked --no-default-features --features tui --bin omasend-tui
+```
+
+The terminal build uses NSH's Rust terminal backend and does not require GTK or
+a graphical session. File dialogs and system clipboard access use the host's
+available desktop services.
+
+Linux desktop builds require a C/C++ compiler, pkg-config, GTK 4.14 or later, OpenSSL,
 and XCB development files. The native file picker uses xdg-desktop-portal.
 Install `wl-clipboard` for clipboard support on Wayland.
 

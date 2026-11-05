@@ -11,6 +11,7 @@ import zipfile
 
 
 def check(archive, version, run):
+    name = "omasend-tui" if archive.name.startswith("omasend-tui-") else "omasend"
     expected = archive.with_name(archive.name + ".sha256").read_text().split()
     with archive.open("rb") as stream:
         actual = hashlib.file_digest(stream, "sha256").hexdigest()
@@ -21,11 +22,15 @@ def check(archive, version, run):
         if archive.suffix == ".zip":
             with zipfile.ZipFile(archive) as bundle:
                 bundle.extractall(root)
-            executable = root / "omasend.exe"
+            executable = root / f"{name}.exe"
         else:
             with tarfile.open(archive) as bundle:
                 bundle.extractall(root, filter="data")
-            if "apple-darwin" in archive.name:
+            if name == "omasend-tui":
+                executable = root / name
+                if "apple-darwin" in archive.name:
+                    subprocess.run(["codesign", "--verify", "--strict", str(executable)], check=True)
+            elif "apple-darwin" in archive.name:
                 app = root / "OmaSend.app"
                 executable = app / "Contents/MacOS/omasend"
                 with (app / "Contents/Info.plist").open("rb") as stream:
@@ -47,7 +52,7 @@ def check(archive, version, run):
         if run:
             result = subprocess.run([str(executable), "--version"], check=True,
                                     text=True, capture_output=True, timeout=30)
-            if result.stdout.strip() != f"omasend {version}":
+            if result.stdout.strip() != f"{name} {version}":
                 raise SystemExit(f"Unexpected packaged version: {result.stdout!r}")
     print(f"Verified {archive.name}" + (" (native executable ran)" if run else " (cross-compiled archive)"))
 

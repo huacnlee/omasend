@@ -41,6 +41,18 @@ jobs:
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked --features ui-tests --lib
       - run: cargo build --locked
+      - name: Check standalone TUI
+        run: cargo clippy --locked --no-default-features --features tui --bin omasend-tui -- -D warnings
+      - name: Test TUI update policy
+        run: cargo test --locked --no-default-features --features tui --lib updates::install
+      - name: Build standalone TUI
+        run: cargo build --locked --no-default-features --features tui --bin omasend-tui
+      - name: Test TUI startup and terminal restoration
+        if: runner.os == 'Linux'
+        run: python3 scripts/test-tui.py target/debug/omasend-tui
+      - name: Verify TUI version
+        shell: bash
+        run: ./target/debug/omasend-tui${{ runner.os == 'Windows' && '.exe' || '' }} --version
 
   website:
     name: Website build
@@ -106,6 +118,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ci-tests
+      - name: TUI release archive tests
+        run: python scripts/test-tui-release.py
       - name: Unix installer tests
         run: python scripts/test-install.py
       - name: Arch package recipe tests

@@ -84,6 +84,9 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all --check
 
+      - name: Test TUI packaging
+        run: python scripts/test-tui-release.py
+
       - name: Test Unix installer
         if: runner.os != 'Windows'
         run: python scripts/test-install.py
@@ -140,6 +143,25 @@ jobs:
           python packaging/check-release.py \
             "dist/omasend-$RELEASE_VERSION-$RELEASE_TARGET.$extension" \
             --version "$RELEASE_VERSION" "${options[@]}"
+
+      - name: Build TUI release
+        run: cargo build --locked --release --no-default-features --features tui --bin omasend-tui --target ${{ matrix.target }}
+
+      - name: Test standalone TUI
+        if: runner.os == 'Linux'
+        run: python3 scripts/test-tui.py target/${{ matrix.target }}/release/omasend-tui
+
+      - name: Package TUI release
+        run: |
+          python packaging/build-release.py --variant tui --target ${{ matrix.target }} \
+            --version ${{ steps.version.outputs.version }} \
+            --binary target/${{ matrix.target }}/release/omasend-tui${{ runner.os == 'Windows' && '.exe' || '' }} --output dist
+
+      - name: Verify packaged TUI executable
+        run: |
+          python packaging/check-release.py \
+            dist/omasend-tui-${{ steps.version.outputs.version }}-${{ matrix.target }}.${{ runner.os == 'Windows' && 'zip' || 'tar.gz' }} \
+            --version ${{ steps.version.outputs.version }} ${{ matrix.target == 'x86_64-apple-darwin' && '--no-run' || '' }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -261,7 +283,7 @@ jobs:
         run: |
           cd dist
           cat *.sha256 | sort -k2 > SHA256SUMS
-          test "$(wc -l < SHA256SUMS)" -eq 7
+          test "$(wc -l < SHA256SUMS)" -eq 12
           sha256sum --check SHA256SUMS
           rm -- *.sha256
 

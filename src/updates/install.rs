@@ -3,6 +3,14 @@ use anyhow::{Context, Result, ensure};
 use self_update::backends::github::{Update, UpdateBuilder};
 use std::{path::Path, time::Duration};
 
+fn binary_name() -> &'static str {
+    if crate::terminal_binary() {
+        "omasend-tui"
+    } else {
+        "omasend"
+    }
+}
+
 pub fn builder(version: &str) -> Result<UpdateBuilder> {
     let parsed = semver::Version::parse(version.strip_prefix('v').unwrap_or(version))?;
     ensure!(parsed.pre.is_empty(), "Only stable updates are supported");
@@ -11,12 +19,12 @@ pub fn builder(version: &str) -> Result<UpdateBuilder> {
         "Update must be newer than this application"
     );
     let target = self_update::get_target();
-    let asset_name = release_asset_name(&parsed, target)?;
+    let asset_name = release_asset_name(&parsed, target, binary_name())?;
     let mut builder = Update::configure();
     builder
         .repo_owner("huacnlee")
         .repo_name("omasend")
-        .bin_name("omasend")
+        .bin_name(binary_name())
         .current_version(env!("CARGO_PKG_VERSION"))
         .release_tag(format!("v{parsed}"))
         .target(target)
@@ -35,7 +43,7 @@ pub fn builder(version: &str) -> Result<UpdateBuilder> {
     Ok(builder)
 }
 
-fn release_asset_name(version: &semver::Version, target: &str) -> Result<String> {
+fn release_asset_name(version: &semver::Version, target: &str, binary: &str) -> Result<String> {
     ensure!(
         matches!(
             target,
@@ -52,7 +60,7 @@ fn release_asset_name(version: &semver::Version, target: &str) -> Result<String>
     } else {
         "tar.gz"
     };
-    Ok(format!("omasend-{version}-{target}.{extension}"))
+    Ok(format!("{binary}-{version}-{target}.{extension}"))
 }
 
 pub fn install(
@@ -62,7 +70,7 @@ pub fn install(
     let mut builder = builder(version)?;
     builder.progress_callback(progress);
     #[cfg(target_os = "macos")]
-    {
+    if !crate::terminal_binary() {
         // Replacing just Contents/MacOS/omasend would invalidate the signed bundle.
         let executable = std::env::current_exe()?;
         let app = executable
@@ -150,10 +158,15 @@ mod tests {
                 "omasend-9.0.0-x86_64-pc-windows-msvc.zip",
             ),
         ] {
-            assert_eq!(release_asset_name(&version, target).unwrap(), expected);
+            for binary in ["omasend", "omasend-tui"] {
+                assert_eq!(
+                    release_asset_name(&version, target, binary).unwrap(),
+                    expected.replacen("omasend-", &format!("{binary}-"), 1)
+                );
+            }
         }
-        assert!(release_asset_name(&version, "aarch64-pc-windows-msvc").is_err());
-        assert!(release_asset_name(&version, "x86_64-unknown-linux-musl").is_err());
+        assert!(release_asset_name(&version, "aarch64-pc-windows-msvc", "omasend-tui").is_err());
+        assert!(release_asset_name(&version, "x86_64-unknown-linux-musl", "omasend-tui").is_err());
     }
 
     #[test]
