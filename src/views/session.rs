@@ -62,8 +62,8 @@ impl Session {
     pub fn persistent() -> Self {
         let mut session = Self::new();
         session.persist = true;
-        #[cfg(target_os = "macos")]
-        {
+        #[cfg(all(target_os = "macos", feature = "desktop"))]
+        if !crate::terminal_binary() {
             // The standalone runner retains its window on ordinary close.
             session.exit_application = Rc::new(nsh_platform_macos::quit_app);
         }
