@@ -1,7 +1,7 @@
 //! Keyed lists keep focus and animation nodes alive across network progress.
 use super::appearance::{self, theme};
 use super::{control, plain_control, session::Session};
-use nsh_core::ui::prelude::*;
+use nsh_core::prelude::*;
 use omasend::model::TransferStatus;
 
 #[cfg(all(test, feature = "ui-tests"))]
@@ -46,7 +46,7 @@ pub(super) fn error_notice(session: Session) -> impl IntoElement {
                 .gap_3()
                 .border_1()
                 .border_color(appearance::divider)
-                .bg(move || theme().foreground().opacity(0.03))
+                .bg(move || theme().foreground.opacity(0.03))
                 .rounded(move || {
                     px(if appearance::is_omarchy_style() {
                         0.0
@@ -60,8 +60,8 @@ pub(super) fn error_notice(session: Session) -> impl IntoElement {
                         .items_center()
                         .justify_center()
                         .border_1()
-                        .border_color(move || theme().danger().opacity(0.4))
-                        .child(text("!").text_color(move || theme().danger())),
+                        .border_color(move || theme().destructive.opacity(0.4))
+                        .child(text("!").text_color(move || theme().destructive)),
                 )
                 .child(
                     view()
@@ -71,7 +71,7 @@ pub(super) fn error_notice(session: Session) -> impl IntoElement {
                         .child(
                             text(move || message.get().1)
                                 .text_size(move || px(if is_desktop() { 11.0 } else { 13.0 }))
-                                .text_color(move || theme().muted_foreground()),
+                                .text_color(move || theme().muted_foreground),
                         ),
                 )
                 .child(super::utilities::copy_error_button(session.clone()))
@@ -112,7 +112,7 @@ pub(super) fn nearby(session: Session) -> impl IntoElement {
                         count.revision.get();
                         count.state.borrow().devices.len().to_string()
                     })
-                    .text_color(move || theme().muted_foreground()),
+                    .text_color(move || theme().muted_foreground),
                 )
                 .child(view().flex_1())
                 .child(when(
@@ -155,7 +155,7 @@ pub(super) fn nearby(session: Session) -> impl IntoElement {
                 let session = session.clone();
                 move || {
                     text(session.translated("nearby.looking"))
-                        .text_color(move || theme().muted_foreground())
+                        .text_color(move || theme().muted_foreground)
                 }
             },
         ))
@@ -248,18 +248,18 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
         .border_1()
         .border_color(move || {
             if selected.get() {
-                theme().primary()
+                theme().primary
             } else {
-                theme().border()
+                theme().border
             }
         })
         .bg(move || {
             theme()
-                .foreground()
+                .foreground
                 .opacity(if selected.get() { 0.04 } else { 0.0 })
         })
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
         .role(AccessibilityRole::Button)
         .label(move || device.get().map(|d| d.0).unwrap_or_default())
         .on_press(move |_: &()| session.select(id.clone()))
@@ -269,8 +269,8 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
                 .items_center()
                 .justify_center()
                 .border_1()
-                .border_color(move || theme().success().opacity(0.45))
-                .bg(move || theme().success().opacity(0.12))
+                .border_color(move || theme().color("success.background").unwrap().opacity(0.45))
+                .bg(move || theme().color("success.background").unwrap().opacity(0.12))
                 .child(
                     text(move || {
                         device
@@ -278,7 +278,7 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
                             .map(|d| device_initials(&d.0))
                             .unwrap_or_default()
                     })
-                    .text_color(move || theme().success()),
+                    .text_color(move || theme().color("success.background").unwrap()),
                 ),
         )
         .child(
@@ -302,12 +302,12 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
                     })
                     .number_of_lines(1)
                     .text_size(px(11.0))
-                    .text_color(move || theme().muted_foreground()),
+                    .text_color(move || theme().muted_foreground),
                 ),
         )
         .child(
             text(move || if selected.get() { "✓" } else { " " })
-                .text_color(move || theme().primary()),
+                .text_color(move || theme().primary),
         )
 }
 
@@ -333,7 +333,7 @@ fn keycap(label: &'static str) -> impl IntoElement {
         .px(px(4.0))
         .py(px(3.0))
         .border_1()
-        .border_color(move || theme().foreground().opacity(0.25))
+        .border_color(move || theme().foreground.opacity(0.25))
         .child(text(label).text_size(px(11.0)))
 }
 
@@ -387,7 +387,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                 .inset_0()
                 .pointer_events(PointerEvents::None)
                 .border_2()
-                .border_color(move || theme().primary())
+                .border_color(move || theme().primary)
                 .rounded(move || {
                     px(if appearance::is_omarchy_style() {
                         0.0
@@ -418,7 +418,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                         })))
                         .child(
                             text(session.translated("composer.drop_kinds"))
-                                .text_color(move || theme().muted_foreground())
+                                .text_color(move || theme().muted_foreground)
                                 .max_w(move || px((window().width.0 - 64.0).max(0.0)))
                                 .text_center()
                                 .number_of_lines(2),
@@ -526,7 +526,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                                                 12.0
                                             })
                                         })
-                                        .text_color(move || theme().muted_foreground())
+                                        .text_color(move || theme().muted_foreground)
                                 },
                             ))
                             .child(
@@ -706,7 +706,7 @@ fn composer_progress(session: Session, id: String) -> impl IntoElement {
                         }
                     })
                     .text_size(px(11.0))
-                    .text_color(move || theme().muted_foreground()),
+                    .text_color(move || theme().muted_foreground),
                 )
                 .child(when(
                     move || {
@@ -718,7 +718,7 @@ fn composer_progress(session: Session, id: String) -> impl IntoElement {
                         view()
                             .test_id("composer-transfer-progress")
                             .h(px(3.0))
-                            .bg(move || theme().border())
+                            .bg(move || theme().border)
                             .child(
                                 view()
                                     .h(px(3.0))
@@ -763,9 +763,9 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
         .popup_style(|s| {
             s.h(move || px(window().height.0 * 0.55))
                 .bg(appearance::panel_background)
-                .text_color(move || theme().foreground())
+                .text_color(move || theme().foreground)
                 .font_family(move || SharedString::from(appearance::metrics().family))
-                .text_size(move || px(theme().font_size().0))
+                .text_size(move || px(appearance::metrics().font_size))
                 .pb(move || safe_area().bottom)
                 .border_t_1()
                 .border_color(appearance::divider)
@@ -802,7 +802,7 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
                                 move || clear.clear_history(),
                             )
                             .label(session.translated("action.clear_history"))
-                            .text_color(move || theme().danger()),
+                            .text_color(move || theme().destructive),
                         )
                         .child(super::utilities::close_button(
                             session.translated("action.close"),
@@ -823,7 +823,7 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
                                     move || {
                                         text(session.translated("history.empty"))
                                             .py_3()
-                                            .text_color(move || theme().muted_foreground())
+                                            .text_color(move || theme().muted_foreground)
                                     }
                                 },
                             ))
@@ -897,7 +897,7 @@ fn activity_with(session: Session, include_finished: bool) -> impl IntoElement {
                                     .bg(appearance::panel_background)
                                     .border_1()
                                     .p_4()
-                                    .border_color(move || theme().border())
+                                    .border_color(move || theme().border)
                                     .child(text(move || {
                                         labels.revision.get();
                                         labels
@@ -1050,16 +1050,18 @@ fn transfer_row(session: Session, id: String) -> impl IntoElement {
                         .number_of_lines(1)
                         .text_size(px(11.0))
                         .text_color(move || match details.get().map(|d| d.3) {
-                            Some(TransferStatus::Completed) => theme().success(),
-                            Some(TransferStatus::Failed(_)) => theme().danger(),
-                            _ => theme().muted_foreground(),
+                            Some(TransferStatus::Completed) => {
+                                theme().color("success.background").unwrap()
+                            }
+                            Some(TransferStatus::Failed(_)) => theme().destructive,
+                            _ => theme().muted_foreground,
                         }),
                 ),
         )
         .child(
             text(move || details.get().map(|d| d.2).unwrap_or_default())
                 .text_size(px(11.0))
-                .text_color(move || theme().muted_foreground()),
+                .text_color(move || theme().muted_foreground),
         )
         .child(when(
             move || active.get(),
@@ -1072,7 +1074,7 @@ fn transfer_row(session: Session, id: String) -> impl IntoElement {
                         view()
                             .test_id("transfer-progress")
                             .h(px(3.0))
-                            .bg(move || theme().border())
+                            .bg(move || theme().border)
                             .child(
                                 view()
                                     .h(px(3.0))
@@ -1198,7 +1200,7 @@ fn received_actions(session: Session, id: String) -> impl IntoElement {
                             })
                             .number_of_lines(2)
                             .text_size(px(11.0))
-                            .text_color(move || theme().muted_foreground())
+                            .text_color(move || theme().muted_foreground)
                         }
                     }))
                     .child(
@@ -1302,7 +1304,7 @@ fn thumbnail(session: Session, id: String) -> impl IntoElement {
                 .unwrap_or_else(|_| path.to_string_lossy().into_owned());
             image(uri)
                 .size(px(48.0))
-                .resize_mode(nsh_core::ResizeMode::Contain)
+                .object_fit(nsh_core::ResizeMode::Contain)
         },
     )
 }

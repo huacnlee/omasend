@@ -4,7 +4,7 @@ use super::{
     control, editor,
     session::Session,
 };
-use nsh_core::ui::prelude::*;
+use nsh_core::prelude::*;
 use omasend::{i18n::Language, updates::UpdateState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -63,10 +63,10 @@ pub(super) fn overlay(session: Session, _appearance: Controller) -> impl IntoEle
                                 .font_family(move || {
                                     SharedString::from(appearance::metrics().family)
                                 })
-                                .text_size(move || px(theme().font_size().0))
+                                .text_size(move || px(appearance::metrics().font_size))
                                 .bg(appearance::panel_background)
-                                .text_color(move || theme().foreground())
-                                .border_color(move || theme().border())
+                                .text_color(move || theme().foreground)
+                                .border_color(move || theme().border)
                                 .child(
                                     view()
                                         .flex_row()
@@ -145,7 +145,7 @@ fn icon_button(
             canvas(move || {
                 Painter::new()
                     .scale(glyph / 18.0, glyph / 18.0)
-                    .stroke_color(color(theme().foreground()))
+                    .stroke_color(color(theme().foreground))
                     .line_width(1.5)
                     .stroke_svg(path)
             })
@@ -169,9 +169,9 @@ fn icon_button(
                 4.0
             })
         })
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .active(|s| s.bg(move || theme().foreground().opacity(0.22)))
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
         .child(content)
 }
 
@@ -220,29 +220,20 @@ pub(super) fn mobile_menu_trigger(session: Session) -> impl IntoElement {
         },
     )
     .selected(move || surface.get() == Some(Surface::Menu))
-    .selected_style(|s| s.bg(move || theme().foreground().opacity(0.08)))
+    .selected_style(|s| s.bg(move || theme().foreground.opacity(0.08)))
 }
 
 fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
     let surface = session.surface;
+    // Menu owns the trigger's press; on_open_change applies the session guards.
     icon_button(
         session.translated("action.menu"),
         ToolbarIcon::Menu,
         Some("app-menu"),
-        move || {
-            if surface.get() == Some(Surface::Menu) {
-                surface.set(None);
-            } else if surface.get().is_none()
-                && session.state.borrow().incoming.is_none()
-                && session.preview.get().is_none()
-                && !session.history_visible.get()
-            {
-                surface.set(Some(Surface::Menu));
-            }
-        },
+        || {},
     )
     .selected(move || surface.get() == Some(Surface::Menu))
-    .selected_style(|s| s.bg(move || theme().foreground().opacity(0.08)))
+    .selected_style(|s| s.bg(move || theme().foreground.opacity(0.08)))
 }
 
 pub(super) fn menu_button(session: Session) -> impl IntoElement {
@@ -289,9 +280,9 @@ pub(super) fn menu_button(session: Session) -> impl IntoElement {
                 .border_1()
                 .border_color(appearance::divider)
                 .bg(appearance::panel_background)
-                .text_color(move || theme().foreground())
+                .text_color(move || theme().foreground)
                 .font_family(move || SharedString::from(appearance::metrics().family))
-                .text_size(move || px(theme().font_size().0))
+                .text_size(move || px(appearance::metrics().font_size))
                 .rounded(move || {
                     px(if appearance::is_omarchy_style() {
                         0.0
@@ -330,16 +321,16 @@ pub(super) fn add_files_button(session: Session) -> impl IntoElement {
                 .border_1()
                 .border_color(appearance::divider)
                 .bg(appearance::panel_background)
-                .text_color(move || theme().foreground())
+                .text_color(move || theme().foreground)
                 .font_family(move || SharedString::from(appearance::metrics().family))
-                .text_size(move || px(theme().font_size().0))
+                .text_size(move || px(appearance::metrics().font_size))
         })
         .backdrop_style(|s| s.bg(AdaptiveColor::from(rgb(0)).opacity(0.6)))
         .trigger(
             control(
                 session.translated("action.add_files_ellipsis"),
                 move || disabled.input_blocked(),
-                move || open.set(!open.get()),
+                || {},
             )
             .test_id("add-files-button"),
         )
@@ -382,8 +373,8 @@ fn menu_row(
         .h(move || px(if is_desktop() { 28.0 } else { 44.0 }))
         .px(px(8.0))
         .py(px(4.0))
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
         .child(text(title))
 }
 
@@ -411,7 +402,7 @@ fn checked_menu_row(
         )
 }
 
-fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::ui::View {
+fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::element::View {
     let title = title.into_reactive();
     view()
         .label(title.clone())
@@ -421,15 +412,15 @@ fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::ui::View
         .h(move || px(if is_desktop() { 28.0 } else { 44.0 }))
         .px(px(8.0))
         .py(px(4.0))
-        .hover(|s| s.bg(move || theme().foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground().opacity(0.08)))
+        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
         .child(text(title))
         .child(text("›").flex_1().text_right())
 }
 
 fn menu_back(session: Session) -> impl IntoElement {
     view()
-        .text_color(move || color(theme().foreground()))
+        .text_color(move || color(theme().foreground))
         .h(px(44.0))
         .px(px(8.0))
         .justify_center()
@@ -473,7 +464,7 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
                 text(move || if is_desktop() { "ctrl+v" } else { "" })
                     .flex_1()
                     .text_right()
-                    .text_color(move || theme().muted_foreground()),
+                    .text_color(move || theme().muted_foreground),
             ),
         )
         .child(if is_desktop() {
@@ -489,7 +480,7 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
                 text(move || if is_desktop() { "ctrl+o" } else { "" })
                     .flex_1()
                     .text_right()
-                    .text_color(move || theme().muted_foreground()),
+                    .text_color(move || theme().muted_foreground),
             )
             .into_element()
         } else {
@@ -677,7 +668,7 @@ fn logs(session: Session) -> impl IntoElement {
                     .map(|key| language.get().text(key))
                     .unwrap_or_default()
             })
-            .text_color(move || theme().success()),
+            .text_color(move || theme().color("success.background").unwrap()),
         )
 }
 
@@ -699,7 +690,7 @@ fn about(session: Session) -> impl IntoElement {
         .child(text(session.translated("about.credit")))
         .child(
             text(session.translated("about.native_shell"))
-                .text_color(move || theme().muted_foreground()),
+                .text_color(move || theme().muted_foreground),
         )
         .child(
             view()

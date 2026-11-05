@@ -19,12 +19,12 @@ pub mod views;
 pub use views::App;
 
 #[cfg(feature = "desktop")]
-#[nsh_core::ui::native_module("omasend/native")]
-fn native(registry: &mut nsh_core::ui::Registry) {
+#[nsh_core::element::native_module("omasend/native")]
+fn native(registry: &mut nsh_core::element::Registry) {
     registry.register::<App>();
 }
 
 #[cfg(feature = "desktop")]
-pub fn app_root() -> nsh_core::ui::Root {
+pub fn app_root() -> nsh_core::element::Root {
     views::appearance::root()
 }

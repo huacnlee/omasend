@@ -8,7 +8,7 @@ struct TestRect {
 // The actual NSH engine drives application commands into real HTTPS sockets.
 use super::{control, panels, session::Session};
 use nsh_core::{
-    ApproxTextEngine, EventKind, EventPayload, MountBatch, MountItem, Size, ui::prelude::*,
+    ApproxTextEngine, EventKind, EventPayload, MountBatch, MountItem, Size, prelude::*,
 };
 use nsh_engine::{Engine, EngineConfig, EngineControl, Environment, MountSink};
 use omasend::{
@@ -262,7 +262,6 @@ async fn native_round_trip_preserves_bytes_previews_translations_and_controls() 
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<TestApp>()),
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -282,6 +281,9 @@ async fn native_round_trip_preserves_bytes_previews_translations_and_controls() 
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(
+                nsh_core::element::Root::of::<TestApp>(),
+            ))
         },
         || ApproxTextEngine,
         Sink {
@@ -599,7 +601,6 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<LayoutApp>()),
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -619,6 +620,9 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(nsh_core::element::Root::of::<
+                LayoutApp,
+            >()))
         },
         || ApproxTextEngine,
         Sink {
@@ -780,7 +784,6 @@ async fn update_progress_retry_and_restart_survive_closing_the_starting_surface(
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<UpdateFixtureApp>()),
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -800,6 +803,9 @@ async fn update_progress_retry_and_restart_survive_closing_the_starting_surface(
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(nsh_core::element::Root::of::<
+                UpdateFixtureApp,
+            >()))
         },
         || ApproxTextEngine,
         Sink {
@@ -900,7 +906,6 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<NearbyFixtureApp>()),
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -920,6 +925,9 @@ async fn nearby_expansion_preserves_selection_and_bounds_the_device_list() {
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(nsh_core::element::Root::of::<
+                NearbyFixtureApp,
+            >()))
         },
         || ApproxTextEngine,
         Sink {
@@ -1089,7 +1097,6 @@ async fn motion_preferences_stop_pending_discovery_strokes_and_button_timing() {
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<MotionFixtureApp>()),
             viewport: Size::new(nsh_core::Points(640.0), nsh_core::Points(520.0)),
             trace: false,
             network: None,
@@ -1109,6 +1116,9 @@ async fn motion_preferences_stop_pending_discovery_strokes_and_button_timing() {
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(nsh_core::element::Root::of::<
+                MotionFixtureApp,
+            >()))
         },
         || ApproxTextEngine,
         Sink {
@@ -1208,7 +1218,6 @@ async fn composer_progress_accounts_for_each_item_and_zero_length_files() {
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<ProgressFixtureApp>()),
             viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
             trace: false,
             network: None,
@@ -1228,6 +1237,9 @@ async fn composer_progress_accounts_for_each_item_and_zero_length_files() {
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(nsh_core::element::Root::of::<
+                ProgressFixtureApp,
+            >()))
         },
         || ApproxTextEngine,
         Sink {
@@ -1290,7 +1302,6 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
     let control = Arc::new(OnceLock::new());
     let engine = Engine::start(
         EngineConfig {
-            app: nsh_engine::App::Rust(nsh_core::ui::Root::of::<LayoutApp>()),
             viewport: Size::new(nsh_core::Points(402.0), nsh_core::Points(874.0)),
             trace: false,
             network: None,
@@ -1316,6 +1327,9 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
             limits: Default::default(),
             ui_sets: Vec::new(),
             runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(nsh_core::element::Root::of::<
+                LayoutApp,
+            >()))
         },
         || ApproxTextEngine,
         Sink {

@@ -1,6 +1,6 @@
 //! UI-thread state and commands shared by pointer and keyboard entry points.
 use anyhow::{Context, Result};
-use nsh_core::ui::prelude::*;
+use nsh_core::prelude::*;
 use omasend::{
     localsend::{Device, Handle, Node, NodeConfig, TransferEvent},
     model::{AppState, ComposerItem, SendItem},
@@ -51,7 +51,7 @@ impl Session {
             notice: signal(None),
             notice_revision: signal(0),
             owner: Owner::current(),
-            exit_application: Rc::new(nsh_core::ui::desktop::close_window),
+            exit_application: Rc::new(nsh_core::element::desktop::close_window),
         }
     }
 

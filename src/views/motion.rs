@@ -2,7 +2,7 @@
 use super::{appearance::theme, session::Session};
 use nsh_core::{
     canvas::{Path, svg_path},
-    ui::prelude::*,
+    prelude::*,
 };
 use std::{sync::OnceLock, time::Duration};
 
@@ -95,7 +95,7 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
             canvas(move || {
                 Painter::new()
                     .scale(size / 32.0, size / 32.0)
-                    .fill_color(color(theme().link()))
+                    .fill_color(color(theme().color("link").unwrap()))
                     .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
             })
             .absolute()
@@ -107,7 +107,7 @@ pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
         canvas(move || {
             let mut painter = Painter::new()
                 .scale(size / 32.0, size / 32.0)
-                .fill_color(color(theme().link()));
+                .fill_color(color(theme().color("link").unwrap()));
             for path in paths() {
                 painter = painter.fill_path(path, nsh_core::canvas::FillRule::NonZero);
             }

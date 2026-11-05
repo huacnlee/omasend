@@ -1,7 +1,7 @@
 //! Previews retain their SendItem, including clipboard temporary-file ownership.
 use super::appearance::theme;
 use super::{control, session::Session};
-use nsh_core::ui::prelude::*;
+use nsh_core::prelude::*;
 use omasend::model::SendItem;
 
 #[derive(Clone, Debug)]
@@ -40,10 +40,10 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                         .gap_2()
                         .child(
                             image(uri)
-                                .resize_mode(nsh_core::ResizeMode::Contain)
+                                .object_fit(nsh_core::ResizeMode::Contain)
                                 .flex_1()
                                 .bind_opacity(&loaded)
-                                .on_load(move |_: &nsh_core::Size<nsh_core::Points>| {
+                                .on_load(move |_: &Size<DevicePixels>| {
                                     fade.timing(
                                         1.0,
                                         if reduce_motion() { 0.0 } else { 140.0 },
@@ -52,7 +52,7 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 })
                                 .on_error(move |reason: &str| error.set(reason.to_owned())),
                         )
-                        .child(text(move || error.get()).text_color(move || theme().danger()))
+                        .child(text(move || error.get()).text_color(move || theme().destructive))
                         .into_element()
                 }
             };
@@ -78,8 +78,8 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 .gap_4()
                                 .p_4()
                                 .border_1()
-                                .border_color(move || theme().border())
-                                .bg(move || theme().background())
+                                .border_color(move || theme().border)
+                                .bg(move || theme().background)
                                 .child(
                                     view()
                                         .flex_row()
