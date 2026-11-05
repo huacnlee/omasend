@@ -47,8 +47,7 @@ fn control_variant(
     let scale = animated_value(1.0);
     let down = scale;
     let up = scale;
-    let standalone = !appearance::is_omarchy_style();
-    let button = view()
+    view()
         .flex_row()
         .items_center()
         .justify_center()
@@ -57,22 +56,14 @@ fn control_variant(
         .py(move || px(appearance::metrics().space(6.0)))
         .border_1()
         .border_color(move || {
-            if outlined && standalone {
-                theme().border
-            } else if outlined {
+            if outlined {
                 theme().foreground.opacity(0.4)
             } else {
                 AdaptiveColor::TRANSPARENT
             }
         })
-        .rounded(px(if standalone { 4.0 } else { 0.0 }))
-        .bg(move || {
-            if outlined && standalone {
-                theme().secondary
-            } else {
-                AdaptiveColor::TRANSPARENT
-            }
-        })
+        .rounded_none()
+        .bg(AdaptiveColor::TRANSPARENT)
         .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
         .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
         .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
@@ -95,18 +86,13 @@ fn control_variant(
             );
         })
         .on_press(move |_: &()| run())
-        .child(text(title).text_size(move || px(appearance::metrics().font_size)));
-    if standalone && outlined {
-        button.shadow_sm().inset_shadow_sm()
-    } else {
-        button
-    }
+        .child(text(title).text_size(move || px(theme().number("font.size").unwrap())))
 }
 
 pub(super) fn editor() -> nsh_core::element::Input {
     nsh_core::element::input()
         .text_color(move || theme().foreground)
-        .text_size(move || px(appearance::metrics().font_size))
+        .text_size(move || px(theme().number("font.size").unwrap()))
         .font_family(move || SharedString::from(appearance::metrics().family))
         .placeholder_color(move || color(theme().muted_foreground))
         .selection_color(move || color(theme().color("caret").unwrap()))
@@ -196,7 +182,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
         .p_safe_area()
         .flex_1()
         .font_family(move || SharedString::from(appearance::metrics().family))
-        .text_size(move || px(appearance::metrics().font_size))
+        .text_size(move || px(theme().number("font.size").unwrap()))
         .bg(move || theme().background)
         .text_color(move || theme().foreground)
         .child(when(is_desktop, {

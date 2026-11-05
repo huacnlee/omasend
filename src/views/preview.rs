@@ -43,7 +43,7 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 .object_fit(nsh_core::ResizeMode::Contain)
                                 .flex_1()
                                 .bind_opacity(&loaded)
-                                .on_load(move |_: &Size<DevicePixels>| {
+                                .on_load(move |_: &nsh_core::Size<DevicePixels>| {
                                     fade.timing(
                                         1.0,
                                         if reduce_motion() { 0.0 } else { 140.0 },
@@ -52,7 +52,10 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 })
                                 .on_error(move |reason: &str| error.set(reason.to_owned())),
                         )
-                        .child(text(move || error.get()).text_color(move || theme().destructive))
+                        .child(
+                            text(move || error.get())
+                                .text_color(move || theme().color("destructive").unwrap()),
+                        )
                         .into_element()
                 }
             };

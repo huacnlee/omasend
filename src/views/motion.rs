@@ -1,5 +1,5 @@
-//! The existing vector emblem, with short native discovery/confirmation strokes.
-use super::{appearance::theme, session::Session};
+//! The central waiting emblem animates while visible; title-bar emblems stay static.
+use super::appearance::theme;
 use nsh_core::{
     canvas::{Path, svg_path},
     prelude::*,
@@ -46,75 +46,61 @@ fn burst(levels: &[AnimatedValue], active: Memo<bool>, epoch: Signal<u64>) {
     }
 }
 
-pub(super) fn emblem(session: Session, size: f32) -> impl IntoElement {
-    let state = session.clone();
+pub(super) fn static_emblem(size: f32) -> impl IntoElement {
+    canvas(move || {
+        let mut painter = Painter::new()
+            .scale(size / 32.0, size / 32.0)
+            .fill_color(color(theme().color("link").unwrap()));
+        for path in paths() {
+            painter = painter.fill_path(path, nsh_core::canvas::FillRule::NonZero);
+        }
+        painter
+    })
+    .size(px(size))
+}
+
+/// Animates only while someone can see it: the window is in front, no
+/// overlay covers it (`paused`), and the system allows motion. Pausing
+/// reruns the effect, which disposes the interval and pending bursts.
+pub(super) fn emblem(size: f32, paused: impl Fn() -> bool + 'static) -> impl IntoElement {
     let active = computed(move || {
-        state.revision.get();
-        state.state.borrow().discovering
-    });
-    let revision = computed(move || {
-        session.revision.get();
-        session.state.borrow().discovery_revision
+        !paused() && !reduce_motion() && lifecycle() == nsh_core::platform::Lifecycle::Active
     });
     let levels = (0..9).map(|_| animated_value(1.0)).collect::<Vec<_>>();
     let changing = levels.clone();
     let epoch = signal(0_u64);
     effect(move || {
-        let running = active.get() && !reduce_motion();
+        let running = active.get();
         epoch.update(|value| *value += 1);
         for (index, level) in changing.iter().enumerate() {
             level.set(if running && index != 8 { 0.6 } else { 1.0 });
         }
         if running {
             burst(&changing, active, epoch);
-        }
-    });
-    let clock = levels.clone();
-    effect(move || {
-        if active.get() && !reduce_motion() {
-            let clock = clock.clone();
-            set_interval(Duration::from_millis(2250), move || {
+            let clock = changing.clone();
+            set_interval(Duration::from_millis(440), move || {
                 burst(&clock, active, epoch)
             });
-        }
-    });
-    let confirmed = animated_value(0.0);
-    let confirmation = confirmed;
-    effect(move || {
-        if revision.get() > 0 && !reduce_motion() {
-            confirmation.set(1.0);
-            confirmation.timing(0.0, 420.0, Easing::Linear);
-        } else {
-            confirmation.set(0.0);
         }
     });
     let mut logo = view().relative().size(px(size));
     for (index, path) in paths().iter().cloned().enumerate() {
         let level = levels[index];
+        // Fade a plain wrapper, not the canvas: on macOS an animated value
+        // on a canvas redraws its drawing every frame, and a canvas painted
+        // that often moves the process onto Core Animation's drawing
+        // threads, which holds ~50 MB of graphics memory.
         logo = logo.child(
-            canvas(move || {
-                Painter::new()
-                    .scale(size / 32.0, size / 32.0)
-                    .fill_color(color(theme().color("link").unwrap()))
-                    .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
-            })
-            .absolute()
-            .size(px(size))
-            .bind_opacity(&level),
+            view().absolute().size(px(size)).bind_opacity(&level).child(
+                canvas(move || {
+                    Painter::new()
+                        .scale(size / 32.0, size / 32.0)
+                        .fill_color(color(theme().color("link").unwrap()))
+                        .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
+                })
+                .size(px(size)),
+            ),
         );
     }
-    logo.child(
-        canvas(move || {
-            let mut painter = Painter::new()
-                .scale(size / 32.0, size / 32.0)
-                .fill_color(color(theme().color("link").unwrap()));
-            for path in paths() {
-                painter = painter.fill_path(path, nsh_core::canvas::FillRule::NonZero);
-            }
-            painter
-        })
-        .absolute()
-        .size(px(size))
-        .bind_opacity(&confirmed),
-    )
+    logo
 }

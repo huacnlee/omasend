@@ -31,12 +31,16 @@ test('English and Chinese routes keep correct links, language and metadata', asy
   expect(errors).toEqual([]);
 });
 
-test('related Omarchy projects close the page with GitHub links and descriptions', async ({ page }) => {
+test('related projects close the page with GitHub links and descriptions', async ({ page }) => {
   await page.goto('./');
-  const related = page.getByRole('region', { name: 'More Omarchy projects' });
-  await expect(related).toContainText('Read and manage email right from the desktop.');
+  const related = page.getByRole('region', { name: 'More projects' });
+  await expect(related).toContainText('A native email and calendar app');
   await expect(related).toContainText('Monitor your proxy');
   await expect(related).toContainText('Hold Super to see a shortcut guide');
+  await expect(related).toContainText('A native disk-space explorer');
+  await expect(related.getByRole('link', { name: 'Disktree' })).toHaveAttribute('href', 'https://huacnlee.github.io/disktree/');
+  await expect(related.getByRole('link', { name: 'Noop' })).toHaveAttribute('href', 'https://huacnlee.github.io/noop/');
+  await expect(related.getByRole('link', { name: 'huacnlee/cargo' })).toHaveAttribute('href', 'https://huacnlee.github.io/cargo/');
   await expect(related.getByRole('link', { name: 'Omamail' })).toHaveAttribute(
     'href',
     'https://github.com/huacnlee/omamail',
@@ -215,4 +219,26 @@ test('mobile installation explains APK setup and unsigned IPA signing in both la
       await mobile.screenshot({ path: `/tmp/omasend-mobile-guide-${width}-${route.includes('zh') ? 'zh' : 'en'}.png` });
     }
   }
+});
+
+test('every page asks for sponsorship with a visible button', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  for (const [route, text, nav, button] of [['./', 'If this helps you, please sponsor me.', 'Sponsor me', 'Sponsor on GitHub'], ['./zh-CN/', '如果这个项目帮到了你，请赞助我。', '赞助作者', '在 GitHub 上赞助']]) {
+    await page.goto(route);
+    await expect(page.locator('.sponsor p')).toHaveText(text);
+    await expect(page.locator('.sponsor .sponsor-button')).toHaveText(button);
+    await expect(page.locator('nav .sponsor-button')).toHaveText(nav);
+    await expect(page.locator('nav .sponsor-button')).toBeVisible();
+    for (const link of await page.locator('.sponsor-button').all()) {
+      await expect(link).toHaveAttribute('href', 'https://github.com/sponsors/huacnlee');
+      await expect(link).toHaveAttribute('target', '_blank');
+    }
+  }
+});
+
+test('the sponsor card follows install and stays on phones', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto('./');
+  await expect(page.locator('#install + .sponsor')).toBeVisible();
+  await expect(page.locator('nav .sponsor-button')).toBeHidden();
 });

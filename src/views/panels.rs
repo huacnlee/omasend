@@ -47,21 +47,15 @@ pub(super) fn error_notice(session: Session) -> impl IntoElement {
                 .border_1()
                 .border_color(appearance::divider)
                 .bg(move || theme().foreground.opacity(0.03))
-                .rounded(move || {
-                    px(if appearance::is_omarchy_style() {
-                        0.0
-                    } else {
-                        4.0
-                    })
-                })
+                .rounded_none()
                 .child(
                     view()
                         .size(px(20.0))
                         .items_center()
                         .justify_center()
                         .border_1()
-                        .border_color(move || theme().destructive.opacity(0.4))
-                        .child(text("!").text_color(move || theme().destructive)),
+                        .border_color(move || theme().color("destructive").unwrap().opacity(0.4))
+                        .child(text("!").text_color(move || theme().color("destructive").unwrap())),
                 )
                 .child(
                     view()
@@ -238,13 +232,7 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
         .p_3()
         .w(width)
         .h(px(58.0))
-        .rounded(move || {
-            px(if appearance::is_omarchy_style() {
-                0.0
-            } else {
-                4.0
-            })
-        })
+        .rounded_none()
         .border_1()
         .border_color(move || {
             if selected.get() {
@@ -305,10 +293,14 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
                     .text_color(move || theme().muted_foreground),
                 ),
         )
-        .child(
-            text(move || if selected.get() { "✓" } else { " " })
-                .text_color(move || theme().primary),
-        )
+        .child(view().size(px(12.0)).flex_shrink_0().child(when(
+            move || selected.get(),
+            || {
+                view()
+                    .test_id("nearby-check-icon")
+                    .child(super::utilities::check_icon())
+            },
+        )))
 }
 
 fn device_initials(name: &str) -> String {
@@ -337,11 +329,38 @@ fn keycap(label: &'static str) -> impl IntoElement {
         .child(text(label).text_size(px(11.0)))
 }
 
+#[derive(Clone, Copy)]
+struct ReceivedPresentation {
+    height: Signal<f32>,
+    dismissed: Signal<Option<String>>,
+}
+
 pub(super) fn outbox(session: Session) -> impl IntoElement {
     let items = session.clone();
     let item_rows = session.clone();
     let empty = session.clone();
     let full = session.clone();
+    let dismissed_received = signal(None::<String>);
+    let content_height = signal(0.0);
+    let presentation = ReceivedPresentation {
+        height: content_height,
+        dismissed: dismissed_received,
+    };
+    let received = session.clone();
+    let latest_received = computed(move || {
+        received.revision.get();
+        let state = received.state.borrow();
+        if !state.composer.is_empty() {
+            return None;
+        }
+        state
+            .transfers
+            .iter()
+            .rev()
+            .find(|transfer| !transfer.sending && transfer.status == TransferStatus::Completed)
+            .map(|transfer| transfer.id.clone())
+            .filter(|id| dismissed_received.get().as_ref() != Some(id))
+    });
     let guard = session.clone();
     let enabled = computed(move || !guard.input_blocked());
     let hovering = signal(false);
@@ -362,6 +381,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
     let receiver = session.clone();
     view()
         .test_id("composer-area")
+        .on_layout(move |bounds: &Bounds<Points>| content_height.set(bounds.size.height.0))
         .disabled(move || !enabled.get())
         .on_file_drag_enter(move |_: &()| hovering.set(true))
         .on_file_drag_leave(move |_: &()| hovering.set(false))
@@ -370,13 +390,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
             receiver.drop_files(event.uris.clone());
         })
         .bg(appearance::panel_background)
-        .rounded(move || {
-            px(if appearance::is_omarchy_style() {
-                0.0
-            } else {
-                4.0
-            })
-        })
+        .rounded_none()
         .flex_1()
         .border_1()
         .border_color(appearance::divider)
@@ -388,19 +402,13 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                 .pointer_events(PointerEvents::None)
                 .border_2()
                 .border_color(move || theme().primary)
-                .rounded(move || {
-                    px(if appearance::is_omarchy_style() {
-                        0.0
-                    } else {
-                        4.0
-                    })
-                })
+                .rounded_none()
                 .bind_opacity(&highlight),
         )
         .child(when(
             move || {
                 empty.revision.get();
-                empty.state.borrow().composer.is_empty()
+                empty.state.borrow().composer.is_empty() && latest_received.get().is_none()
             },
             {
                 let session = session.clone();
@@ -410,7 +418,10 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                         .items_center()
                         .justify_center()
                         .gap_3()
-                        .child(super::motion::emblem(session.clone(), 64.0))
+                        .child(super::motion::emblem(64.0, {
+                            let surface = session.surface;
+                            move || surface.get().is_some()
+                        }))
                         .child(text(session.translated(if is_desktop() {
                             "composer.drop_hint"
                         } else {
@@ -440,6 +451,20 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                 }
             },
         ))
+        .child(when(move || latest_received.get().is_some(), {
+            let session = session.clone();
+            move || {
+                let session = session.clone();
+                scroll().flex_1().child(view().p_3().child(each(
+                    move || latest_received.get().into_iter().collect::<Vec<_>>(),
+                    Clone::clone,
+                    move |id, _| {
+                        let id = id.get_untracked();
+                        transfer_row(session.clone(), id, Some(presentation))
+                    },
+                )))
+            }
+        }))
         .child(when(
             move || {
                 full.revision.get();
@@ -506,13 +531,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                             .gap_2()
                             .border_1()
                             .border_color(appearance::divider)
-                            .rounded(move || {
-                                px(if appearance::is_omarchy_style() {
-                                    0.0
-                                } else {
-                                    4.0
-                                })
-                            })
+                            .rounded_none()
                             .child(when(
                                 move || summary.get().is_some(),
                                 move || {
@@ -765,7 +784,7 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
                 .bg(appearance::panel_background)
                 .text_color(move || theme().foreground)
                 .font_family(move || SharedString::from(appearance::metrics().family))
-                .text_size(move || px(appearance::metrics().font_size))
+                .text_size(move || px(theme().number("font.size").unwrap()))
                 .pb(move || safe_area().bottom)
                 .border_t_1()
                 .border_color(appearance::divider)
@@ -802,7 +821,7 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
                                 move || clear.clear_history(),
                             )
                             .label(session.translated("action.clear_history"))
-                            .text_color(move || theme().destructive),
+                            .text_color(move || theme().color("destructive").unwrap()),
                         )
                         .child(super::utilities::close_button(
                             session.translated("action.close"),
@@ -942,9 +961,8 @@ fn activity_with(session: Session, include_finished: bool) -> impl IntoElement {
                     transfers.visible_transfer_ids()
                 } else {
                     transfers.revision.get();
-                    transfers
-                        .state
-                        .borrow()
+                    let state = transfers.state.borrow();
+                    state
                         .transfers
                         .iter()
                         .filter(|t| t.status == TransferStatus::Active)
@@ -953,11 +971,17 @@ fn activity_with(session: Session, include_finished: bool) -> impl IntoElement {
                 }
             },
             Clone::clone,
-            move |id, _| transfer_row(transfer_rows.clone(), id.get_untracked()),
+            move |id, _| transfer_row(transfer_rows.clone(), id.get_untracked(), None),
         ))
 }
 
-fn transfer_row(session: Session, id: String) -> impl IntoElement {
+fn transfer_row(
+    session: Session,
+    id: String,
+    presentation: Option<ReceivedPresentation>,
+) -> impl IntoElement {
+    let dismiss_language = session.language;
+    let dismiss_id = id.clone();
     let labels = session.clone();
     let label_id = id.clone();
     let details = computed(move || {
@@ -1053,10 +1077,28 @@ fn transfer_row(session: Session, id: String) -> impl IntoElement {
                             Some(TransferStatus::Completed) => {
                                 theme().color("success.background").unwrap()
                             }
-                            Some(TransferStatus::Failed(_)) => theme().destructive,
+                            Some(TransferStatus::Failed(_)) => {
+                                theme().color("destructive").unwrap()
+                            }
                             _ => theme().muted_foreground,
                         }),
-                ),
+                )
+                .child(when(
+                    move || presentation.is_some(),
+                    move || {
+                        let dismiss_id = dismiss_id.clone();
+                        control(
+                            move || dismiss_language.get().text("action.dismiss"),
+                            false,
+                            move || {
+                                if let Some(presentation) = presentation {
+                                    presentation.dismissed.set(Some(dismiss_id.clone()));
+                                }
+                            },
+                        )
+                        .test_id("dismiss-received")
+                    },
+                )),
         )
         .child(
             text(move || details.get().map(|d| d.2).unwrap_or_default())
@@ -1096,10 +1138,14 @@ fn transfer_row(session: Session, id: String) -> impl IntoElement {
                     )))
             },
         ))
-        .child(received_actions(session, id))
+        .child(received_actions(session, id, presentation))
 }
 
-fn received_actions(session: Session, id: String) -> impl IntoElement {
+fn received_actions(
+    session: Session,
+    id: String,
+    presentation: Option<ReceivedPresentation>,
+) -> impl IntoElement {
     let paths = session.clone();
     let path_id = id.clone();
     let path_rows = session.clone();
@@ -1129,10 +1175,35 @@ fn received_actions(session: Session, id: String) -> impl IntoElement {
                 let opener = path_rows.clone();
                 let revealer = path_rows.clone();
                 let reveal_path = path.clone();
+                let previewer = path_rows.clone();
+                let preview_path = path.clone();
+                let is_image = mime_guess::from_path(&path)
+                    .first_raw()
+                    .is_some_and(|mime| mime.starts_with("image/"));
                 view()
                     .flex_row()
+                    .flex_wrap()
                     .gap_2()
                     .items_center()
+                    .child(when(move || is_image, {
+                        let path = path.clone();
+                        move || {
+                            let uri = url::Url::from_file_path(&path)
+                                .map(|uri| uri.to_string())
+                                .unwrap_or_else(|_| path.to_string_lossy().into_owned());
+                            image(uri)
+                                .test_id("received-image-thumbnail")
+                                .size(px(48.0))
+                                .when_some(presentation, |image, presentation| {
+                                    image.w_full().h(move || {
+                                        let chrome = if is_desktop() { 180.0 } else { 240.0 };
+                                        px((presentation.height.get() - chrome).max(48.0))
+                                    })
+                                })
+                                .flex_shrink_0()
+                                .object_fit(nsh_core::ResizeMode::Contain)
+                        }
+                    }))
                     .child(
                         text(
                             path.file_name()
@@ -1142,6 +1213,18 @@ fn received_actions(session: Session, id: String) -> impl IntoElement {
                         )
                         .flex_1(),
                     )
+                    .child(when(
+                        move || is_image,
+                        move || {
+                            let previewer = previewer.clone();
+                            let path = preview_path.clone();
+                            control(previewer.translated("action.preview"), false, move || {
+                                previewer.preview.set(Some(super::preview::Preview::Image(
+                                    omasend::model::SendItem::File(path.clone()),
+                                )));
+                            })
+                        },
+                    ))
                     .child(control(
                         path_rows.translated(if cfg!(target_os = "ios") {
                             "action.share"

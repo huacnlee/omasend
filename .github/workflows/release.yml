@@ -161,13 +161,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     steps:
+      # The Android build (two ABIs, plus the nsh toolchain) outgrows the
+      # Ubuntu runner's free disk; drop preinstalled toolchains it never uses.
+      - name: Free disk space
+        if: matrix.platform == 'android'
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost /usr/share/swift /usr/local/share/powershell /usr/local/julia*
+          sudo docker image prune --all --force >/dev/null || true
+          df -h /
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: longbridge/nsh
-          ref: caaa58ccdcb2529c710219fdd52576bbda84b022
+          ref: 88987268529fee91c2787608c0b985c5b8cd52cd
           path: .nsh/toolchain
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -204,6 +213,9 @@ jobs:
         run: |
           cargo build --locked --release -p nsh-cli
           echo "$PWD/target/release" >> "$GITHUB_PATH"
+      - name: Test Android packaging
+        if: matrix.platform == 'android'
+        run: python scripts/test-android.py
       - name: Package unsigned iOS IPA
         if: matrix.platform == 'ios'
         run: python scripts/ios.py
