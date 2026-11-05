@@ -530,6 +530,10 @@ pub(super) fn is_omarchy_style() -> bool {
     is_omarchy() || cfg!(any(target_os = "ios", target_os = "android"))
 }
 
+pub(super) fn is_terminal() -> bool {
+    idiom() == nsh_core::platform::Idiom::Terminal
+}
+
 pub(super) fn panel_background() -> AdaptiveColor {
     if is_omarchy_style() {
         theme().background

@@ -123,6 +123,21 @@ fn icon_button(
     run: impl Fn() + 'static,
 ) -> nsh_base::ButtonElement {
     let label = label.into_reactive();
+    if appearance::is_terminal() {
+        let accessible = label.clone();
+        let mut content = view().window_drag(false).child(text(label));
+        if let Some(id) = test_id {
+            content = content.test_id(id);
+        }
+        return nsh_base::button()
+            .accessibility_label(move || Some(accessible.get()))
+            .on_press(run)
+            .px(px(8.0))
+            .rounded_none()
+            .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
+            .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
+            .child(content);
+    }
     let (target, glyph) = if is_desktop() {
         (28.0, 12.0)
     } else {
@@ -429,7 +444,10 @@ fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::element:
         .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
         .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
         .child(text(title))
-        .child(text("›").flex_1().text_right())
+        .child(when(
+            || !appearance::is_terminal(),
+            || text("›").flex_1().text_right(),
+        ))
 }
 
 fn menu_back(session: Session) -> impl IntoElement {

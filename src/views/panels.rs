@@ -418,9 +418,9 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                         .items_center()
                         .justify_center()
                         .gap_3()
-                        .child(super::motion::emblem(64.0, {
+                        .child(when(|| !appearance::is_terminal(), {
                             let surface = session.surface;
-                            move || surface.get().is_some()
+                            move || super::motion::emblem(64.0, move || surface.get().is_some())
                         }))
                         .child(text(session.translated(if is_desktop() {
                             "composer.drop_hint"

@@ -7,7 +7,7 @@ use nsh_core::{
 };
 
 pub(super) fn install() {
-    if !is_desktop() {
+    if !is_desktop() || appearance::is_terminal() {
         return;
     }
     effect(|| {
@@ -38,7 +38,10 @@ pub(super) fn bar(session: Session) -> impl IntoElement {
         })
         .border_b_1()
         .border_color(appearance::divider)
-        .child(motion::static_emblem(24.0))
+        .child(when(
+            || !appearance::is_terminal(),
+            || motion::static_emblem(24.0),
+        ))
         .child(text("Omasend").test_id("app-title").flex_1())
         .child(utilities::menu_button(session))
 }
