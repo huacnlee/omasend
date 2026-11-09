@@ -182,6 +182,10 @@ jobs:
             platform: android
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    env:
+      # onig_sys needs ___chkstk_darwin, which the iOS linker only provides
+      # from iOS 13; without this the link defaults to iOS 10.0 and fails.
+      IPHONEOS_DEPLOYMENT_TARGET: '15.0'
     steps:
       # The Android build (two ABIs, plus the nsh toolchain) outgrows the
       # Ubuntu runner's free disk; drop preinstalled toolchains it never uses.
