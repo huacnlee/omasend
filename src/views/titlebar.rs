@@ -1,8 +1,8 @@
 //! The application's title bar shares NSH's native drag and window controls.
 use super::{appearance, appearance::theme, motion, session::Session, utilities};
 use nsh_core::{
-    desktop::TitleBarStyle,
-    element::desktop::{set_title_bar, title_bar},
+    desktop::{TitleBarOptions, TitleBarStyle, WindowAttributes},
+    element::desktop::{main_window, title_bar},
     prelude::*,
 };
 
@@ -11,10 +11,13 @@ pub(super) fn install() {
         return;
     }
     effect(|| {
-        set_title_bar(
-            TitleBarStyle::Hidden,
-            Some(nsh_core::Points(appearance::metrics().space(42.0))),
-        );
+        // Both option structs are non-exhaustive: start from defaults.
+        let mut bar = TitleBarOptions::default();
+        bar.style = TitleBarStyle::Hidden;
+        bar.height = Some(nsh_core::Points(appearance::metrics().space(42.0)));
+        let mut attributes = WindowAttributes::default();
+        attributes.title_bar = Some(bar);
+        main_window().set(attributes);
     });
 }
 

@@ -53,7 +53,7 @@ impl Session {
             notice: signal(None),
             notice_revision: signal(0),
             owner: Owner::current(),
-            exit_application: Rc::new(nsh_core::element::desktop::close_window),
+            exit_application: Rc::new(|| nsh_core::element::desktop::main_window().close()),
         }
     }
 

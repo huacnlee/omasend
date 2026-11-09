@@ -668,7 +668,9 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
         let actions = screen.bounds("outbox-actions");
         let status = screen.bounds("status-bar");
         assert!(screen.desktop_commands.iter().any(|command| matches!(command,
-            nsh_core::desktop::DesktopCommand::SetTitleBar { style: nsh_core::desktop::TitleBarStyle::Hidden, height: Some(height) } if height.0 == 42.0)));
+            nsh_core::desktop::DesktopCommand::SetAttributes(attributes)
+                if attributes.title_bar.is_some_and(|bar| bar.style == nsh_core::desktop::TitleBarStyle::Hidden
+                    && bar.height.is_some_and(|height| height.0 == 42.0)))));
         assert_eq!(
             screen.window_drag[&screen.test_ids["app-header"]],
             Some(true)
@@ -873,19 +875,20 @@ async fn update_progress_retry_and_restart_survive_closing_the_starting_surface(
             .values()
             .any(|t| t == "Finish transfers and clear Outbox before restarting")
     });
-    assert!(
-        !screen
-            .desktop_commands
-            .iter()
-            .any(|c| matches!(c, nsh_core::desktop::DesktopCommand::Close))
-    );
+    assert!(!screen.desktop_commands.iter().any(|c| matches!(
+        c,
+        nsh_core::desktop::DesktopCommand::Request(nsh_core::desktop::WindowRequest::Close)
+    )));
     assert!(!omasend::updates::RESTART_REQUESTED.load(Ordering::SeqCst));
     press(&engine, &screen, "Clear draft");
     press(&engine, &screen, "Restart to update");
     screen.wait(&rx, Duration::from_secs(10), |s| {
-        s.desktop_commands
-            .iter()
-            .any(|c| matches!(c, nsh_core::desktop::DesktopCommand::Close))
+        s.desktop_commands.iter().any(|c| {
+            matches!(
+                c,
+                nsh_core::desktop::DesktopCommand::Request(nsh_core::desktop::WindowRequest::Close)
+            )
+        })
     });
     assert!(omasend::updates::RESTART_REQUESTED.load(Ordering::SeqCst));
     drop(engine);
@@ -1403,7 +1406,7 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
     assert!(header.width > 0.0);
     assert!(!screen.desktop_commands.iter().any(|command| matches!(
         command,
-        nsh_core::desktop::DesktopCommand::SetTitleBar { .. }
+        nsh_core::desktop::DesktopCommand::SetAttributes(attributes) if attributes.title_bar.is_some()
     )));
     let outbox = screen.bounds("outbox-panel");
     assert!(outbox.y >= 62.0, "content under notch: {outbox:?}");

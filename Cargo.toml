@@ -17,7 +17,7 @@ mobile = ["desktop"]
 ui-tests = ["desktop"]
 
 [dependencies]
-nsh-platform-tui = { git = "https://github.com/longbridge/nsh", rev = "1ce0be1bdf3907b0dbe68aff6bb485e79d72e8e3", default-features = false, features = ["run-app"], optional = true }
+nsh-platform-tui = { git = "https://github.com/longbridge/nsh", rev = "36b91689c1e7c38379179a56381de7ddab16c6a5", default-features = false, features = ["run-app"], optional = true }
 ratatui-core = { version = "0.1.2", optional = true }
 ratatui-crossterm = { version = "0.1.2", optional = true }
 crossterm = { version = "0.29", optional = true }
@@ -28,8 +28,8 @@ chrono = "0.4"
 cap-std = "3"
 dirs = "6"
 futures-util = "0.3"
-nsh-core = { git = "https://github.com/longbridge/nsh", rev = "1ce0be1bdf3907b0dbe68aff6bb485e79d72e8e3", optional = true }
-nsh-base = { git = "https://github.com/longbridge/nsh", rev = "1ce0be1bdf3907b0dbe68aff6bb485e79d72e8e3", default-features = false, optional = true }
+nsh-core = { git = "https://github.com/longbridge/nsh", rev = "36b91689c1e7c38379179a56381de7ddab16c6a5", optional = true }
+nsh-base = { git = "https://github.com/longbridge/nsh", rev = "36b91689c1e7c38379179a56381de7ddab16c6a5", default-features = false, optional = true }
 image = { version = "0.25", default-features = false, features = ["png"], optional = true }
 
 localsend = { path = "vendor/localsend", features = ["discovery"] }
@@ -61,16 +61,16 @@ open = { version = "5", optional = true }
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard"], optional = true }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSData", "NSString"], optional = true }
-nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "1ce0be1bdf3907b0dbe68aff6bb485e79d72e8e3", default-features = false, optional = true }
+nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "36b91689c1e7c38379179a56381de7ddab16c6a5", default-features = false, optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "1ce0be1bdf3907b0dbe68aff6bb485e79d72e8e3", default-features = false, optional = true }
+nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "36b91689c1e7c38379179a56381de7ddab16c6a5", default-features = false, optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "1ce0be1bdf3907b0dbe68aff6bb485e79d72e8e3", default-features = false, optional = true }
+nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "36b91689c1e7c38379179a56381de7ddab16c6a5", default-features = false, optional = true }
 
 [dev-dependencies]
-nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "1ce0be1bdf3907b0dbe68aff6bb485e79d72e8e3", default-features = false }
+nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "36b91689c1e7c38379179a56381de7ddab16c6a5", default-features = false }
 crossbeam-channel = "0.5"
 
 [[bin]]
@@ -95,7 +95,7 @@ codegen-units = 1
 cc = "1"
 
 [target.'cfg(target_os = "ios")'.dependencies]
-nsh-platform-ios = { git = "https://github.com/longbridge/nsh", rev = "1ce0be1bdf3907b0dbe68aff6bb485e79d72e8e3", default-features = false, optional = true }
+nsh-platform-ios = { git = "https://github.com/longbridge/nsh", rev = "36b91689c1e7c38379179a56381de7ddab16c6a5", default-features = false, optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21", optional = true }
