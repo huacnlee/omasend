@@ -75,7 +75,20 @@ enum Command {
         accept: bool,
     },
     Cancel(String),
+    Probe(oneshot::Sender<NodeProbe>),
     Stop,
+}
+
+/// A view of the running node for network diagnostics. Holding it keeps no
+/// lock on the actor; the discovery handle is shared with the running node.
+#[derive(Clone)]
+pub struct NodeProbe {
+    pub device: Device,
+    pub protocol: ProtocolType,
+    pub discovery: Option<Arc<DiscoveryHandle>>,
+    pub multicast_error: Option<String>,
+    /// The node's TLS identity: Omasend peers require a client certificate.
+    pub identity: Arc<SelfSignedCert>,
 }
 
 #[derive(Clone)]
@@ -116,6 +129,17 @@ impl Handle {
     pub fn cancel(&self, id: &str) -> Result<()> {
         self.commands
             .send(Command::Cancel(id.into()))
+            .map_err(|_| anyhow::anyhow!("Network service stopped"))
+    }
+
+    /// The running node's identity and discovery state, for diagnostics.
+    pub async fn probe(&self) -> Result<NodeProbe> {
+        let (reply, answer) = oneshot::channel();
+        self.commands
+            .send(Command::Probe(reply))
+            .map_err(|_| anyhow::anyhow!("Network service stopped"))?;
+        answer
+            .await
             .map_err(|_| anyhow::anyhow!("Network service stopped"))
     }
 }
@@ -331,6 +355,24 @@ impl Actor {
                     }
                     Some(Command::Decide { id, accept }) => self.decide(&id, accept),
                     Some(Command::Cancel(id)) => self.cancel(&id).await,
+                    Some(Command::Probe(reply)) => {
+                        let _ = reply.send(NodeProbe {
+                            device: Device {
+                                fingerprint: self.register.fingerprint.clone(),
+                                alias: self.register.alias.clone(),
+                                model: self.register.device_model.clone().unwrap_or_default(),
+                                host: "127.0.0.1".into(),
+                                port: self.register.port,
+                            },
+                            protocol: self.register.protocol,
+                            discovery: discovery.clone(),
+                            multicast_error: discovery
+                                .as_ref()
+                                .and_then(|discovery| discovery.multicast_error())
+                                .map(|error| format!("{error:#}")),
+                            identity: self.identity.clone(),
+                        });
+                    }
                 },
                 event = server_events.recv() => {
                     let Some(event) = event else { break };

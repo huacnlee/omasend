@@ -11,6 +11,7 @@ use omasend::{i18n::Language, updates::UpdateState};
 pub(crate) enum Surface {
     Menu,
     Logs,
+    Diagnostics,
     About,
 }
 impl Surface {
@@ -18,6 +19,7 @@ impl Surface {
         match self {
             Self::Menu => "action.menu",
             Self::Logs => "logs.title",
+            Self::Diagnostics => "diagnostics.title",
             Self::About => "about.title",
         }
     }
@@ -51,11 +53,16 @@ pub(super) fn overlay(session: Session, _appearance: Controller) -> impl IntoEle
                             view()
                                 .w_full()
                                 .max_w(move || {
-                                    px(if surface.get() == Some(Surface::Logs) {
-                                        720.0
-                                    } else {
-                                        420.0
-                                    })
+                                    px(
+                                        if matches!(
+                                            surface.get(),
+                                            Some(Surface::Logs | Surface::Diagnostics)
+                                        ) {
+                                            720.0
+                                        } else {
+                                            420.0
+                                        },
+                                    )
                                 })
                                 .p_4()
                                 .gap_4()
@@ -95,6 +102,10 @@ pub(super) fn overlay(session: Session, _appearance: Controller) -> impl IntoEle
                                                 Surface::Menu => view().into_element(),
                                                 Surface::Logs => {
                                                     logs(sections.clone()).into_element()
+                                                }
+                                                Surface::Diagnostics => {
+                                                    super::diagnostics::surface(sections.clone())
+                                                        .into_element()
                                                 }
                                                 Surface::About => {
                                                     about(sections.clone()).into_element()
@@ -487,6 +498,7 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
     let check = session.clone();
     let about = session.clone();
     let logs = session.clone();
+    let diagnostics = session.clone();
     let history = session.clone();
     let surface = session.surface;
     let language = session.language;
@@ -613,6 +625,11 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
             move || language.get().text("action.logs"),
             false,
             move || logs.open_surface(Surface::Logs),
+        ))
+        .child(menu_row(
+            move || language.get().text("action.diagnostics"),
+            false,
+            move || diagnostics.open_surface(Surface::Diagnostics),
         ))
         .child(when(is_desktop, move || {
             let session = session.clone();

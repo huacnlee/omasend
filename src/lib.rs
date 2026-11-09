@@ -5,6 +5,7 @@ pub mod clipboard;
 pub mod diagnostics;
 pub mod localsend;
 pub mod model;
+pub mod netcheck;
 
 pub mod i18n;
 

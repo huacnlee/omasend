@@ -1,5 +1,6 @@
 //! Native Shell Rust UI. The protocol and transfer model remain platform independent.
 pub(crate) mod appearance;
+mod diagnostics;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod inputs;
 #[cfg(target_os = "ios")]

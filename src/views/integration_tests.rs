@@ -1607,3 +1607,119 @@ async fn received_image_stays_on_home_and_previews_without_opening_history() {
         s.texts.values().any(|text| text == "received-photo.png")
     });
 }
+
+#[component]
+fn DiagnosticsFixtureApp() -> impl IntoElement {
+    super::appearance::install_for_test();
+    let session = Session::new();
+    session.start_with(Ok(NodeConfig {
+        alias: "Diagnostics UI".into(),
+        port: 0,
+        downloads: std::env::temp_dir().join(format!("omasend-diag-ui-{}", std::process::id())),
+        discovery: false,
+    }));
+    let state = session.diagnostics;
+    let ready = session.clone();
+    view()
+        .child(super::diagnostics::surface(session.clone()))
+        .child(control("Enter bad peer", false, move || {
+            state.peer.set("10.0.0".into())
+        }))
+        .child(control("Enter loopback peer", false, {
+            let identity = session.identity;
+            move || {
+                let port = identity.get().map(|device| device.port).unwrap_or_default();
+                state.peer.set(format!("127.0.0.1:{port}"))
+            }
+        }))
+        .child(text(move || {
+            if ready.handle.get().is_some() {
+                "Node ready"
+            } else {
+                "Node starting"
+            }
+        }))
+        .child(text(move || {
+            state
+                .report
+                .get()
+                .map(|report| {
+                    let peer = report
+                        .sections
+                        .iter()
+                        .find(|section| section.title == "Specific device test")
+                        .map(|section| section.summary.clone())
+                        .unwrap_or_default();
+                    format!("Report sections: {} · {peer}", report.sections.len())
+                })
+                .unwrap_or_default()
+        }))
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn diagnostics_rejects_bad_peer_then_reports_on_the_running_node() {
+    let (tx, rx) = crossbeam_channel::unbounded();
+    let control = Arc::new(OnceLock::new());
+    let engine = Engine::start(
+        EngineConfig {
+            viewport: Size::new(nsh_core::Points(840.0), nsh_core::Points(630.0)),
+            environment: Environment {
+                os: nsh_core::platform::Os::MacOs,
+                ..Environment::default()
+            },
+            runtime: Some(tokio::runtime::Handle::current()),
+            ..EngineConfig::new(nsh_engine::App::Rust(nsh_core::element::Root::of::<
+                DiagnosticsFixtureApp,
+            >()))
+        },
+        || ApproxTextEngine,
+        Sink {
+            tx,
+            control: control.clone(),
+        },
+    )
+    .unwrap();
+    control.set(engine.control()).ok().unwrap();
+    let mut screen = Screen::default();
+    fn press(engine: &Engine, screen: &Screen, label: &str) {
+        let id = *screen
+            .labels
+            .iter()
+            .find(|(_, value)| value.as_str() == label)
+            .unwrap_or_else(|| panic!("missing {label}: {:?}", screen.labels))
+            .0;
+        engine.control().dispatch_event(
+            screen.press_target(id),
+            EventKind::Press,
+            EventPayload::None,
+        );
+    }
+    // Debug builds generate the node's RSA identity slowly.
+    screen.wait(&rx, Duration::from_secs(60), |s| {
+        s.texts.values().any(|t| t == "Node ready")
+    });
+    press(&engine, &screen, "Enter bad peer");
+    press(&engine, &screen, "Run diagnostics");
+    screen.wait(&rx, Duration::from_secs(10), |s| {
+        s.texts
+            .values()
+            .any(|t| t.starts_with("Enter an IPv4 address"))
+    });
+    press(&engine, &screen, "Enter loopback peer");
+    press(&engine, &screen, "Run diagnostics");
+    screen.wait(&rx, Duration::from_secs(60), |s| {
+        s.texts.values().any(|t| {
+            t.starts_with("Report sections: 10 · 127.0.0.1:") && t.contains("answered directly")
+        })
+    });
+    screen.wait(&rx, Duration::from_secs(10), |s| {
+        s.labels.values().any(|t| t == "Run again")
+    });
+    assert!(
+        !screen
+            .texts
+            .values()
+            .any(|t| t.starts_with("Enter an IPv4 address"))
+    );
+    drop(engine);
+}
