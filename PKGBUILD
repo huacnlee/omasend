@@ -9,6 +9,8 @@ license=('MIT')
 depends=(
   'gcc-libs'
   'glibc'
+  'gst-plugins-base-libs'
+  'gstreamer'
   'gtk4>=4.14'
   'hicolor-icon-theme'
   'omarchy'

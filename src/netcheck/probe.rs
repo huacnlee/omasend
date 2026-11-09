@@ -367,8 +367,9 @@ mod tests {
         let open = listener.local_addr().unwrap();
         assert_eq!(connect(open, CONNECT_TIMEOUT).await.0, ConnectOutcome::Open);
         drop(listener);
+        // Windows retries a refused connect for about two seconds.
         assert_eq!(
-            connect(open, CONNECT_TIMEOUT).await.0,
+            connect(open, Duration::from_secs(5)).await.0,
             ConnectOutcome::Refused
         );
     }
