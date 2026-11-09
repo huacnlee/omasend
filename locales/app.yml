@@ -550,3 +550,67 @@ action.copy_error:
 action.dismiss_error:
   en: "Dismiss error"
   zh-CN: "收起错误提示"
+
+action.diagnostics:
+  en: "Network diagnostics…"
+  zh-CN: "网络诊断…"
+diagnostics.title:
+  en: "Network diagnostics"
+  zh-CN: "网络诊断"
+diagnostics.intro:
+  en: "Can't see other devices, or they can't see you? Run the checks, then copy the report and paste it into an AI assistant such as ChatGPT or Claude."
+  zh-CN: "看不到其他设备，或者别人看不到你？运行检查后，复制报告并粘贴给 ChatGPT、Claude 等 AI 助手分析。"
+diagnostics.peer_label:
+  en: "Device IP to test (optional)"
+  zh-CN: "要测试的设备 IP（可选）"
+diagnostics.peer_placeholder:
+  en: "e.g. 192.168.1.23"
+  zh-CN: "例如 192.168.1.23"
+diagnostics.peer_invalid:
+  en: "Enter an IPv4 address such as 192.168.1.23, or leave it empty"
+  zh-CN: "请输入 IPv4 地址（如 192.168.1.23），或留空"
+diagnostics.run:
+  en: "Run diagnostics"
+  zh-CN: "开始诊断"
+diagnostics.run_again:
+  en: "Run again"
+  zh-CN: "重新诊断"
+diagnostics.running:
+  en: "Running…"
+  zh-CN: "诊断中…"
+diagnostics.report_label:
+  en: "Report"
+  zh-CN: "报告"
+diagnostics.empty:
+  en: "The report appears here. It takes about 15 seconds."
+  zh-CN: "报告会显示在这里，大约需要 15 秒。"
+diagnostics.step.basics:
+  en: "Collecting app and system information…"
+  zh-CN: "收集应用和系统信息…"
+diagnostics.step.interfaces:
+  en: "Reading network interfaces…"
+  zh-CN: "读取网卡信息…"
+diagnostics.step.routing:
+  en: "Reading routes…"
+  zh-CN: "读取路由…"
+diagnostics.step.proxy:
+  en: "Checking proxies and VPNs…"
+  zh-CN: "检查代理和 VPN…"
+diagnostics.step.network:
+  en: "Listening for devices and scanning the local network…"
+  zh-CN: "监听设备广播并扫描局域网…"
+diagnostics.step.peer:
+  en: "Testing the device you entered…"
+  zh-CN: "测试你输入的设备…"
+diagnostics.step.system:
+  en: "Checking firewall…"
+  zh-CN: "检查防火墙…"
+diagnostics.step.logs:
+  en: "Adding recent logs…"
+  zh-CN: "附加最近日志…"
+diagnostics.prompt:
+  en: "I'm having trouble with device discovery or connections in Omasend, a file-sharing app that uses the LocalSend protocol (UDP multicast 224.0.0.167:53317 for discovery, HTTPS on TCP 53317 for transfers). Below is a diagnostics report the app collected automatically. It lists facts, not conclusions. Please analyze the likely cause and give me step-by-step fixes I can follow. If you need more information, tell me exactly which command to run."
+  zh-CN: "我在使用 Omasend（一款使用 LocalSend 协议的文件传输应用：通过 UDP 组播 224.0.0.167:53317 发现设备，通过 TCP 53317 上的 HTTPS 传输文件）时遇到设备发现或连接问题。下面是应用自动收集的诊断报告，只列出事实，不含结论。请分析可能的原因，并给出我可以逐步操作的解决办法。如果需要更多信息，请告诉我具体要运行什么命令。"
+diagnostics.problem:
+  en: "**My problem:** <describe it here, e.g. \"my phone (192.168.1.23) and laptop see each other, but this computer sees neither\">"
+  zh-CN: "**我的问题：**<请在这里描述，例如「我的手机（192.168.1.23）和笔记本能互相看到，但这台电脑两个都看不到」>"

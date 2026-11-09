@@ -183,8 +183,8 @@ The terminal build uses NSH's Rust terminal backend and does not require GTK or
 a graphical session. File dialogs and system clipboard access use the host's
 available desktop services.
 
-Linux desktop builds require a C/C++ compiler, pkg-config, GTK 4.14 or later, OpenSSL,
-and XCB development files. The native file picker uses xdg-desktop-portal.
+Linux desktop builds require a C/C++ compiler, pkg-config, GTK 4.14 or later, GStreamer 1.x
+with its base plugin libraries, OpenSSL, and XCB development files. The native file picker uses xdg-desktop-portal.
 Install `wl-clipboard` for clipboard support on Wayland.
 
 ## License

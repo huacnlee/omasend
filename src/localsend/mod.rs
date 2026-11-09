@@ -2,7 +2,7 @@ mod adapter;
 mod receive;
 mod send;
 
-pub use adapter::{Handle, Node, NodeConfig};
+pub use adapter::{Handle, Node, NodeConfig, NodeProbe};
 pub use send::Upload;
 
 use std::path::PathBuf;

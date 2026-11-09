@@ -1,6 +1,6 @@
 # Maintainer: Jason Lee <huacnlee@gmail.com>
 pkgname=omasend
-pkgver=0.3.1
+pkgver=0.4.0
 pkgrel=1
 pkgdesc='Omarchy-native LocalSend client'
 arch=('x86_64' 'aarch64')
@@ -9,6 +9,8 @@ license=('MIT')
 depends=(
   'gcc-libs'
   'glibc'
+  'gst-plugins-base-libs'
+  'gstreamer'
   'gtk4>=4.14'
   'hicolor-icon-theme'
   'omarchy'

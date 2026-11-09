@@ -29,7 +29,8 @@ quarantine behavior; it does not disable Gatekeeper.
 On Linux, put `~/.local/bin` on `PATH`. The installer adds the desktop entry
 and icon under the prefix's `share` directory. A custom prefix also needs its
 `share` directory on `XDG_DATA_DIRS` for launcher discovery. Install your
-distribution's GTK 4.14 or later and `xdg-desktop-portal` runtime packages, plus
+distribution's GTK 4.14 or later, GStreamer 1.x (core and base plugin libraries)
+and `xdg-desktop-portal` runtime packages, plus
 `wl-clipboard` for Wayland paste.
 The installer does not modify package-manager or shell configuration.
 
