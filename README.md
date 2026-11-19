@@ -16,7 +16,7 @@ Windows, Android, and iOS.
 
 ## Install
 
-Supports Linux x86_64 and ARM64, macOS 14+ (Apple Silicon and Intel), Windows x86_64, Android 9+ (ARM64 and x86_64), and iOS 15+.
+The commands below install the latest stable release. Supports Linux x86_64 and ARM64, macOS 14+ (Apple Silicon and Intel), Windows x86_64, Android 9+ (ARM64 and x86_64), and iOS 15+.
 
 **macOS / Linux**
 
@@ -35,6 +35,19 @@ irm https://huacnlee.github.io/omasend/install.ps1 | iex
 ```sh
 mise use -g github:huacnlee/omasend
 ```
+
+**From source**
+
+Stable releases are the only prebuilt builds; there is no nightly channel. To run
+the latest `main`, build it with a recent stable Rust toolchain:
+
+```sh
+git clone https://github.com/huacnlee/omasend.git
+cd omasend
+cargo build --release --locked
+```
+
+See [Build from source](docs/install.md#build-from-source) for platform requirements.
 
 **Android**
 

@@ -133,6 +133,29 @@ mise installs only the executable. It does not add the Linux desktop entry and
 icon, or put `OmaSend.app` in Applications. Upgrade with `mise upgrade`, not
 the in-app updater, so mise keeps track of the installed version.
 
+## Build from source
+
+Omasend has no nightly channel; stable releases are the only prebuilt builds.
+To run the latest `main`, build it from source. You need a recent stable Rust
+toolchain. On Linux, also install a C/C++ compiler, pkg-config, GTK 4.14 or later,
+GStreamer 1.x with its base plugin libraries, OpenSSL, and XCB development files.
+
+```sh
+git clone https://github.com/huacnlee/omasend.git
+cd omasend
+cargo build --release --locked
+```
+
+The executable is `target/release/omasend` (`omasend.exe` on Windows). Build the
+terminal version instead with:
+
+```sh
+cargo build --release --locked --no-default-features --features tui --bin omasend-tui
+```
+
+See [Development and build](../README.md#development-and-build) for the NSH
+development host, iOS, and Android builds.
+
 ## Manual installation and removal
 
 Every archive is portable. Download the archive for your platform and CPU,
