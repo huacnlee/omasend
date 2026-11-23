@@ -141,7 +141,7 @@ and 1 mocked Wayland test. The manually operated native-window fixture remains
 ignored. The Arch recipe test and all 9 Unix installer tests pass.
 
 The optimized ARM macOS executable was packaged with the production release
-script, extracted and executed by `packaging/check-release.py`. The real Unix
+script, extracted and executed by `scripts/check-release.py`. The real Unix
 installer then installed and replaced that bundle in an isolated temporary
 folder (including spaces in its path), preserving a valid signature and version
 output. The installed release executable also opened the native window and

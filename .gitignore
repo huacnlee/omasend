@@ -1,5 +1,6 @@
 /target/
-/native/target/
+/ext/*/target/
+/ext/omasend/native/target/
 /.nsh/
 *.panic.log
 .DS_Store

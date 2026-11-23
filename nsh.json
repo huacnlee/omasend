@@ -1,7 +1,10 @@
 {
   "name": "Omasend",
+  "id": "com.huacnlee.omasend",
   "appearance": "system",
-  "rust": ".",
-  "root": "App",
-  "id": "com.huacnlee.omasend"
+  "dependencies": {
+    "omasend": {
+      "path": "ext/omasend"
+    }
+  }
 }

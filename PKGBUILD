@@ -28,19 +28,19 @@ source=()
 build() {
   export CARGO_TARGET_DIR="$srcdir/target"
   cd "$startdir"
-  cargo build --release --locked
+  cargo build --manifest-path ext/omasend/Cargo.toml --release --locked
 }
 
 check() {
   export CARGO_TARGET_DIR="$srcdir/target"
   cd "$startdir"
-  cargo test --locked --no-default-features
+  cargo test --manifest-path ext/omasend/Cargo.toml --locked --no-default-features
 }
 
 package() {
   cd "$startdir"
   install -Dm755 "$srcdir/target/release/omasend" "$pkgdir/usr/bin/omasend"
-  install -Dm644 packaging/omasend.desktop \
+  install -Dm644 assets/omasend.desktop \
     "$pkgdir/usr/share/applications/omasend.desktop"
   install -Dm644 assets/omasend.png \
     "$pkgdir/usr/share/icons/hicolor/1024x1024/apps/omasend.png"

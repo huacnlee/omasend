@@ -58,7 +58,7 @@ class PkgbuildTests(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(cargo_log.read_text().strip(), "build --release --locked")
+            self.assertEqual(cargo_log.read_text().strip(), "build --manifest-path ext/omasend/Cargo.toml --release --locked")
             self.assertTrue(os.access(pkgdir / "usr/bin/omasend", os.X_OK))
             self.assertTrue((pkgdir / "usr/share/applications/omasend.desktop").is_file())
             self.assertTrue(

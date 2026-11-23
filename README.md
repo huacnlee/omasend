@@ -100,25 +100,40 @@ Omasend available from the Dock; choose **Exit** to quit.
 
 ## Migration status
 
-The main application now runs on Native Shell in Rust mode. UI parity work is
+The main application runs on Native Shell, with its Rust in an nshm. UI parity work is
 still in progress; see [migration status and verification](docs/migration.md).
 Some features described above remain to be restored in the new interface.
 
 ## Development and build
 
-Built with [Native Shell](https://github.com/longbridge/nsh) in Rust mode and the
+Built with [Native Shell](https://github.com/longbridge/nsh) nightly and the
 [LocalSend Rust core](https://github.com/localsend/localsend).
 
-With a recent stable Rust toolchain, the latest NSH CLI, and your platform’s
-development libraries, start the native development host with automatic rebuilding
-on Rust source changes:
+The app follows NSH's [`ext/` layout](https://nsh.dev/docs/nshm#an-apps-own-rust-ext):
+
+```text
+App.tsx              the entry: mounts the Rust App view
+ext/omasend/         the app's Rust, an nshm: LocalSend client, state, views,
+                     the standalone desktop (omasend) and terminal (omasend-tui) binaries
+nsh.json             "dependencies": { "omasend": { "path": "ext/omasend" } }
+```
+
+With a recent stable Rust toolchain and your platform’s development libraries,
+build the pinned NSH nightly CLI once, then start the native development host,
+which rebuilds on Rust source changes:
 
 ```sh
+scripts/setup-nightly.sh
+export PATH="$PWD/.nsh/bin:$PATH"
 nsh dev
 ```
 
-`nsh.json` declares the Rust `App` root. The default target is the native host
-for your platform (AppKit on macOS, GTK on Linux, Win32 on Windows).
+The default target is the native host for your platform (AppKit on macOS, GTK on
+Linux, Win32 on Windows). Run the Rust tests from the crate:
+
+```sh
+cargo test --manifest-path ext/omasend/Cargo.toml --features ui-tests --lib
+```
 
 For iPhone UI development, use the iOS simulator host:
 
@@ -168,7 +183,7 @@ Release builds use the same persistent keystore for updates. GitHub Actions read
 Build the standalone release executable with:
 
 ```sh
-cargo build --release --locked
+cargo build --manifest-path ext/omasend/Cargo.toml --release --locked
 ```
 
 The releases also include `omasend-tui` archives for macOS, Linux, and Windows.
@@ -176,7 +191,7 @@ Extract the archive and run `./omasend-tui` (`omasend-tui.exe` on Windows).
 Build the standalone terminal version with:
 
 ```sh
-cargo build --release --locked --no-default-features --features tui --bin omasend-tui
+cargo build --manifest-path ext/omasend/Cargo.toml --release --locked --no-default-features --features tui --bin omasend-tui
 ```
 
 The terminal build uses NSH's Rust terminal backend and does not require GTK or

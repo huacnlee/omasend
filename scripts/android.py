@@ -39,7 +39,7 @@ def main():
     args = parser.parse_args()
     if not os.environ.get('NSH_KEYSTORE_PASSWORD'):
         parser.error('Set NSH_KEYSTORE_PASSWORD for the release keystore')
-    version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['package']['version']
+    version = tomllib.loads((ROOT / 'ext/omasend/Cargo.toml').read_text())['package']['version']
     major, minor, patch = map(int, version.split('.'))
     version_code = str(major * 1_000_000 + minor * 10_000 + patch * 100)
     sdk = Path(os.environ.get('ANDROID_HOME', str(Path.home() / 'Library/Android/sdk')))
@@ -84,7 +84,7 @@ def main():
     shutil.rmtree(work, ignore_errors=True)
     classes = work / 'classes'
     classes.mkdir(parents=True)
-    sources = sorted(java.rglob('*.java')) + sorted((ROOT / 'native/android').rglob('*.java'))
+    sources = sorted(java.rglob('*.java')) + sorted((ROOT / 'ext/omasend/native/android').rglob('*.java'))
     run('javac', '--release', '17', '-encoding', 'UTF-8', '-classpath', android_jar, '-d', classes, *sources)
     run('jar', 'cf', work / 'classes.jar', '-C', classes, '.')
     run(tools / 'd8', '--min-api', '28', '--lib', android_jar, '--output', work, work / 'classes.jar')

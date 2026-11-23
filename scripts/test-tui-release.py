@@ -19,8 +19,8 @@ def load(name, path):
     return module
 
 
-build = load("build_release", "packaging/build-release.py")
-verify = load("check_release", "packaging/check-release.py")
+build = load("build_release", "scripts/build-release.py")
+verify = load("check_release", "scripts/check-release.py")
 
 
 class TerminalReleaseTests(unittest.TestCase):

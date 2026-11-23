@@ -9,7 +9,7 @@ use std::{sync::OnceLock, time::Duration};
 fn paths() -> &'static [Path] {
     static PATHS: OnceLock<Vec<Path>> = OnceLock::new();
     PATHS.get_or_init(|| {
-        include_str!("../../assets/logo.svg")
+        include_str!("../../../../assets/logo.svg")
             .split(" d=\"")
             .skip(1)
             .flat_map(|part| {

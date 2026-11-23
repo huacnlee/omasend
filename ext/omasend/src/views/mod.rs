@@ -99,6 +99,7 @@ pub(super) fn editor() -> nsh_core::element::Input {
         .selection_color(move || color(theme().color("caret").unwrap()))
 }
 
+/// Omasend's window: nearby devices, the Outbox and transfers.
 #[component]
 pub fn App() -> impl IntoElement {
     let appearance = appearance::install();

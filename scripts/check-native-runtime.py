@@ -7,7 +7,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 result = subprocess.run(
-    ["cargo", "metadata", "--locked", "--all-features", "--format-version", "1"],
+    ["cargo", "metadata", "--manifest-path", "ext/omasend/Cargo.toml", "--locked", "--all-features", "--format-version", "1"],
     cwd=root,
     check=True,
     capture_output=True,

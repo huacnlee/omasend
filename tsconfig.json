@@ -1,0 +1,10 @@
+{
+  "extends": "./.nsh/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
+  },
+  "include": ["App.tsx"]
+}

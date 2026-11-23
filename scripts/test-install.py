@@ -78,7 +78,7 @@ else:
         binary.write_bytes(b"#!/bin/sh\n# arm64 release fixture\n")
         result = subprocess.run([
             sys.executable,
-            str(SCRIPT.parent / "packaging/build-release.py"),
+            str(SCRIPT.parent / "scripts/build-release.py"),
             "--target", "aarch64-unknown-linux-gnu", "--version", "0.1.0",
             "--binary", str(binary), "--output", str(self.root),
         ], capture_output=True, text=True)

@@ -711,6 +711,8 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
                 right: nsh_core::Points(right),
                 bottom: nsh_core::Points(0.0),
             },
+            // Title bar insets only apply on a desktop OS.
+            os: nsh_core::platform::Os::MacOs,
             ..Environment::default()
         });
         screen.wait(&rx, Duration::from_secs(10), |s| {
@@ -875,20 +877,17 @@ async fn update_progress_retry_and_restart_survive_closing_the_starting_surface(
             .values()
             .any(|t| t == "Finish transfers and clear Outbox before restarting")
     });
-    assert!(!screen.desktop_commands.iter().any(|c| matches!(
-        c,
-        nsh_core::desktop::DesktopCommand::Request(nsh_core::desktop::WindowRequest::Close)
-    )));
+    assert!(
+        !screen
+            .desktop_commands
+            .contains(&nsh_core::desktop::DesktopCommand::Quit)
+    );
     assert!(!omasend::updates::RESTART_REQUESTED.load(Ordering::SeqCst));
     press(&engine, &screen, "Clear draft");
     press(&engine, &screen, "Restart to update");
     screen.wait(&rx, Duration::from_secs(10), |s| {
-        s.desktop_commands.iter().any(|c| {
-            matches!(
-                c,
-                nsh_core::desktop::DesktopCommand::Request(nsh_core::desktop::WindowRequest::Close)
-            )
-        })
+        s.desktop_commands
+            .contains(&nsh_core::desktop::DesktopCommand::Quit)
     });
     assert!(omasend::updates::RESTART_REQUESTED.load(Ordering::SeqCst));
     drop(engine);
