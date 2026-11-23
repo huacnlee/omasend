@@ -54,9 +54,9 @@ fn control_variant(
 
 pub(super) fn editor() -> nsh_core::element::Input {
     nsh_core::element::input()
-        .text_color(move || nsh_omarchy::tokens::foreground())
+        .text_color(nsh_omarchy::tokens::foreground)
         .text_size(move || px(appearance::font_size()))
-        .font_family(move || SharedString::from(appearance::metrics().family))
+        .font_family(move || appearance::metrics().family)
         .placeholder_color(move || color(nsh_omarchy::tokens::secondary()))
         .selection_color(move || color(nsh_omarchy::tokens::accent()))
 }
@@ -144,10 +144,10 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
     let content = view()
         .p_safe_area()
         .flex_1()
-        .font_family(move || SharedString::from(appearance::metrics().family))
+        .font_family(move || appearance::metrics().family)
         .text_size(move || px(appearance::font_size()))
-        .bg(move || nsh_omarchy::tokens::background())
-        .text_color(move || nsh_omarchy::tokens::foreground())
+        .bg(nsh_omarchy::tokens::background)
+        .text_color(nsh_omarchy::tokens::foreground)
         .child(when(is_desktop, {
             let session = session.clone();
             move || titlebar::bar(session.clone())
@@ -179,7 +179,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                                         language.get().text("composer.choose_device")
                                     })
                             })
-                            .text_color(move || nsh_omarchy::tokens::secondary())
+                            .text_color(nsh_omarchy::tokens::secondary)
                             .flex_1(),
                         )
                         .child(text(move || {
@@ -215,8 +215,8 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                                 move || sender.send(),
                             )
                             .when(!is_desktop(), |v| {
-                                v.border_color(move || nsh_omarchy::tokens::accent())
-                                    .text_color(move || nsh_omarchy::tokens::accent())
+                                v.border_color(nsh_omarchy::tokens::accent)
+                                    .text_color(nsh_omarchy::tokens::accent)
                             }),
                         ),
                 )
@@ -234,7 +234,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                 .border_t_1()
                 .border_color(appearance::divider)
                 .text_size(px(11.0))
-                .text_color(move || nsh_omarchy::tokens::secondary())
+                .text_color(nsh_omarchy::tokens::secondary)
                 .child(
                     text(move || {
                         identity.get().map(|d| d.alias).unwrap_or_else(|| {
@@ -250,7 +250,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                             .map(|key| language.get().text(key))
                             .unwrap_or_default()
                     })
-                    .text_color(move || nsh_omarchy::tokens::success())
+                    .text_color(nsh_omarchy::tokens::success)
                     .bind_opacity(&notice_opacity),
                 )
                 .child(services::update_control(session.clone()))

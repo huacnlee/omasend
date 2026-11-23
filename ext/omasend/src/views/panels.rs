@@ -46,7 +46,7 @@ pub(super) fn error_notice(session: Session) -> impl IntoElement {
                 .gap_3()
                 .border_1()
                 .border_color(appearance::divider)
-                .bg(move || nsh_omarchy::tokens::foreground().opacity(0.03))
+                .bg(nsh_omarchy::tokens::foreground().opacity(0.03))
                 .rounded_none()
                 .child(
                     view()
@@ -54,8 +54,8 @@ pub(super) fn error_notice(session: Session) -> impl IntoElement {
                         .items_center()
                         .justify_center()
                         .border_1()
-                        .border_color(move || nsh_omarchy::tokens::danger().opacity(0.4))
-                        .child(text("!").text_color(move || nsh_omarchy::tokens::danger())),
+                        .border_color(nsh_omarchy::tokens::danger().opacity(0.4))
+                        .child(text("!").text_color(nsh_omarchy::tokens::danger)),
                 )
                 .child(
                     view()
@@ -65,7 +65,7 @@ pub(super) fn error_notice(session: Session) -> impl IntoElement {
                         .child(
                             text(move || message.get().1)
                                 .text_size(move || px(if is_desktop() { 11.0 } else { 13.0 }))
-                                .text_color(move || nsh_omarchy::tokens::secondary()),
+                                .text_color(nsh_omarchy::tokens::secondary),
                         ),
                 )
                 .child(super::utilities::copy_error_button(session.clone()))
@@ -106,7 +106,7 @@ pub(super) fn nearby(session: Session) -> impl IntoElement {
                         count.revision.get();
                         count.state.borrow().devices.len().to_string()
                     })
-                    .text_color(move || nsh_omarchy::tokens::secondary()),
+                    .text_color(nsh_omarchy::tokens::secondary),
                 )
                 .child(view().flex_1())
                 .child(when(
@@ -149,7 +149,7 @@ pub(super) fn nearby(session: Session) -> impl IntoElement {
                 let session = session.clone();
                 move || {
                     text(session.translated("nearby.looking"))
-                        .text_color(move || nsh_omarchy::tokens::secondary())
+                        .text_color(nsh_omarchy::tokens::secondary)
                 }
             },
         ))
@@ -244,8 +244,8 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
         .bg(move || {
             nsh_omarchy::tokens::foreground().opacity(if selected.get() { 0.04 } else { 0.0 })
         })
-        .hover(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
+        .hover(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
+        .focus(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
         .role(AccessibilityRole::Button)
         .label(move || device.get().map(|d| d.0).unwrap_or_default())
         .on_press(move |_: &()| session.select(id.clone()))
@@ -255,8 +255,8 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
                 .items_center()
                 .justify_center()
                 .border_1()
-                .border_color(move || nsh_omarchy::tokens::success().opacity(0.45))
-                .bg(move || nsh_omarchy::tokens::success().opacity(0.12))
+                .border_color(nsh_omarchy::tokens::success().opacity(0.45))
+                .bg(nsh_omarchy::tokens::success().opacity(0.12))
                 .child(
                     text(move || {
                         device
@@ -264,7 +264,7 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
                             .map(|d| device_initials(&d.0))
                             .unwrap_or_default()
                     })
-                    .text_color(move || nsh_omarchy::tokens::success()),
+                    .text_color(nsh_omarchy::tokens::success),
                 ),
         )
         .child(
@@ -288,7 +288,7 @@ fn device_card(session: Session, id: String) -> impl IntoElement {
                     })
                     .number_of_lines(1)
                     .text_size(px(11.0))
-                    .text_color(move || nsh_omarchy::tokens::secondary()),
+                    .text_color(nsh_omarchy::tokens::secondary),
                 ),
         )
         .child(view().size(px(12.0)).flex_shrink_0().child(when(
@@ -323,7 +323,7 @@ fn keycap(label: &'static str) -> impl IntoElement {
         .px(px(4.0))
         .py(px(3.0))
         .border_1()
-        .border_color(move || nsh_omarchy::tokens::foreground().opacity(0.25))
+        .border_color(nsh_omarchy::tokens::foreground().opacity(0.25))
         .child(text(label).text_size(px(11.0)))
 }
 
@@ -399,7 +399,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                 .inset_0()
                 .pointer_events(PointerEvents::None)
                 .border_2()
-                .border_color(move || nsh_omarchy::tokens::accent())
+                .border_color(nsh_omarchy::tokens::accent)
                 .rounded_none()
                 .bind_opacity(&highlight),
         )
@@ -427,7 +427,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                         })))
                         .child(
                             text(session.translated("composer.drop_kinds"))
-                                .text_color(move || nsh_omarchy::tokens::secondary())
+                                .text_color(nsh_omarchy::tokens::secondary)
                                 .max_w(move || px((window().width.0 - 64.0).max(0.0)))
                                 .text_center()
                                 .number_of_lines(2),
@@ -543,7 +543,7 @@ pub(super) fn outbox(session: Session) -> impl IntoElement {
                                                 12.0
                                             })
                                         })
-                                        .text_color(move || nsh_omarchy::tokens::secondary())
+                                        .text_color(nsh_omarchy::tokens::secondary)
                                 },
                             ))
                             .child(
@@ -723,7 +723,7 @@ fn composer_progress(session: Session, id: String) -> impl IntoElement {
                         }
                     })
                     .text_size(px(11.0))
-                    .text_color(move || nsh_omarchy::tokens::secondary()),
+                    .text_color(nsh_omarchy::tokens::secondary),
                 )
                 .child(when(
                     move || {
@@ -735,12 +735,12 @@ fn composer_progress(session: Session, id: String) -> impl IntoElement {
                         view()
                             .test_id("composer-transfer-progress")
                             .h(px(3.0))
-                            .bg(move || nsh_omarchy::tokens::border())
+                            .bg(nsh_omarchy::tokens::border)
                             .child(
                                 view()
                                     .h(px(3.0))
                                     .w_full()
-                                    .bg(move || nsh_omarchy::tokens::accent())
+                                    .bg(nsh_omarchy::tokens::accent)
                                     .transform_origin(nsh_core::TransformOrigin {
                                         x: nsh_core::geometry::DefiniteLength::Fraction(
                                             nsh_core::geometry::Percentage(0.0),
@@ -780,8 +780,8 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
         .popup_style(|s| {
             s.h(move || px(window().height.0 * 0.55))
                 .bg(appearance::panel_background)
-                .text_color(move || nsh_omarchy::tokens::foreground())
-                .font_family(move || SharedString::from(appearance::metrics().family))
+                .text_color(nsh_omarchy::tokens::foreground)
+                .font_family(move || appearance::metrics().family)
                 .text_size(move || px(super::appearance::font_size()))
                 .pb(move || safe_area().bottom)
                 .border_t_1()
@@ -819,7 +819,7 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
                                 move || clear.clear_history(),
                             )
                             .label(session.translated("action.clear_history"))
-                            .text_color(move || nsh_omarchy::tokens::danger()),
+                            .text_color(nsh_omarchy::tokens::danger),
                         )
                         .child(super::utilities::close_button(
                             session.translated("action.close"),
@@ -840,7 +840,7 @@ pub(super) fn history_overlay(session: Session) -> impl IntoElement {
                                     move || {
                                         text(session.translated("history.empty"))
                                             .py_3()
-                                            .text_color(move || nsh_omarchy::tokens::secondary())
+                                            .text_color(nsh_omarchy::tokens::secondary)
                                     }
                                 },
                             ))
@@ -914,7 +914,7 @@ fn activity_with(session: Session, include_finished: bool) -> impl IntoElement {
                                     .bg(appearance::panel_background)
                                     .border_1()
                                     .p_4()
-                                    .border_color(move || nsh_omarchy::tokens::border())
+                                    .border_color(nsh_omarchy::tokens::border)
                                     .child(text(move || {
                                         labels.revision.get();
                                         labels
@@ -1097,7 +1097,7 @@ fn transfer_row(
         .child(
             text(move || details.get().map(|d| d.2).unwrap_or_default())
                 .text_size(px(11.0))
-                .text_color(move || nsh_omarchy::tokens::secondary()),
+                .text_color(nsh_omarchy::tokens::secondary),
         )
         .child(when(
             move || active.get(),
@@ -1110,12 +1110,12 @@ fn transfer_row(
                         view()
                             .test_id("transfer-progress")
                             .h(px(3.0))
-                            .bg(move || nsh_omarchy::tokens::border())
+                            .bg(nsh_omarchy::tokens::border)
                             .child(
                                 view()
                                     .h(px(3.0))
                                     .w_full()
-                                    .bg(move || nsh_omarchy::tokens::accent())
+                                    .bg(nsh_omarchy::tokens::accent)
                                     .transform_origin(nsh_core::TransformOrigin {
                                         x: nsh_core::geometry::DefiniteLength::Fraction(
                                             nsh_core::geometry::Percentage(0.0),
@@ -1277,7 +1277,7 @@ fn received_actions(
                             })
                             .number_of_lines(2)
                             .text_size(px(11.0))
-                            .text_color(move || nsh_omarchy::tokens::secondary())
+                            .text_color(nsh_omarchy::tokens::secondary)
                         }
                     }))
                     .child(

@@ -670,7 +670,7 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
         assert!(screen.desktop_commands.iter().any(|command| matches!(command,
             nsh_core::desktop::DesktopCommand::SetAttributes(attributes)
                 if attributes.title_bar.is_some_and(|bar| bar.style == nsh_core::desktop::TitleBarStyle::Hidden
-                    && bar.height.is_some_and(|height| height.0 == 42.0)))));
+                    && bar.height.is_some_and(|height| height.0 == 36.0)))));
         assert_eq!(
             screen.window_drag[&screen.test_ids["app-header"]],
             Some(true)
@@ -717,8 +717,8 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
         });
         screen.wait(&rx, Duration::from_secs(10), |s| {
             let menu = s.bounds("app-menu");
-            (menu.x + menu.width - (640.0 - 16.0 - right)).abs() < 0.1
-                && (s.bounds("app-title").x - (16.0 + left + 24.0 + 8.0)).abs() < 0.1
+            (menu.x + menu.width - (640.0 - 12.0 - right)).abs() < 0.1
+                && (s.bounds("app-title").x - (12.0 + left + 20.0 + 8.0)).abs() < 0.1
         });
     }
     drop(engine);

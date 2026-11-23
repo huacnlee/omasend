@@ -249,7 +249,7 @@ pub(super) fn update_control(session: Session) -> impl IntoElement {
                     move || activate.activate_update(),
                 )
                 .py(px(0.0))
-                .text_color(move || nsh_omarchy::tokens::accent())
+                .text_color(nsh_omarchy::tokens::accent)
             },
         ))
         .child(when(

@@ -67,13 +67,11 @@ pub(super) fn overlay(session: Session, _appearance: Controller) -> impl IntoEle
                                 .p_4()
                                 .gap_4()
                                 .border_1()
-                                .font_family(move || {
-                                    SharedString::from(appearance::metrics().family)
-                                })
+                                .font_family(move || appearance::metrics().family)
                                 .text_size(move || px(super::appearance::font_size()))
                                 .bg(appearance::panel_background)
-                                .text_color(move || nsh_omarchy::tokens::foreground())
-                                .border_color(move || nsh_omarchy::tokens::border())
+                                .text_color(nsh_omarchy::tokens::foreground)
+                                .border_color(nsh_omarchy::tokens::border)
                                 .child(
                                     view()
                                         .flex_row()
@@ -145,8 +143,8 @@ fn icon_button(
             .on_press(run)
             .px(px(8.0))
             .rounded_none()
-            .hover(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
-            .focus(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
+            .hover(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
+            .focus(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
             .child(content);
     }
     let (target, glyph) = if is_desktop() {
@@ -189,9 +187,9 @@ fn icon_button(
         .items_center()
         .justify_center()
         .rounded_none()
-        .hover(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
-        .active(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.22)))
+        .hover(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
+        .focus(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
+        .active(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.22)))
         .child(content)
 }
 
@@ -242,7 +240,7 @@ pub(super) fn mobile_menu_trigger(session: Session) -> impl IntoElement {
         },
     )
     .selected(move || surface.get() == Some(Surface::Menu))
-    .selected_style(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
+    .selected_style(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
 }
 
 /// The menu opens and closes itself from its trigger's presses (its
@@ -257,7 +255,7 @@ fn desktop_menu_trigger(session: Session) -> nsh_base::ButtonElement {
         || {},
     )
     .selected(move || surface.get() == Some(Surface::Menu))
-    .selected_style(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
+    .selected_style(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
 }
 
 pub(super) fn menu_button(session: Session) -> impl IntoElement {
@@ -304,8 +302,8 @@ pub(super) fn menu_button(session: Session) -> impl IntoElement {
                 .border_1()
                 .border_color(appearance::divider)
                 .bg(appearance::panel_background)
-                .text_color(move || nsh_omarchy::tokens::foreground())
-                .font_family(move || SharedString::from(appearance::metrics().family))
+                .text_color(nsh_omarchy::tokens::foreground)
+                .font_family(move || appearance::metrics().family)
                 .text_size(move || px(super::appearance::font_size()))
                 .rounded_none()
         })
@@ -339,8 +337,8 @@ pub(super) fn add_files_button(session: Session) -> impl IntoElement {
                 .border_1()
                 .border_color(appearance::divider)
                 .bg(appearance::panel_background)
-                .text_color(move || nsh_omarchy::tokens::foreground())
-                .font_family(move || SharedString::from(appearance::metrics().family))
+                .text_color(nsh_omarchy::tokens::foreground)
+                .font_family(move || appearance::metrics().family)
                 .text_size(move || px(super::appearance::font_size()))
         })
         .backdrop_style(|s| s.bg(AdaptiveColor::from(rgb(0)).opacity(0.6)))
@@ -392,9 +390,9 @@ fn menu_row(
         .h(move || px(if is_desktop() { 28.0 } else { 44.0 }))
         .px(px(8.0))
         .py(px(4.0))
-        .hover(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
-        .active(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.22)))
+        .hover(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
+        .focus(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
+        .active(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.22)))
         .child(text(title))
 }
 
@@ -442,9 +440,9 @@ fn submenu_trigger(title: impl IntoReactive<SharedString>) -> nsh_core::element:
         .h(move || px(if is_desktop() { 28.0 } else { 44.0 }))
         .px(px(8.0))
         .py(px(4.0))
-        .hover(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
-        .focus(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.08)))
-        .active(|s| s.bg(move || nsh_omarchy::tokens::foreground().opacity(0.22)))
+        .hover(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
+        .focus(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.08)))
+        .active(|s| s.bg(nsh_omarchy::tokens::foreground().opacity(0.22)))
         .child(text(title))
         .child(when(
             || !appearance::is_terminal(),
@@ -511,7 +509,7 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
                 text(move || if is_desktop() { "ctrl+v" } else { "" })
                     .flex_1()
                     .text_right()
-                    .text_color(move || nsh_omarchy::tokens::secondary()),
+                    .text_color(nsh_omarchy::tokens::secondary),
             ),
         )
         .child(if is_desktop() {
@@ -527,7 +525,7 @@ fn menu_contents(session: Session, appearance: Controller) -> impl IntoElement {
                 text(move || if is_desktop() { "ctrl+o" } else { "" })
                     .flex_1()
                     .text_right()
-                    .text_color(move || nsh_omarchy::tokens::secondary()),
+                    .text_color(nsh_omarchy::tokens::secondary),
             )
             .into_element()
         } else {
@@ -728,7 +726,7 @@ fn logs(session: Session) -> impl IntoElement {
                     .map(|key| language.get().text(key))
                     .unwrap_or_default()
             })
-            .text_color(move || nsh_omarchy::tokens::success()),
+            .text_color(nsh_omarchy::tokens::success),
         )
 }
 
@@ -750,7 +748,7 @@ fn about(session: Session) -> impl IntoElement {
         .child(text(session.translated("about.credit")))
         .child(
             text(session.translated("about.native_shell"))
-                .text_color(move || nsh_omarchy::tokens::secondary()),
+                .text_color(nsh_omarchy::tokens::secondary),
         )
         .child(
             view()

@@ -89,7 +89,7 @@ fn install_with(mode: Mode, omarchy: bool, persist: bool) -> Controller {
 }
 #[cfg(all(test, feature = "ui-tests"))]
 pub(super) fn install_for_test() -> Controller {
-    install_with(Mode::Dark, false, false)
+    install_with(Mode::System, false, false)
 }
 
 impl Controller {

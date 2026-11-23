@@ -93,7 +93,7 @@ pub(super) fn surface(session: Session) -> impl IntoElement {
         .gap_3()
         .child(
             text(session.translated("diagnostics.intro"))
-                .text_color(move || nsh_omarchy::tokens::secondary()),
+                .text_color(nsh_omarchy::tokens::secondary),
         )
         .child(
             nsh_omarchy::input()
@@ -119,7 +119,7 @@ pub(super) fn surface(session: Session) -> impl IntoElement {
             move || state.invalid_peer.get(),
             move || {
                 text(move || language.get().text("diagnostics.peer_invalid"))
-                    .text_color(move || nsh_omarchy::tokens::danger())
+                    .text_color(nsh_omarchy::tokens::danger)
             },
         ))
         .child(
