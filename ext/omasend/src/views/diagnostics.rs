@@ -1,6 +1,6 @@
 //! Network diagnostics surface: runs `omasend::netcheck` against the running
 //! node and shows a Markdown report the user copies into an AI assistant.
-use super::{appearance::theme, control, editor, session::Session};
+use super::{control, editor, session::Session};
 use nsh_core::prelude::*;
 use omasend::netcheck::{self, Report};
 
@@ -93,28 +93,33 @@ pub(super) fn surface(session: Session) -> impl IntoElement {
         .gap_3()
         .child(
             text(session.translated("diagnostics.intro"))
-                .text_color(move || theme().muted_foreground),
+                .text_color(move || nsh_omarchy::tokens::secondary()),
         )
         .child(
-            editor()
-                .value(move || state.peer.get())
-                .on_change(move |value: &str| {
-                    state.peer.set(value.to_owned());
+            nsh_omarchy::input()
+                .value(move || SharedString::from(state.peer.get()))
+                .invalid(move || state.invalid_peer.get())
+                .on_change(move |value: &SharedString| {
+                    state.peer.set(value.to_string());
                     state.invalid_peer.set(false);
                 })
                 .on_submit({
                     let run = run.clone();
-                    move |_: &str| run.run_diagnostics()
+                    move |_: &SharedString| run.run_diagnostics()
                 })
-                .placeholder(move || language.get().text("diagnostics.peer_placeholder"))
-                .label(move || language.get().text("diagnostics.peer_label"))
+                .placeholder(move || {
+                    SharedString::from(language.get().text("diagnostics.peer_placeholder"))
+                })
+                .accessibility_label(move || {
+                    SharedString::from(language.get().text("diagnostics.peer_label"))
+                })
                 .test_id("diagnostics-peer"),
         )
         .child(when(
             move || state.invalid_peer.get(),
             move || {
                 text(move || language.get().text("diagnostics.peer_invalid"))
-                    .text_color(move || theme().color("destructive").unwrap())
+                    .text_color(move || nsh_omarchy::tokens::danger())
             },
         ))
         .child(
@@ -159,9 +164,9 @@ pub(super) fn surface(session: Session) -> impl IntoElement {
                     .flex_1()
                     .text_color(move || {
                         if state.step.get().is_some() {
-                            theme().muted_foreground
+                            nsh_omarchy::tokens::secondary()
                         } else {
-                            theme().color("success.background").unwrap()
+                            nsh_omarchy::tokens::success()
                         }
                     }),
                 ),

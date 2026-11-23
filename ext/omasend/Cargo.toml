@@ -12,7 +12,7 @@ exclude = ["vendor/localsend"]
 
 [features]
 default = ["desktop"]
-ui = ["dep:nsh-core", "dep:nsh-base", "dep:rfd", "dep:arboard", "dep:image", "dep:open", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:toml"]
+ui = ["dep:nsh-core", "dep:nsh-base", "dep:nsh-omarchy", "dep:rfd", "dep:arboard", "dep:image", "dep:open", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:toml"]
 desktop = ["ui", "dep:nsh-platform-macos", "dep:nsh-platform-ios", "dep:jni", "dep:nsh-platform-linux", "dep:nsh-platform-windows"]
 tui = ["ui", "dep:nsh-platform-tui", "dep:ratatui-core", "dep:ratatui-crossterm", "dep:crossterm"]
 mobile = ["desktop"]
@@ -32,6 +32,7 @@ dirs = "6"
 futures-util = "0.3"
 nsh-core = { version = "0.6", optional = true }
 nsh-base = { version = "0.6", default-features = false, optional = true }
+nsh-omarchy = { version = "0.1", optional = true }
 image = { version = "0.25", default-features = false, features = ["png"], optional = true }
 
 localsend = { path = "vendor/localsend", features = ["discovery"] }

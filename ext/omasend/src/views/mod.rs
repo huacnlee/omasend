@@ -18,7 +18,6 @@ mod session;
 mod titlebar;
 mod utilities;
 
-use appearance::theme;
 use nsh_core::{keymap::When, prelude::*};
 use session::Session;
 
@@ -26,77 +25,40 @@ pub(crate) fn control(
     title: impl IntoReactive<SharedString>,
     disabled: impl IntoReactive<bool>,
     run: impl Fn() + 'static,
-) -> nsh_core::element::View {
-    control_variant(title, disabled, run, true)
+) -> nsh_omarchy::ButtonElement {
+    control_variant(title, disabled, run, nsh_omarchy::ButtonVariant::Default)
 }
 
 fn plain_control(
     title: impl IntoReactive<SharedString>,
     disabled: impl IntoReactive<bool>,
     run: impl Fn() + 'static,
-) -> nsh_core::element::View {
-    control_variant(title, disabled, run, false)
+) -> nsh_omarchy::ButtonElement {
+    control_variant(title, disabled, run, nsh_omarchy::ButtonVariant::Ghost)
 }
 
+/// Every Omasend action is an Omarchy button; `variant` picks outline or ghost.
 fn control_variant(
     title: impl IntoReactive<SharedString>,
     disabled: impl IntoReactive<bool>,
     run: impl Fn() + 'static,
-    outlined: bool,
-) -> nsh_core::element::View {
+    variant: nsh_omarchy::ButtonVariant,
+) -> nsh_omarchy::ButtonElement {
     let title = title.into_reactive();
-    let scale = animated_value(1.0);
-    let down = scale;
-    let up = scale;
-    view()
-        .flex_row()
-        .items_center()
-        .justify_center()
-        .min_h(px(if is_desktop() { 0.0 } else { 44.0 }))
-        .px(move || px(appearance::metrics().space(10.0)))
-        .py(move || px(appearance::metrics().space(6.0)))
-        .border_1()
-        .border_color(move || {
-            if outlined {
-                theme().foreground.opacity(0.4)
-            } else {
-                AdaptiveColor::TRANSPARENT
-            }
-        })
-        .rounded_none()
-        .bg(AdaptiveColor::TRANSPARENT)
-        .hover(|s| s.bg(move || theme().foreground.opacity(0.08)))
-        .focus(|s| s.bg(move || theme().foreground.opacity(0.08)))
-        .active(|s| s.bg(move || theme().foreground.opacity(0.22)))
-        .disabled_style(|s| s.opacity(0.45))
-        .disabled(disabled)
-        .window_drag(false)
-        .role(AccessibilityRole::Button)
-        .label(title.clone())
-        .bind_scale(&scale)
-        .on_press_down(move |_: &()| {
-            if !reduce_motion() {
-                down.timing(0.98, 70.0, Easing::Linear);
-            }
-        })
-        .on_press_up(move |_: &()| {
-            up.timing(
-                1.0,
-                if reduce_motion() { 0.0 } else { 110.0 },
-                Easing::Linear,
-            );
-        })
+    let disabled = disabled.into_reactive();
+    nsh_omarchy::button(move || title.get())
+        .variant(variant)
+        .disabled(move || disabled.get())
         .on_press(move |_: &()| run())
-        .child(text(title).text_size(move || px(theme().number("font.size").unwrap())))
 }
 
 pub(super) fn editor() -> nsh_core::element::Input {
     nsh_core::element::input()
-        .text_color(move || theme().foreground)
-        .text_size(move || px(theme().number("font.size").unwrap()))
+        .text_color(move || nsh_omarchy::tokens::foreground())
+        .text_size(move || px(appearance::font_size()))
         .font_family(move || SharedString::from(appearance::metrics().family))
-        .placeholder_color(move || color(theme().muted_foreground))
-        .selection_color(move || color(theme().color("caret").unwrap()))
+        .placeholder_color(move || color(nsh_omarchy::tokens::secondary()))
+        .selection_color(move || color(nsh_omarchy::tokens::accent()))
 }
 
 /// Omasend's window: nearby devices, the Outbox and transfers.
@@ -110,7 +72,6 @@ pub fn App() -> impl IntoElement {
 }
 
 fn shell(session: Session, appearance: appearance::Controller) -> impl IntoElement {
-    titlebar::install();
     let picker = session.clone();
     on_key("mod+o", move |_| picker.pick(false));
     let paste = session.clone();
@@ -184,9 +145,9 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
         .p_safe_area()
         .flex_1()
         .font_family(move || SharedString::from(appearance::metrics().family))
-        .text_size(move || px(theme().number("font.size").unwrap()))
-        .bg(move || theme().background)
-        .text_color(move || theme().foreground)
+        .text_size(move || px(appearance::font_size()))
+        .bg(move || nsh_omarchy::tokens::background())
+        .text_color(move || nsh_omarchy::tokens::foreground())
         .child(when(is_desktop, {
             let session = session.clone();
             move || titlebar::bar(session.clone())
@@ -218,7 +179,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                                         language.get().text("composer.choose_device")
                                     })
                             })
-                            .text_color(move || theme().muted_foreground)
+                            .text_color(move || nsh_omarchy::tokens::secondary())
                             .flex_1(),
                         )
                         .child(text(move || {
@@ -254,8 +215,8 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                                 move || sender.send(),
                             )
                             .when(!is_desktop(), |v| {
-                                v.border_color(move || theme().primary)
-                                    .text_color(move || theme().primary)
+                                v.border_color(move || nsh_omarchy::tokens::accent())
+                                    .text_color(move || nsh_omarchy::tokens::accent())
                             }),
                         ),
                 )
@@ -273,7 +234,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                 .border_t_1()
                 .border_color(appearance::divider)
                 .text_size(px(11.0))
-                .text_color(move || theme().muted_foreground)
+                .text_color(move || nsh_omarchy::tokens::secondary())
                 .child(
                     text(move || {
                         identity.get().map(|d| d.alias).unwrap_or_else(|| {
@@ -289,7 +250,7 @@ fn shell(session: Session, appearance: appearance::Controller) -> impl IntoEleme
                             .map(|key| language.get().text(key))
                             .unwrap_or_default()
                     })
-                    .text_color(move || theme().color("success.background").unwrap())
+                    .text_color(move || nsh_omarchy::tokens::success())
                     .bind_opacity(&notice_opacity),
                 )
                 .child(services::update_control(session.clone()))

@@ -2670,6 +2670,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nsh-omarchy"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00d9bc1f59db9d1d62e7f2dcda1ea5b236c288809519cfc13e36fff206061aef"
+dependencies = [
+ "chrono",
+ "log",
+ "nsh-base",
+ "nsh-core",
+ "toml 0.8.23",
+]
+
+[[package]]
 name = "nsh-platform-apple"
 version = "0.6.0"
 source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
@@ -3086,6 +3099,7 @@ dependencies = [
  "nsh-base",
  "nsh-core",
  "nsh-engine",
+ "nsh-omarchy",
  "nsh-platform-ios",
  "nsh-platform-linux",
  "nsh-platform-macos",

@@ -1375,31 +1375,16 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
         s.test_ids.contains_key("app-menu")
     });
     let add_files = screen.test_ids["add-files-button"];
-    let idle = screen.backgrounds[&add_files];
-    engine
-        .control()
-        .dispatch_event(add_files, EventKind::PressDown, EventPayload::None);
-    screen.wait(&rx, Duration::from_secs(5), |s| {
-        s.backgrounds[&add_files] != idle
-    });
-    engine
-        .control()
-        .dispatch_event(add_files, EventKind::PressUp, EventPayload::None);
-    screen.wait(&rx, Duration::from_secs(5), |s| {
-        s.backgrounds[&add_files] == idle
-    });
+    // The nsh-omarchy button draws its own pressed and open states.
     engine
         .control()
         .dispatch_event(add_files, EventKind::Press, EventPayload::None);
     screen.wait(&rx, Duration::from_secs(5), |s| {
-        s.backgrounds[&add_files] != idle && s.test_ids.contains_key("add-files-menu")
+        s.test_ids.contains_key("add-files-menu")
     });
     engine
         .control()
         .dispatch_event(add_files, EventKind::Press, EventPayload::None);
-    screen.wait(&rx, Duration::from_secs(5), |s| {
-        s.backgrounds[&add_files] == idle
-    });
     let header = screen.bounds("app-header");
     // Header items are laid out by UIKit; their frames are local to its slots.
     assert!(header.width > 0.0);
