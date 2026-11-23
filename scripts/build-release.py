@@ -81,10 +81,12 @@ def package(root, binary, output, version, target, variant="desktop"):
         elif platform == "linux":
             shutil.copy2(binary, stage / "omasend")
             (stage / "omasend").chmod(0o755)
-            for name in ("packaging/omasend.desktop", "assets/omasend.png"):
+            # Archive paths stay as released; install.sh reads them.
+            for source, name in (("assets/omasend.desktop", "packaging/omasend.desktop"),
+                                 ("assets/omasend.png", "assets/omasend.png")):
                 destination = stage / name
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(root / name, destination)
+                shutil.copy2(root / source, destination)
         else:
             shutil.copy2(binary, stage / "omasend.exe")
         for name in ("LICENSE", "README.md"):

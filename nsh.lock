@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "packages": [
+    {
+      "name": "omasend",
+      "version": "0.4.0",
+      "path": "ext/omasend",
+      "module": "omasend/native"
+    }
+  ]
+}

@@ -53,7 +53,7 @@ impl Session {
             notice: signal(None),
             notice_revision: signal(0),
             owner: Owner::current(),
-            exit_application: Rc::new(|| nsh_core::element::desktop::main_window().close()),
+            exit_application: Rc::new(nsh_core::element::desktop::quit),
         }
     }
 
@@ -64,11 +64,6 @@ impl Session {
     pub fn persistent() -> Self {
         let mut session = Self::new();
         session.persist = true;
-        #[cfg(all(target_os = "macos", feature = "desktop"))]
-        if !crate::terminal_binary() {
-            // The standalone runner retains its window on ordinary close.
-            session.exit_application = Rc::new(nsh_platform_macos::quit_app);
-        }
         session.language.set(super::preferences::load_language());
         session.state.borrow_mut().transfers = omasend::model::history::load();
         session
@@ -185,7 +180,9 @@ impl Session {
             .find(|t| t.id == id)
             .and_then(|t| t.received_text.clone())
         {
-            set_clipboard(text);
+            // Nothing waits for the clipboard's answer.
+            #[allow(clippy::let_underscore_future)]
+            let _ = set_clipboard(text);
             self.notify("status.copied");
         }
     }

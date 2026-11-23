@@ -27,7 +27,7 @@ def main():
     if args.device and not args.sign:
         parser.error("--device requires signing")
     profile = args.profile.expanduser().resolve() if args.profile else None
-    version = tomllib.loads((ROOT / "Cargo.toml").read_text())["package"]["version"]
+    version = tomllib.loads((ROOT / "ext/omasend/Cargo.toml").read_text())["package"]["version"]
     command = ["nsh", "package", "--target", "ios", "--icon", "assets/omasend.png", "--app-version", version]
     if profile:
         command += ["--sign", args.sign, "--profile", str(profile)]

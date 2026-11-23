@@ -140,7 +140,9 @@ pub(super) fn surface(session: Session) -> impl IntoElement {
                     move || state.running.get() || state.report.get().is_none(),
                     move || {
                         if let Some(markdown) = copy.diagnostics_markdown() {
-                            set_clipboard(markdown);
+                            // Nothing waits for the clipboard's answer.
+                            #[allow(clippy::let_underscore_future)]
+                            let _ = set_clipboard(markdown);
                             copy.notify("logs.copied");
                         }
                     },

@@ -209,7 +209,9 @@ pub(super) fn copy_error_button(session: Session) -> impl IntoElement {
         Some("copy-error"),
         move || {
             if let Some(error) = session.state.borrow().error.clone() {
-                set_clipboard(error);
+                // Nothing waits for the clipboard's answer.
+                #[allow(clippy::let_underscore_future)]
+                let _ = set_clipboard(error);
                 session.notify("status.copied");
             }
         },
@@ -715,7 +717,9 @@ fn logs(session: Session) -> impl IntoElement {
                     session.translated("action.copy"),
                     move || snapshot.get().is_empty(),
                     move || {
-                        set_clipboard(copy.logs.get());
+                        // Nothing waits for the clipboard's answer.
+                        #[allow(clippy::let_underscore_future)]
+                        let _ = set_clipboard(copy.logs.get());
                         copy.notify("logs.copied");
                     },
                 ))
