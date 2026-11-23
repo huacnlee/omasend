@@ -28,6 +28,7 @@ jobs:
         with:
           bun-version: '1.4.0'
       - run: bun install --frozen-lockfile
+      - run: test -f ../.nsh/tsconfig.json || { mkdir -p ../.nsh && echo '{}' > ../.nsh/tsconfig.json; }
       - run: bun run build
         env:
           SITE_URL: https://huacnlee.github.io
