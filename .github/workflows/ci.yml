@@ -53,7 +53,7 @@ jobs:
         run: python3 scripts/test-tui.py ext/omasend/target/debug/omasend-tui
       - name: Verify TUI version
         shell: bash
-        run: ./target/debug/omasend-tui${{ runner.os == 'Windows' && '.exe' || '' }} --version
+        run: ./ext/omasend/target/debug/omasend-tui${{ runner.os == 'Windows' && '.exe' || '' }} --version
 
   website:
     name: Website build
@@ -70,6 +70,9 @@ jobs:
         with:
           bun-version: '1.4.0'
       - run: bun install --frozen-lockfile
+      # The root tsconfig.json extends the generated .nsh/tsconfig.json, which the
+      # website bundler resolves too; provide an empty base when NSH has not run.
+      - run: test -f ../.nsh/tsconfig.json || { mkdir -p ../.nsh && echo '{}' > ../.nsh/tsconfig.json; }
       - run: bun run build
         env:
           SITE_URL: https://huacnlee.github.io
