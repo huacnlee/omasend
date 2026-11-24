@@ -15,6 +15,8 @@ pub mod updates;
 extern crate self as omasend;
 
 #[cfg(feature = "ui")]
+pub mod api;
+#[cfg(feature = "ui")]
 pub mod views;
 #[cfg(feature = "ui")]
 pub use views::App;
@@ -22,7 +24,7 @@ pub use views::App;
 #[cfg(feature = "ui")]
 #[nsh_core::element::native_module("omasend/native")]
 fn native(registry: &mut nsh_core::element::Registry) {
-    registry.register::<App>();
+    registry.register::<App>().module::<api::Omasend>();
 }
 
 #[cfg(feature = "ui")]

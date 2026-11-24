@@ -5,7 +5,7 @@ use nsh_core::prelude::*;
 use omasend::model::SendItem;
 
 #[derive(Clone, Debug)]
-pub(super) enum Preview {
+pub(crate) enum Preview {
     Image(SendItem),
     Text(String),
 }
