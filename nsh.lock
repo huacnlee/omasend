@@ -2,6 +2,14 @@
   "version": 2,
   "packages": [
     {
+      "name": "nsh-omarchy",
+      "version": "0.1.0",
+      "source": "crates.io",
+      "checksum": "sha256-00d9bc1f59db9d1d62e7f2dcda1ea5b236c288809519cfc13e36fff206061aef",
+      "dir": "nsh-omarchy/0.1.0",
+      "module": "nsh-omarchy"
+    },
+    {
       "name": "omasend",
       "version": "0.4.0",
       "path": "ext/omasend",

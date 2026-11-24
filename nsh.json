@@ -5,6 +5,7 @@
   "dependencies": {
     "omasend": {
       "path": "ext/omasend"
-    }
+    },
+    "nsh-omarchy": "^0.1.0"
   }
 }
