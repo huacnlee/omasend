@@ -141,6 +141,8 @@ pub struct ComposerInfo {
     pub path: String,
     /// The id of the transfer sending it, empty when none.
     pub transfer: String,
+    /// The whole text of a text item, empty for others.
+    pub text: String,
 }
 
 /// A transfer, live or from the history.
@@ -256,6 +258,10 @@ fn composer(item: &ComposerItem, transfer: Option<String>) -> ComposerInfo {
             .map(|path| path.display().to_string())
             .unwrap_or_default(),
         transfer: transfer.unwrap_or_default(),
+        text: match &item.item {
+            SendItem::Text(text) => text.clone(),
+            _ => String::new(),
+        },
     }
 }
 
@@ -424,6 +430,12 @@ impl Omasend {
     pub fn navigate(delta: i32) {
         let _entered = runtime().enter();
         session().navigate(delta as isize);
+    }
+
+    /// Hides the error notice.
+    pub fn dismiss_error() {
+        let _entered = runtime().enter();
+        session().dismiss_error();
     }
 
     /// Sends the items to the selected device.

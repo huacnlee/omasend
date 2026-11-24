@@ -240,6 +240,12 @@ impl Session {
         self.changed();
     }
 
+    /// Hides the error notice.
+    pub fn dismiss_error(&self) {
+        self.state.borrow_mut().error = None;
+        self.changed();
+    }
+
     pub fn navigate(&self, delta: isize) {
         if self.input_blocked() {
             return;

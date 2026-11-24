@@ -8,6 +8,9 @@ type Surface = "logs" | "diagnostics" | "about" | null;
 const surface = signal<Surface>(null);
 const logs = signal("");
 
+/** Whether logs, the diagnosis or About covers the window. */
+export const surfaceOpen = () => surface() !== null;
+
 function openLogs() {
   logs.set(Omasend.logs());
   surface.set("logs");
@@ -51,7 +54,7 @@ export function AppMenu() {
     <Menu
       testID="app-menu"
       align="end"
-      trigger={<IconButton icon="ellipsis" label={t("action.menu")} size="small" />}
+      trigger={<IconButton icon="menu" label={t("action.menu")} size="small" />}
     >
       <MenuItem label={t("action.paste")} shortcut="mod-v" onSelect={() => Omasend.paste()} />
       <MenuItem label={t("action.add_files_ellipsis")} shortcut="mod-o" onSelect={() => Omasend.pick(false)} />
@@ -60,14 +63,14 @@ export function AppMenu() {
         <>
           <MenuLabel label={t("action.theme")} />
           {THEMES.map((mode) => (
-            <MenuItem label={t(`theme.${mode}`)} checked={theme() === mode} onSelect={() => setTheme(mode)} />
+            <MenuItem label={t(`theme.${mode}`)} shortcut={theme() === mode ? "✓" : null} onSelect={() => setTheme(mode)} closeOnSelect={false} />
           ))}
           <MenuSeparator />
         </>
       )}
       <MenuLabel label={t("action.language")} />
-      <MenuItem label="English" checked={state().language === "en"} onSelect={() => Omasend.setLanguage("en")} />
-      <MenuItem label="简体中文" checked={state().language === "zh-CN"} onSelect={() => Omasend.setLanguage("zh-CN")} />
+      <MenuItem label="English" shortcut={state().language === "en" ? "✓" : null} onSelect={() => Omasend.setLanguage("en")} closeOnSelect={false} />
+      <MenuItem label="简体中文" shortcut={state().language === "zh-CN" ? "✓" : null} onSelect={() => Omasend.setLanguage("zh-CN")} closeOnSelect={false} />
       <MenuSeparator />
       <MenuItem
         label={t("action.check_update")}
@@ -90,11 +93,14 @@ export function AppMenu() {
 /** The update status in the title bar: a button when there is something to install or restart into. */
 export function UpdateStatus() {
   const label = () => state().update;
-  if (!label()) return null;
-  return state().updateActionable ? (
-    <Button testID="update" label={label()} size="small" variant="ghost" onPress={() => Omasend.activateUpdate()} />
-  ) : (
-    <Text class="text-xs text-muted-foreground">{label()}</Text>
+  return (
+    <If when={label()}>
+      {state().updateActionable ? (
+        <Button testID="update" label={label()} size="small" variant="ghost" onPress={() => Omasend.activateUpdate()} />
+      ) : (
+        <Text class="text-[11px] text-muted-foreground">{label()}</Text>
+      )}
+    </If>
   );
 }
 

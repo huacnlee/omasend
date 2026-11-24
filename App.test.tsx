@@ -4,7 +4,7 @@ import { expect, open, test } from "nsh/test";
 test("opens with an empty Outbox and nothing to send", async () => {
   const app = await open("./App.tsx");
   await app.waitFor("Outbox");
-  expect(app.texts()).toContain("Nothing added yet");
+  expect(app.texts()).toContain("Files, folders, images or a few words.");
 });
 
 test("the menu offers the languages and Exit", async () => {
