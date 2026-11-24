@@ -1,11 +1,12 @@
 // Omasend's own components. Screens use these, not nsh-omarchy directly, so
 // the app keeps one small vocabulary of controls.
-import { Text, View } from "nsh";
+import { Text, View, reduceMotion } from "nsh";
 import {
-  Button,
+  Button as OmarchyButton,
   Caption,
   Dialog,
   EmptyState,
+  Icon,
   IconButton,
   Input,
   ListItem,
@@ -23,7 +24,7 @@ import {
 } from "nsh-omarchy";
 
 export {
-  Button,
+  Icon,
   Dialog,
   EmptyState,
   IconButton,
@@ -73,5 +74,16 @@ export function Row(props: {
         {props.trailing}
       </View>
     </ListItem>
+  );
+}
+
+/** nsh-omarchy's button with Omasend's press: it shrinks a little while held. */
+export function Button(props: Parameters<typeof OmarchyButton>[0]) {
+  return (
+    <OmarchyButton
+      {...props}
+      style={{ transitionProperty: "scale", transitionDuration: reduceMotion() ? 0 : 90, transitionTimingFunction: "linear" }}
+      activeStyle={{ scale: reduceMotion() ? 1 : 0.98 }}
+    />
   );
 }

@@ -6,6 +6,6 @@
     "omasend": {
       "path": "ext/omasend"
     },
-    "nsh-omarchy": "^0.1.0"
+    "nsh-omarchy": "^0.1.1"
   }
 }

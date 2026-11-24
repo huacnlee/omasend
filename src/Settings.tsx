@@ -1,12 +1,16 @@
 // The app menu and what it opens: theme, language, updates, logs, the network
 // diagnosis and About.
-import { Text, View, signal } from "nsh";
-import { Button, Dialog, IconButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
+import { Scroll, Text, View, signal } from "nsh";
+import { Submenu } from "nsh/base";
+import { Button, Dialog, Icon, IconButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
 import { Omasend, state, t } from "./state";
 
 type Surface = "logs" | "diagnostics" | "about" | null;
 const surface = signal<Surface>(null);
 const logs = signal("");
+
+/** Whether logs, the diagnosis or About covers the window. */
+export const surfaceOpen = () => surface() !== null;
 
 function openLogs() {
   logs.set(Omasend.logs());
@@ -51,7 +55,7 @@ export function AppMenu() {
     <Menu
       testID="app-menu"
       align="end"
-      trigger={<IconButton icon="ellipsis" label={t("action.menu")} size="small" />}
+      trigger={<IconButton icon="menu" label={t("action.menu")} size="small" />}
     >
       <MenuItem label={t("action.paste")} shortcut="mod-v" onSelect={() => Omasend.paste()} />
       <MenuItem label={t("action.add_files_ellipsis")} shortcut="mod-o" onSelect={() => Omasend.pick(false)} />
@@ -60,14 +64,24 @@ export function AppMenu() {
         <>
           <MenuLabel label={t("action.theme")} />
           {THEMES.map((mode) => (
-            <MenuItem label={t(`theme.${mode}`)} checked={theme() === mode} onSelect={() => setTheme(mode)} />
+            <MenuItem label={t(`theme.${mode}`)} checked={theme() === mode} onSelect={() => setTheme(mode)} closeOnSelect={false} />
           ))}
           <MenuSeparator />
         </>
       )}
-      <MenuLabel label={t("action.language")} />
-      <MenuItem label="English" checked={state().language === "en"} onSelect={() => Omasend.setLanguage("en")} />
-      <MenuItem label="简体中文" checked={state().language === "zh-CN"} onSelect={() => Omasend.setLanguage("zh-CN")} />
+      <Submenu
+        testID="language-menu"
+        offset={4}
+        trigger={
+          <View class="flex-row items-center gap-2 h-6 px-2 hover:bg-foreground/10 focus:bg-foreground/10">
+            <Text class="flex-1 text-foreground" style={{ fontSize: 12 }}>{t("action.language")}</Text>
+            <Icon name="chevron-right" size={12} class="text-muted-foreground" />
+          </View>
+        }
+      >
+        <MenuItem label="English" checked={state().language === "en"} onSelect={() => Omasend.setLanguage("en")} />
+        <MenuItem label="简体中文" checked={state().language === "zh-CN"} onSelect={() => Omasend.setLanguage("zh-CN")} />
+      </Submenu>
       <MenuSeparator />
       <MenuItem
         label={t("action.check_update")}
@@ -90,11 +104,14 @@ export function AppMenu() {
 /** The update status in the title bar: a button when there is something to install or restart into. */
 export function UpdateStatus() {
   const label = () => state().update;
-  if (!label()) return null;
-  return state().updateActionable ? (
-    <Button testID="update" label={label()} size="small" variant="ghost" onPress={() => Omasend.activateUpdate()} />
-  ) : (
-    <Text class="text-xs text-muted-foreground">{label()}</Text>
+  return (
+    <If when={label()}>
+      {state().updateActionable ? (
+        <Button testID="update" label={label()} size="small" variant="ghost" onPress={() => Omasend.activateUpdate()} />
+      ) : (
+        <Text class="text-[11px] text-muted-foreground">{label()}</Text>
+      )}
+    </If>
   );
 }
 
@@ -102,15 +119,23 @@ function close(event: { open: boolean }) {
   if (!event.open) surface.set(null);
 }
 
+/** The log, over the whole window. */
 function Logs() {
   return (
-    <Dialog
-      testID="logs"
-      title={t("logs.title")}
-      open={surface() === "logs"}
-      onOpenChange={close}
-      footer={
-        <View class="flex-row gap-2">
+    <If when={surface() === "logs"}>
+      <View testID="logs" class="absolute inset-x-0 bottom-0 top-9 bg-background">
+        <View class="px-4 py-2 min-h-11 flex-row items-center gap-2 border-b border-border">
+          <Text class="flex-1 font-semibold text-foreground">{t("logs.title")}</Text>
+          <IconButton icon="x" label={t("action.close")} size="small" onPress={() => surface.set(null)} />
+        </View>
+        <Scroll class="flex-1 m-3 border border-border bg-foreground/5">
+          <View selectable>
+          <Text class="p-3 select-text text-xs text-foreground font-mono" accessibilityLabel={t("logs.title")}>
+            {logs() || t("logs.empty")}
+          </Text>
+          </View>
+        </Scroll>
+        <View class="flex-row gap-2 px-3 pb-3">
           <Button label={t("action.refresh")} onPress={() => logs.set(Omasend.logs())} />
           <Button label={t("action.copy")} disabled={!logs()} onPress={() => copy(logs())} />
           <Button
@@ -122,10 +147,8 @@ function Logs() {
             }}
           />
         </View>
-      }
-    >
-      <Textarea value={logs()} placeholder={t("logs.empty")} readonly rows={14} accessibilityLabel={t("logs.title")} />
-    </Dialog>
+      </View>
+    </If>
   );
 }
 
@@ -211,10 +234,10 @@ function About() {
 /** The dialogs the menu opens. */
 export function Surfaces() {
   return (
-    <View>
+    <>
       <Logs />
       <Diagnostics />
       <About />
-    </View>
+    </>
   );
 }

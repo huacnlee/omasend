@@ -37,9 +37,9 @@ export function sizeLabel(bytes: number): string {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let value = bytes;
   let unit = 0;
-  while (value >= 1000 && unit < units.length - 1) {
-    value /= 1000;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
     unit += 1;
   }
-  return unit === 0 ? `${value} ${units[0]}` : `${value.toFixed(value < 10 ? 1 : 0)} ${units[unit]}`;
+  return unit === 0 ? `${bytes} B` : `${value.toFixed(1)} ${units[unit]}`;
 }

@@ -1,8 +1,9 @@
 // Receiving and the transfers: the request to accept, the live transfers and
 // the history sheet. Finished transfers also raise a toast.
-import { Text, View, signal } from "nsh";
-import { Button, Dialog, IconButton, Progress, Row, Section, Sheet, EmptyState, toast } from "./ui";
+import { Image, Scroll, Text, View, platform, signal, windowSize } from "nsh";
+import { Button, Dialog, IconButton, Textarea, toast } from "./ui";
 import { Omasend, sizeLabel, state, t } from "./state";
+import { preview } from "./preview";
 
 type Transfer = ReturnType<typeof Omasend.snapshot>["transfers"][number];
 
@@ -24,40 +25,100 @@ function percent(item: Transfer) {
   return item.total > 0 ? Math.round((item.transferred / item.total) * 100) : 0;
 }
 
-/** One transfer with its progress and the actions that fit its state. */
-function TransferRow(props: { item: () => Transfer }) {
+function when(item: Transfer) {
+  const d = new Date(item.when);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function statusColor(item: Transfer) {
+  if (item.status === "completed") return "text-green-500";
+  if (item.status === "failed") return "text-destructive";
+  return "text-muted-foreground";
+}
+
+function isImage(path: string) {
+  return /\.(png|jpe?g|gif|webp|heic|bmp|svg)$/i.test(path);
+}
+
+function basename(path: string) {
+  return path.split(/[\\/]/).pop() || path;
+}
+
+/** One transfer as a record: peer, status, size and time, its progress and what to do with what arrived. */
+export function TransferRecord(props: { item: () => Transfer; onDismiss?: () => void }) {
   const item = () => props.item();
-  const detail = () =>
-    item().status === "active" && !item().awaitingAcceptance
-      ? `${statusLabel(item())} · ${sizeLabel(item().transferred)} / ${sizeLabel(item().total)}`
-      : statusLabel(item());
+  const expanded = signal(false);
+  const size = () =>
+    item().status === "active" ? `${sizeLabel(item().transferred)} / ${sizeLabel(item().total)}` : sizeLabel(item().total);
   return (
-    <View class="gap-1">
-      <Row
-        testID={`transfer-${item().id}`}
-        title={`${fill(item().sending ? "history.to" : "history.from", item().peer)} · ${item().files.join(", ")}`}
-        detail={detail()}
-        trailing={
-          <View class="flex-row gap-1">
-            {item().status === "active" ? (
-              <IconButton icon="x" label={t("action.cancel")} size="small" onPress={() => Omasend.cancel(item().id)} />
-            ) : null}
-            {item().text ? (
-              <IconButton icon="copy" label={t("action.copy")} size="small" onPress={() => Omasend.copyReceived(item().id)} />
-            ) : null}
-            {item().paths.length > 0 ? (
-              <IconButton
-                icon="folder"
-                label={t("action.show_in_files")}
-                size="small"
-                onPress={() => Omasend.openPath(item().paths[0], true)}
-              />
-            ) : null}
+    <View testID="transfer-record" class="gap-1.5 py-3 border-b border-border">
+      <View class="flex-row items-center gap-3">
+        <Text class="flex-1 text-foreground truncate">{item().peer}</Text>
+        <Text class={`text-[11px] truncate ${statusColor(item())}`}>{statusLabel(item())}</Text>
+        {props.onDismiss ? (
+          <Button testID="dismiss-received" label={t("action.dismiss")} size="small" onPress={props.onDismiss} />
+        ) : null}
+      </View>
+      <Text class="text-[11px] text-muted-foreground">{`${size()} · ${when(item())}`}</Text>
+      {item().status === "active" ? (
+        <View class="gap-2">
+          {item().awaitingAcceptance ? null : (
+            <View testID="transfer-progress" class="h-[3px] bg-border">
+              <View class="h-[3px] bg-primary" style={{ width: `${percent(item())}%` }} />
+            </View>
+          )}
+          <View class="flex-row">
+            <Button label={t("action.cancel")} size="small" variant="ghost" onPress={() => Omasend.cancel(item().id)} />
           </View>
-        }
-      />
-      {item().status === "active" && !item().awaitingAcceptance ? (
-        <Progress value={percent(item())} label={null} />
+        </View>
+      ) : null}
+      {item().paths.map((path) => (
+        <View class="flex-row flex-wrap items-center gap-2">
+          {isImage(path) ? (
+            <Image
+              testID="received-image-thumbnail"
+              src={`file://${path}`}
+              style={props.onDismiss ? { width: "100%", height: 220, objectFit: "contain" } : { width: 48, height: 48, objectFit: "contain" }}
+            />
+          ) : null}
+          <Text class="flex-1 text-foreground truncate">{basename(path)}</Text>
+          {isImage(path) ? (
+            <Button
+              label={t("action.preview")}
+              size="small"
+              onPress={() => preview.set({ id: path, kind: "image", name: basename(path), size: 0, path, transfer: "", text: "" })}
+            />
+          ) : null}
+          <Button
+            label={t(platform.os === "ios" ? "action.share" : "action.open")}
+            size="small"
+            onPress={() => Omasend.openPath(path, false)}
+          />
+          {platform.idiom === "desktop" ? (
+            <Button label={t("action.show_in_files")} size="small" onPress={() => Omasend.openPath(path, true)} />
+          ) : null}
+        </View>
+      ))}
+      {item().text ? (
+        <View class="gap-2">
+          {expanded() ? (
+            <Textarea value={item().text} readonly rows={5} accessibilityLabel={t("message.title")} />
+          ) : (
+            <Text class="text-[11px] text-muted-foreground" style={{ numberOfLines: 2 }}>
+              {item().text}
+            </Text>
+          )}
+          <View class="flex-row gap-2">
+            <Button
+              label={t(expanded() ? "action.collapse" : "action.expand")}
+              size="small"
+              variant="ghost"
+              onPress={() => expanded.set(!expanded())}
+            />
+            <Button label={t("action.copy")} size="small" variant="ghost" onPress={() => Omasend.copyReceived(item().id)} />
+          </View>
+        </View>
       ) : null}
     </View>
   );
@@ -66,12 +127,12 @@ function TransferRow(props: { item: () => Transfer }) {
 /** The live transfers, newest first; nothing while there are none. */
 export function Active() {
   const live = () => state().transfers.filter((item) => item.status === "active").reverse();
-  return live().length === 0 ? null : (
-    <Section title={t("history.session")}>
+  return (
+    <View>
       <Each of={live()} key={(item: Transfer) => item.id}>
-        {(item: () => Transfer) => <TransferRow item={item} />}
+        {(item: () => Transfer) => <TransferRecord item={item} />}
       </Each>
-    </Section>
+    </View>
   );
 }
 
@@ -116,32 +177,39 @@ export const historyOpen = signal(false);
 /** Every transfer of this and earlier sessions, newest first. */
 export function History() {
   const items = () => state().transfers.slice().reverse();
+  // As the Rust version: 55% of the window, and never over the title bar.
+  const height = () => Math.min(windowSize().height * 0.55, windowSize().height - 48);
   return (
-    <Sheet
-      testID="history-sheet"
-      title={t("history.title")}
-      open={historyOpen()}
-      closeLabel={t("action.close")}
-      onOpenChange={(event) => historyOpen.set(event.open)}
-      footer={
-        <Button
-          label={t("action.clear_history")}
-          variant="ghost"
-          disabled={items().length === 0}
-          onPress={() => Omasend.clearHistory()}
-        />
-      }
-    >
-      {items().length === 0 ? (
-        <EmptyState title={t("history.empty")} icon="inbox" />
-      ) : (
-        <View class="gap-4">
-          <Each of={items()} key={(item: Transfer) => item.id}>
-            {(item: () => Transfer) => <TransferRow item={item} />}
-          </Each>
+    <If when={historyOpen()}>
+      <View class="absolute inset-0 justify-end">
+        <View class="absolute inset-0 bg-black/45" onPress={() => historyOpen.set(false)} />
+        <View testID="history-sheet" class="bg-card border-t border-border" style={{ height: height() }}>
+          <View class="flex-row items-center gap-2 px-4 py-2 border-b border-border">
+            <Text class="flex-1 font-semibold text-foreground">{t("history.title")}</Text>
+            <Button
+              label={t("action.clear")}
+              accessibilityLabel={t("action.clear_history")}
+              size="small"
+              variant="ghost"
+              disabled={!items().some((item) => item.status !== "active")}
+              onPress={() => Omasend.clearHistory()}
+            />
+            <IconButton icon="x" label={t("action.close")} size="small" onPress={() => historyOpen.set(false)} />
+          </View>
+          <Scroll class="flex-1">
+            <View class="px-4">
+              {items().length === 0 ? (
+                <Text class="py-3 text-muted-foreground">{t("history.empty")}</Text>
+              ) : (
+                <Each of={items()} key={(item: Transfer) => item.id}>
+                  {(item: () => Transfer) => <TransferRecord item={item} />}
+                </Each>
+              )}
+            </View>
+          </Scroll>
         </View>
-      )}
-    </Sheet>
+      </View>
+    </If>
   );
 }
 
