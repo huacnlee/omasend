@@ -74,11 +74,11 @@ function App() {
   return (
     <View class="flex-1 bg-background">
       <TitleBar testID="app-header">
-        <AppMenu />
         <Emblem size={24} />
         <Text testID="app-title" class="flex-1 text-foreground">
           Omasend
         </Text>
+        <AppMenu />
       </TitleBar>
       <ErrorNotice />
       <Nearby />

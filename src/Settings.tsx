@@ -53,7 +53,7 @@ export function AppMenu() {
   return (
     <Menu
       testID="app-menu"
-      align="start"
+      align="end"
       trigger={<IconButton icon="menu" label={t("action.menu")} size="small" />}
     >
       <MenuItem label={t("action.paste")} shortcut="mod-v" onSelect={() => Omasend.paste()} />
