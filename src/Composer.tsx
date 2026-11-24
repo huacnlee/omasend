@@ -20,7 +20,7 @@ export function Composer() {
         <View testID="outbox-actions" class="flex-row gap-1">
           <Button label={t("action.add_files")} size="small" variant="ghost" icon="plus" onPress={() => Omasend.pick(false)} />
           {MOBILE ? (
-            <Button label={t("action.photo_library")} size="small" variant="ghost" icon="image" onPress={() => Omasend.pickPhotos()} />
+            <Button label={t("action.photo_library")} size="small" variant="ghost" onPress={() => Omasend.pickPhotos()} />
           ) : (
             <Button label={t("action.add_folder_ellipsis")} size="small" variant="ghost" onPress={() => Omasend.pick(true)} />
           )}

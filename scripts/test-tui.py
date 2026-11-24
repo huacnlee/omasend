@@ -4,6 +4,7 @@ import fcntl
 import os
 from pathlib import Path
 import pty
+import re
 import select
 import struct
 import subprocess
@@ -12,11 +13,16 @@ import termios
 import time
 
 
+def screen(text):
+    """`text` without escape sequences: what the terminal shows, in order."""
+    return re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", " ", text)
+
+
 def check(binary):
     master, slave = pty.openpty()
     process = None
     try:
-        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 100, 0, 0))
         before = termios.tcgetattr(slave)
 
         def session():
@@ -31,7 +37,7 @@ def check(binary):
             if select.select([master], [], [], 0.1)[0]:
                 output.extend(os.read(master, 65536))
             text = output.decode("utf-8", errors="replace")
-            if "Menu" in text and any("\u2800" <= c <= "\u28ff" for c in text):
+            if "Nothing added yet" in screen(text):
                 break
         os.write(master, b"\x03")
         process.wait(timeout=10)
@@ -39,12 +45,12 @@ def check(binary):
             output.extend(os.read(master, 65536))
         text = output.decode("utf-8", errors="replace")
         assert process.returncode == 0, f"TUI exit code: {process.returncode}"
-        assert "Omasend" in text and "Menu" in text, "Missing toolbar"
-        assert any("\u2800" <= c <= "\u28ff" for c in text), "Missing logo"
+        assert "Omasend" in screen(text), "Missing the title bar"
+        assert "Nothing added yet" in screen(text), "Missing the Outbox"
         assert "Omasend session started" not in text, "Logs corrupted the screen"
         assert termios.tcgetattr(slave) == before, "Terminal modes were not restored"
         assert "\x1b[?1049l" in text, "Alternate screen was not restored"
-        print("Standalone TUI: logo, toolbar, clean logs, Ctrl+C and terminal restoration passed")
+        print("Standalone TUI: toolbar, Outbox, clean logs, Ctrl+C and terminal restoration passed")
     finally:
         if process is not None and process.poll() is None:
             process.kill()

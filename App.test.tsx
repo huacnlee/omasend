@@ -7,10 +7,11 @@ test("opens with an empty Outbox and nothing to send", async () => {
   expect(app.texts()).toContain("Nothing added yet");
 });
 
-test("the menu offers the theme modes", async () => {
+test("the menu offers the languages and Exit", async () => {
   const app = await open("./App.tsx");
   await app.press("label:Menu");
-  for (const mode of ["System", "Light", "Dark"]) {
-    await app.waitFor(mode);
+  // Theme modes only show outside Omarchy, which follows its own theme.
+  for (const item of ["English", "简体中文", "Exit"]) {
+    await app.waitFor(item);
   }
 });

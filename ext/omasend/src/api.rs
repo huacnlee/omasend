@@ -28,13 +28,73 @@ pub(crate) fn runtime() -> &'static Runtime {
     RUNTIME.with(|runtime| *runtime)
 }
 
-/// `future`, polled with [`runtime`] entered.
-pub(crate) fn entering<F: Future + 'static>(future: F) -> impl Future<Output = F::Output> {
+type Task = std::pin::Pin<Box<dyn Future<Output = ()>>>;
+
+thread_local! {
+    /// Tasks queued for the driver, and the driver's waker once it waits.
+    static QUEUE: std::cell::RefCell<(Vec<Task>, Option<std::task::Waker>)> =
+        const { std::cell::RefCell::new((Vec::new(), None)) };
+    static DRIVING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs `future` under `owner` with [`runtime`] entered, polled by the
+/// driver [`drive`] starts. JS calls into this module have no core executor
+/// (NSH's `spawn` panics there); the core runs the driver as one task.
+pub(crate) fn queue(owner: Owner, future: impl Future<Output = ()> + 'static) {
     let mut future = Box::pin(future);
-    std::future::poll_fn(move |cx| {
+    let task: Task = Box::pin(std::future::poll_fn(move |cx| {
         let _entered = runtime().enter();
-        future.as_mut().poll(cx)
-    })
+        owner.run(|| future.as_mut().poll(cx))
+    }));
+    let waker = QUEUE.with(|queue| {
+        let mut queue = queue.borrow_mut();
+        queue.0.push(task);
+        queue.1.take()
+    });
+    if let Some(waker) = waker {
+        waker.wake();
+    }
+}
+
+/// Starts the driver of [`queue`]d tasks as a core task, once.
+fn drive(cx: CallCx<'_>) {
+    if DRIVING.with(|driving| driving.replace(true)) {
+        return;
+    }
+    use futures_util::{StreamExt, stream::FuturesUnordered};
+    let mut tasks = FuturesUnordered::<Task>::new();
+    cx.start(std::future::poll_fn(move |cx| {
+        loop {
+            let queued = QUEUE.with(|queue| std::mem::take(&mut queue.borrow_mut().0));
+            let added = !queued.is_empty();
+            tasks.extend(queued);
+            match tasks.poll_next_unpin(cx) {
+                std::task::Poll::Ready(Some(())) => continue,
+                _ if added => continue,
+                _ => {}
+            }
+            // Register before the final check, so a task queued meanwhile wakes us.
+            let empty = QUEUE.with(|queue| {
+                let mut queue = queue.borrow_mut();
+                queue.1 = Some(cx.waker().clone());
+                queue.0.is_empty()
+            });
+            if empty {
+                return std::task::Poll::<()>::Pending;
+            }
+        }
+    }));
+}
+
+/// Waits `duration` on a thread of its own: the core's timers are out of
+/// reach from module calls.
+pub(crate) async fn sleep(duration: std::time::Duration) {
+    let (tx, rx) = async_channel::bounded::<()>(1);
+    std::thread::spawn(move || {
+        std::thread::sleep(duration);
+        let _ = tx.try_send(());
+    });
+    let _ = rx.recv().await;
 }
 
 /// The app's one session, started on first use.
@@ -130,6 +190,8 @@ pub struct IncomingInfo {
 /// Everything the interface shows.
 #[derive(Debug, Clone, Default, PartialEq, JsObject)]
 pub struct Snapshot {
+    /// Whether the app should quit now (after stopping LocalSend).
+    pub quit: bool,
     /// This device, once LocalSend runs.
     pub identity: Option<DeviceInfo>,
     /// Whether LocalSend runs.
@@ -274,7 +336,8 @@ pub struct Omasend;
 #[module]
 impl Omasend {
     /// Everything the interface shows now. Starts LocalSend on first use.
-    pub fn snapshot() -> Snapshot {
+    pub fn snapshot(cx: CallCx) -> Snapshot {
+        drive(cx);
         let _entered = runtime().enter();
         let session = session();
         let identity = session.identity.get_untracked();
@@ -301,6 +364,7 @@ impl Omasend {
             .unwrap_or_default();
         let state = session.state.borrow();
         Snapshot {
+            quit: session.quit.get_untracked(),
             update,
             update_actionable,
             update_busy,
@@ -319,7 +383,8 @@ impl Omasend {
     }
 
     /// Calls `listener` after each change to the snapshot.
-    pub fn on_change(listener: Callback) {
+    pub fn on_change(listener: Callback, cx: CallCx) {
+        drive(cx);
         let _entered = runtime().enter();
         let session = session();
         let revision = session.revision;
@@ -327,6 +392,7 @@ impl Omasend {
         let handle = session.handle;
         let language = session.language;
         let busy = session.busy;
+        let quit = session.quit;
         let update = session.update;
         let update_visible = session.update_visible;
         let diagnostics = session.diagnostics;
@@ -342,6 +408,7 @@ impl Omasend {
                 handle.get();
                 language.get();
                 busy.get();
+                quit.get();
                 listener.post(());
             });
         });

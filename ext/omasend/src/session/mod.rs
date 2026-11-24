@@ -38,6 +38,8 @@ pub(crate) struct Session {
     pub notice_revision: Signal<u64>,
     pub owner: Owner,
     pub exit_application: Rc<dyn Fn()>,
+    /// Set once the session asks the app to quit; the interface quits.
+    pub quit: Signal<bool>,
 }
 
 impl Session {
@@ -59,12 +61,24 @@ impl Session {
             notice: signal(None),
             notice_revision: signal(0),
             owner: Owner::current(),
-            exit_application: Rc::new(nsh_core::element::desktop::quit),
+            exit_application: Rc::new(|| {}),
+            quit: signal(false),
         }
+        .with_quit()
     }
 
-    pub fn task<T: 'static>(&self, future: impl Future<Output = T> + 'static) -> Spawned<T> {
-        self.owner.run(|| spawn(crate::api::entering(future)))
+    /// Quitting sets [`Session::quit`]: the core's `quit` is out of reach
+    /// from module calls, so the interface quits when it reads it.
+    fn with_quit(mut self) -> Self {
+        let quit = self.quit;
+        self.exit_application = Rc::new(move || quit.set(true));
+        self
+    }
+
+    /// Runs `future` under the session's owner, as a task the module's
+    /// driver polls (see `crate::api::queue`).
+    pub fn task(&self, future: impl Future<Output = ()> + 'static) {
+        crate::api::queue(self.owner, future);
     }
 
     pub fn persistent() -> Self {
@@ -85,7 +99,6 @@ impl Session {
     }
 
     pub fn clear_history(&self) {
-        content_transition();
         self.state.borrow_mut().clear_transfer_history();
         self.save_history();
         self.changed();
@@ -178,15 +191,6 @@ impl Session {
                         {
                             continue;
                         }
-                        if matches!(
-                            event,
-                            TransferEvent::DeviceFound(_)
-                                | TransferEvent::DeviceLost(_)
-                                | TransferEvent::IncomingRequest { .. }
-                                | TransferEvent::Started { .. }
-                        ) {
-                            content_transition();
-                        }
                         let finished = matches!(
                             event,
                             TransferEvent::Completed { .. }
@@ -240,7 +244,6 @@ impl Session {
         if self.input_blocked() {
             return;
         }
-        content_transition();
         self.state.borrow_mut().navigate(delta);
         self.changed();
     }
@@ -281,7 +284,6 @@ impl Session {
         };
         match handle.decide(id, accept) {
             Ok(()) => {
-                content_transition();
                 self.state.borrow_mut().incoming = None;
                 self.changed();
             }
@@ -315,7 +317,6 @@ impl Session {
         if self.input_blocked() || self.item_transfer(id).is_some() {
             return;
         }
-        content_transition();
         self.state
             .borrow_mut()
             .composer
@@ -342,9 +343,6 @@ impl Session {
             this.busy.set(false);
             match result {
                 Ok(items) => {
-                    if !items.is_empty() {
-                        content_transition();
-                    }
                     let mut state = this.state.borrow_mut();
                     state.composer.extend(items);
                     state.error = None;
@@ -423,14 +421,6 @@ impl Session {
                 .await
                 .context("Clipboard read stopped")?
         });
-    }
-}
-
-fn content_transition() {
-    if !reduce_motion() {
-        animate_layout(nsh_core::LayoutAnimation::all(
-            nsh_core::LayoutTransition::new(nsh_core::LayoutCurve::EaseOut, 140.0),
-        ));
     }
 }
 

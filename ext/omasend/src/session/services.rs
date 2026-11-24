@@ -33,12 +33,11 @@ impl Session {
         let revision = self.notice_revision.get_untracked();
         let epoch = self.notice_revision;
         let notice = self.notice;
-        self.owner.run(|| {
-            set_timeout(Duration::from_secs(6), move || {
-                if epoch.get_untracked() == revision {
-                    notice.set(None);
-                }
-            });
+        self.task(async move {
+            crate::api::sleep(Duration::from_secs(6)).await;
+            if epoch.get_untracked() == revision {
+                notice.set(None);
+            }
         });
     }
 
@@ -67,7 +66,7 @@ impl Session {
         let this = self.clone();
         self.task(async move {
             loop {
-                timer(Duration::from_secs(6 * 60 * 60)).await;
+                crate::api::sleep(Duration::from_secs(6 * 60 * 60)).await;
                 this.check_updates_background();
             }
         });

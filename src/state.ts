@@ -1,6 +1,7 @@
 // The app's state lives in Rust (ext/omasend's `Omasend` module); this keeps
 // one signal with its latest snapshot, refreshed on every change.
 import { signal } from "nsh";
+import { Application } from "nsh/desktop";
 import { Omasend } from "omasend/native";
 
 export { Omasend };
@@ -14,7 +15,12 @@ let snapshot: { (): Snapshot; set(value: Snapshot): void } | undefined;
 export function state(): Snapshot {
   if (!snapshot) {
     const current = signal(Omasend.snapshot());
-    Omasend.onChange(() => current.set(Omasend.snapshot()));
+    Omasend.onChange(() => {
+      const next = Omasend.snapshot();
+      current.set(next);
+      // Rust cannot reach the core's quit from a module call; it asks here.
+      if (next.quit) Application.quit();
+    });
     snapshot = current;
   }
   return snapshot();
