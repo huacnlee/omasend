@@ -1,5 +1,5 @@
 //! Previews retain their SendItem, including clipboard temporary-file ownership.
-use super::appearance::theme;
+
 use super::{control, session::Session};
 use nsh_core::prelude::*;
 use omasend::model::SendItem;
@@ -52,10 +52,7 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 })
                                 .on_error(move |reason: &str| error.set(reason.to_owned())),
                         )
-                        .child(
-                            text(move || error.get())
-                                .text_color(move || theme().color("destructive").unwrap()),
-                        )
+                        .child(text(move || error.get()).text_color(nsh_omarchy::tokens::danger))
                         .into_element()
                 }
             };
@@ -81,8 +78,8 @@ pub(super) fn overlay(session: Session) -> impl IntoElement {
                                 .gap_4()
                                 .p_4()
                                 .border_1()
-                                .border_color(move || theme().border)
-                                .bg(move || theme().background)
+                                .border_color(nsh_omarchy::tokens::border)
+                                .bg(nsh_omarchy::tokens::background)
                                 .child(
                                     view()
                                         .flex_row()

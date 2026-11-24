@@ -1,5 +1,5 @@
 //! The central waiting emblem animates while visible; title-bar emblems stay static.
-use super::appearance::theme;
+
 use nsh_core::{
     canvas::{Path, svg_path},
     prelude::*,
@@ -50,7 +50,7 @@ pub(super) fn static_emblem(size: f32) -> impl IntoElement {
     canvas(move || {
         let mut painter = Painter::new()
             .scale(size / 32.0, size / 32.0)
-            .fill_color(color(theme().color("link").unwrap()));
+            .fill_color(color(nsh_omarchy::tokens::accent()));
         for path in paths() {
             painter = painter.fill_path(path, nsh_core::canvas::FillRule::NonZero);
         }
@@ -95,7 +95,7 @@ pub(super) fn emblem(size: f32, paused: impl Fn() -> bool + 'static) -> impl Int
                 canvas(move || {
                     Painter::new()
                         .scale(size / 32.0, size / 32.0)
-                        .fill_color(color(theme().color("link").unwrap()))
+                        .fill_color(color(nsh_omarchy::tokens::accent()))
                         .fill_path(&path, nsh_core::canvas::FillRule::NonZero)
                 })
                 .size(px(size)),

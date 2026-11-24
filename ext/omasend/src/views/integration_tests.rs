@@ -670,7 +670,7 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
         assert!(screen.desktop_commands.iter().any(|command| matches!(command,
             nsh_core::desktop::DesktopCommand::SetAttributes(attributes)
                 if attributes.title_bar.is_some_and(|bar| bar.style == nsh_core::desktop::TitleBarStyle::Hidden
-                    && bar.height.is_some_and(|height| height.0 == 42.0)))));
+                    && bar.height.is_some_and(|height| height.0 == 36.0)))));
         assert_eq!(
             screen.window_drag[&screen.test_ids["app-header"]],
             Some(true)
@@ -717,8 +717,8 @@ async fn main_window_preserves_original_regions_at_both_supported_sizes() {
         });
         screen.wait(&rx, Duration::from_secs(10), |s| {
             let menu = s.bounds("app-menu");
-            (menu.x + menu.width - (640.0 - 16.0 - right)).abs() < 0.1
-                && (s.bounds("app-title").x - (16.0 + left + 24.0 + 8.0)).abs() < 0.1
+            (menu.x + menu.width - (640.0 - 12.0 - right)).abs() < 0.1
+                && (s.bounds("app-title").x - (12.0 + left + 20.0 + 8.0)).abs() < 0.1
         });
     }
     drop(engine);
@@ -1375,31 +1375,16 @@ async fn phone_layout_respects_safe_areas_and_menu_sublevels_have_a_back_action(
         s.test_ids.contains_key("app-menu")
     });
     let add_files = screen.test_ids["add-files-button"];
-    let idle = screen.backgrounds[&add_files];
-    engine
-        .control()
-        .dispatch_event(add_files, EventKind::PressDown, EventPayload::None);
-    screen.wait(&rx, Duration::from_secs(5), |s| {
-        s.backgrounds[&add_files] != idle
-    });
-    engine
-        .control()
-        .dispatch_event(add_files, EventKind::PressUp, EventPayload::None);
-    screen.wait(&rx, Duration::from_secs(5), |s| {
-        s.backgrounds[&add_files] == idle
-    });
+    // The nsh-omarchy button draws its own pressed and open states.
     engine
         .control()
         .dispatch_event(add_files, EventKind::Press, EventPayload::None);
     screen.wait(&rx, Duration::from_secs(5), |s| {
-        s.backgrounds[&add_files] != idle && s.test_ids.contains_key("add-files-menu")
+        s.test_ids.contains_key("add-files-menu")
     });
     engine
         .control()
         .dispatch_event(add_files, EventKind::Press, EventPayload::None);
-    screen.wait(&rx, Duration::from_secs(5), |s| {
-        s.backgrounds[&add_files] == idle
-    });
     let header = screen.bounds("app-header");
     // Header items are laid out by UIKit; their frames are local to its slots.
     assert!(header.width > 0.0);
