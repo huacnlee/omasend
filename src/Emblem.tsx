@@ -1,7 +1,7 @@
 // Omasend's mark. The large one in the empty Outbox animates: its eight outer
 // pieces light up in turn, clockwise, while someone can see it — as the Rust
 // version did. The title bar's stays still.
-import { View, cleanup, effect, lifecycle, reduceMotion, signal } from "nsh";
+import { Canvas, View, cleanup, effect, lifecycle, reduceMotion, signal, token } from "nsh";
 
 type Rect = [number, number, number, number];
 // logo.svg's pieces in its 32-unit grid: four corners, four bars, the center.
@@ -48,13 +48,17 @@ export function Emblem(props: { size: number; animated?: boolean; paused?: () =>
   return (
     <View testID="emblem" class="relative" style={{ width: props.size, height: props.size }}>
       {PIECES.map((rects, index) => (
+        // Fade a plain wrapper, not the canvas (as the Rust version did): a
+        // canvas drawn through an animated value redraws every frame. A
+        // canvas, not views, so the terminal draws the mark in braille.
         <View class="absolute inset-0" style={{ opacity: levels[index](), transitionProperty: "opacity", transitionDuration: 90, transitionTimingFunction: "linear" }}>
-          {rects.map(([x, y, w, h]) => (
-            <View
-              class="absolute bg-primary"
-              style={{ left: x * unit, top: y * unit, width: w * unit, height: h * unit }}
-            />
-          ))}
+          <Canvas
+            style={{ width: props.size, height: props.size }}
+            draw={(cx) => {
+              cx.fillStyle = token("primary" as never) as string;
+              for (const [x, y, w, h] of rects) cx.fillRect(x * unit, y * unit, w * unit, h * unit);
+            }}
+          />
         </View>
       ))}
     </View>

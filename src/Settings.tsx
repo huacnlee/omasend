@@ -2,7 +2,7 @@
 // diagnosis and About.
 import { Scroll, Text, View, signal } from "nsh";
 import { Submenu } from "nsh/base";
-import { Button, Dialog, Icon, IconButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
+import { Button, Dialog, Icon, ToolButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
 import { Omasend, state, t } from "./state";
 
 type Surface = "logs" | "diagnostics" | "about" | null;
@@ -55,7 +55,7 @@ export function AppMenu() {
     <Menu
       testID="app-menu"
       align="end"
-      trigger={<IconButton icon="menu" label={t("action.menu")} size="small" />}
+      trigger={<ToolButton icon="menu" label={t("action.menu")} />}
     >
       <MenuItem label={t("action.paste")} shortcut="mod-v" onSelect={() => Omasend.paste()} />
       <MenuItem label={t("action.add_files_ellipsis")} shortcut="mod-o" onSelect={() => Omasend.pick(false)} />
@@ -126,7 +126,7 @@ function Logs() {
       <View testID="logs" class="absolute inset-x-0 bottom-0 top-9 bg-background">
         <View class="px-4 py-2 min-h-11 flex-row items-center gap-2 border-b border-border">
           <Text class="flex-1 font-semibold text-foreground">{t("logs.title")}</Text>
-          <IconButton icon="x" label={t("action.close")} size="small" onPress={() => surface.set(null)} />
+          <ToolButton icon="x" label={t("action.close")} onPress={() => surface.set(null)} />
         </View>
         <Scroll class="flex-1 m-3 border border-border bg-foreground/5">
           <View selectable>

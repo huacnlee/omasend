@@ -482,6 +482,11 @@ impl Omasend {
         }
     }
 
+    /// This machine's name, for the status bar until LocalSend has an alias.
+    pub fn hostname() -> String {
+        gethostname::gethostname().to_string_lossy().into_owned()
+    }
+
     /// Whether this is an Omarchy installation: the theme follows Omarchy's.
     pub fn omarchy() -> bool {
         let _entered = runtime().enter();

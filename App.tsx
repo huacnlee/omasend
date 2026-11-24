@@ -3,7 +3,7 @@
 // The layout is Omasend's own: nearby devices across the top, the Outbox below
 // and a status bar at the bottom.
 import { Text, View, cleanup, effect, keymap, mount } from "nsh";
-import { IconButton, TitleBar, Toaster } from "./src/ui";
+import { TERMINAL, ToolButton, TitleBar, Toaster } from "./src/ui";
 import { History, Incoming, announceFinished, historyOpen } from "./src/Activity";
 import { Composer, Preview } from "./src/Composer";
 import { preview } from "./src/preview";
@@ -25,19 +25,23 @@ function ErrorNotice() {
         <Text class="font-bold text-foreground">{t(port() ? "error.notice_unavailable" : "error.notice_title")}</Text>
         <Text class="text-[11px] text-muted-foreground">{port() ? t("error.notice_port") : raw()}</Text>
       </View>
-      <IconButton icon="copy" label={t("action.copy_error")} size="small" onPress={() => Omasend.copyText(raw())} />
-      <IconButton icon="x" label={t("action.dismiss_error")} size="small" onPress={() => Omasend.dismissError()} />
+      <View class="flex-row items-center gap-1 self-center">
+        <ToolButton icon="copy" label={t("action.copy_error")} onPress={() => Omasend.copyText(raw())} />
+        <ToolButton icon="x" label={t("action.dismiss_error")} onPress={() => Omasend.dismissError()} />
+      </View>
     </View>
     </If>
   );
 }
+
+const HOSTNAME = Omasend.hostname();
 
 function StatusBar() {
   const status = () =>
     !state().identity ? "status.connecting" : state().devices.length === 0 ? "status.searching" : "status.connected";
   return (
     <View testID="status-bar" class="h-7 px-4 shrink-0 flex-row items-center gap-3 border-t border-border">
-      <Text class="flex-1 text-[11px] text-muted-foreground truncate">{state().identity?.alias ?? ""}</Text>
+      <Text class="flex-1 text-[11px] text-muted-foreground truncate">{state().identity?.alias ?? HOSTNAME}</Text>
       <UpdateStatus />
       <Text class="text-[11px] text-muted-foreground">{t(status())}</Text>
     </View>
@@ -74,7 +78,7 @@ function App() {
   return (
     <View class="flex-1 bg-background">
       <TitleBar testID="app-header">
-        <Emblem size={24} />
+        {TERMINAL ? null : <Emblem size={24} />}
         <Text testID="app-title" class="flex-1 text-foreground">
           Omasend
         </Text>

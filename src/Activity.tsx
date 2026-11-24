@@ -1,7 +1,7 @@
 // Receiving and the transfers: the request to accept, the live transfers and
 // the history sheet. Finished transfers also raise a toast.
 import { Image, Scroll, Text, View, platform, signal, windowSize } from "nsh";
-import { Button, Dialog, IconButton, Textarea, toast } from "./ui";
+import { Button, Dialog, ToolButton, Textarea, toast } from "./ui";
 import { Omasend, sizeLabel, state, t } from "./state";
 import { preview } from "./preview";
 
@@ -194,7 +194,7 @@ export function History() {
               disabled={!items().some((item) => item.status !== "active")}
               onPress={() => Omasend.clearHistory()}
             />
-            <IconButton icon="x" label={t("action.close")} size="small" onPress={() => historyOpen.set(false)} />
+            <ToolButton icon="x" label={t("action.close")} onPress={() => historyOpen.set(false)} />
           </View>
           <Scroll class="flex-1">
             <View class="px-4">
