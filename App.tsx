@@ -5,6 +5,7 @@ import { IconButton, Omarchy, TitleBar, Toaster } from "./src/ui";
 import { Active, History, Incoming, announceFinished, historyOpen } from "./src/Activity";
 import { Composer } from "./src/Composer";
 import { Nearby } from "./src/Nearby";
+import { AppMenu, Surfaces, UpdateStatus } from "./src/Settings";
 import { state, t } from "./src/state";
 
 export default function App() {
@@ -17,6 +18,8 @@ export default function App() {
           {state().identity ? `${t("nearby.you")}: ${state().identity!.alias}` : t("status.starting")}
         </Text>
         <IconButton icon="inbox" label={t("history.title")} size="small" onPress={() => historyOpen.set(true)} />
+        <UpdateStatus />
+        <AppMenu />
       </TitleBar>
       <View class="flex-1 flex-row gap-6 p-4">
         <View class="w-72">
@@ -29,6 +32,7 @@ export default function App() {
       </View>
       <Incoming />
       <History />
+      <Surfaces />
       <Toaster />
     </View>
   );

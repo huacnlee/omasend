@@ -7,16 +7,39 @@ import {
   Dialog,
   EmptyState,
   IconButton,
+  Input,
   ListItem,
+  Menu,
+  MenuItem,
+  MenuLabel,
+  MenuSeparator,
   Omarchy,
   Progress,
   Sheet,
   TitleBar,
+  Textarea,
   Toaster,
   toast,
 } from "nsh-omarchy";
 
-export { Button, Dialog, EmptyState, IconButton, Omarchy, Progress, Sheet, TitleBar, Toaster, toast };
+export {
+  Button,
+  Dialog,
+  EmptyState,
+  IconButton,
+  Input,
+  Menu,
+  MenuItem,
+  MenuLabel,
+  MenuSeparator,
+  Omarchy,
+  Progress,
+  Sheet,
+  Textarea,
+  TitleBar,
+  Toaster,
+  toast,
+};
 
 /** A titled column: a caption above its content. */
 export function Section(props: { title: string; actions?: any; children?: any; class?: string }) {
