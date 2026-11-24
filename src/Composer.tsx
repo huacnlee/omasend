@@ -47,7 +47,8 @@ function latestReceived() {
 
 function Empty() {
   return (
-    <View class="flex-1 items-center justify-center gap-3 p-4">
+    <Scroll class="flex-1">
+    <View class="min-h-full items-center justify-center gap-3 p-4">
       <Emblem size={64} animated paused={() => historyOpen() || !!preview() || !!state().incoming || surfaceOpen()} />
       <Text class="text-foreground">{t(DESKTOP ? "composer.drop_hint" : "composer.mobile_hint")}</Text>
       <Text class="text-muted-foreground text-center" style={{ numberOfLines: 2 }}>
@@ -63,6 +64,7 @@ function Empty() {
         </View>
       ) : null}
     </View>
+    </Scroll>
   );
 }
 
@@ -151,7 +153,7 @@ function DropArea() {
   return (
     <View
       testID="composer-area"
-      class="flex-1 border border-border"
+      class={hovering() ? "flex-1 border-2 border-primary" : "flex-1 border border-border m-px"}
       onFileDragEnter={() => hovering.set(true)}
       onFileDragLeave={() => hovering.set(false)}
       onFileDrop={(event) => {
@@ -176,9 +178,6 @@ function DropArea() {
       ) : (
         <Empty />
       )}
-      {hovering() ? (
-        <View testID="composer-drop-highlight" class="absolute inset-0 border-2 border-primary pointer-events-none" />
-      ) : null}
     </View>
   );
 }

@@ -1,6 +1,6 @@
 // The app menu and what it opens: theme, language, updates, logs, the network
 // diagnosis and About.
-import { Text, View, signal } from "nsh";
+import { Scroll, Text, View, signal } from "nsh";
 import { Button, Dialog, IconButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
 import { Omasend, state, t } from "./state";
 
@@ -53,7 +53,7 @@ export function AppMenu() {
   return (
     <Menu
       testID="app-menu"
-      align="end"
+      align="start"
       trigger={<IconButton icon="menu" label={t("action.menu")} size="small" />}
     >
       <MenuItem label={t("action.paste")} shortcut="mod-v" onSelect={() => Omasend.paste()} />
@@ -108,15 +108,23 @@ function close(event: { open: boolean }) {
   if (!event.open) surface.set(null);
 }
 
+/** The log, over the whole window. */
 function Logs() {
   return (
-    <Dialog
-      testID="logs"
-      title={t("logs.title")}
-      open={surface() === "logs"}
-      onOpenChange={close}
-      footer={
-        <View class="flex-row gap-2">
+    <If when={surface() === "logs"}>
+      <View testID="logs" class="absolute inset-x-0 bottom-0 top-9 bg-background">
+        <View class="px-4 py-2 min-h-11 flex-row items-center gap-2 border-b border-border">
+          <Text class="flex-1 font-semibold text-foreground">{t("logs.title")}</Text>
+          <IconButton icon="x" label={t("action.close")} size="small" onPress={() => surface.set(null)} />
+        </View>
+        <Scroll class="flex-1 m-3 border border-border bg-foreground/5">
+          <View selectable>
+          <Text class="p-3 select-text text-xs text-foreground font-mono" accessibilityLabel={t("logs.title")}>
+            {logs() || t("logs.empty")}
+          </Text>
+          </View>
+        </Scroll>
+        <View class="flex-row gap-2 px-3 pb-3">
           <Button label={t("action.refresh")} onPress={() => logs.set(Omasend.logs())} />
           <Button label={t("action.copy")} disabled={!logs()} onPress={() => copy(logs())} />
           <Button
@@ -128,10 +136,8 @@ function Logs() {
             }}
           />
         </View>
-      }
-    >
-      <Textarea value={logs()} placeholder={t("logs.empty")} readonly rows={14} accessibilityLabel={t("logs.title")} />
-    </Dialog>
+      </View>
+    </If>
   );
 }
 
@@ -217,10 +223,10 @@ function About() {
 /** The dialogs the menu opens. */
 export function Surfaces() {
   return (
-    <View>
+    <>
       <Logs />
       <Diagnostics />
       <About />
-    </View>
+    </>
   );
 }
