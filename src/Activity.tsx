@@ -135,7 +135,7 @@ export function History() {
       {items().length === 0 ? (
         <EmptyState title={t("history.empty")} icon="inbox" />
       ) : (
-        <View class="gap-2">
+        <View class="gap-4">
           <Each of={items()} key={(item: Transfer) => item.id}>
             {(item: () => Transfer) => <TransferRow item={item} />}
           </Each>
