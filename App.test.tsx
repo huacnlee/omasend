@@ -8,10 +8,13 @@ test("opens with an empty Outbox and nothing to send", async () => {
 });
 
 test("the menu offers the languages and Exit", async () => {
-  const app = await open("./App.tsx");
+  const app = await open("./App.tsx", { platform: "linux" } as any);
   await app.press("label:Menu");
   // Theme modes only show outside Omarchy, which follows its own theme.
-  for (const item of ["English", "简体中文", "Exit"]) {
+  await app.waitFor("Exit");
+  // The languages are a submenu, opened by hovering its row.
+  await app.hover("Language");
+  for (const item of ["English", "简体中文"]) {
     await app.waitFor(item);
   }
 });

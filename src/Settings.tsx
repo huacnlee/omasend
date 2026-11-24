@@ -1,7 +1,8 @@
 // The app menu and what it opens: theme, language, updates, logs, the network
 // diagnosis and About.
 import { Scroll, Text, View, signal } from "nsh";
-import { Button, Dialog, IconButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
+import { Submenu } from "nsh/base";
+import { Button, Dialog, Icon, IconButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
 import { Omasend, state, t } from "./state";
 
 type Surface = "logs" | "diagnostics" | "about" | null;
@@ -68,9 +69,19 @@ export function AppMenu() {
           <MenuSeparator />
         </>
       )}
-      <MenuLabel label={t("action.language")} />
-      <MenuItem label="English" shortcut={state().language === "en" ? "✓" : null} onSelect={() => Omasend.setLanguage("en")} closeOnSelect={false} />
-      <MenuItem label="简体中文" shortcut={state().language === "zh-CN" ? "✓" : null} onSelect={() => Omasend.setLanguage("zh-CN")} closeOnSelect={false} />
+      <Submenu
+        testID="language-menu"
+        offset={4}
+        trigger={
+          <View class="flex-row items-center gap-2 h-6 px-2 hover:bg-foreground/10 focus:bg-foreground/10">
+            <Text class="flex-1 text-foreground" style={{ fontSize: 12 }}>{t("action.language")}</Text>
+            <Icon name="chevron-right" size={12} class="text-muted-foreground" />
+          </View>
+        }
+      >
+        <MenuItem label="English" shortcut={state().language === "en" ? "✓" : null} onSelect={() => Omasend.setLanguage("en")} />
+        <MenuItem label="简体中文" shortcut={state().language === "zh-CN" ? "✓" : null} onSelect={() => Omasend.setLanguage("zh-CN")} />
+      </Submenu>
       <MenuSeparator />
       <MenuItem
         label={t("action.check_update")}
