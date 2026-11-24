@@ -58,6 +58,9 @@ def main():
     libraries = {}
     with zipfile.ZipFile(ROOT / '.nsh/out/Omasend.apk') as runtime:
         abis = supported_abis(runtime)
+    # NSH names the generated Android crate after the app's nshms; read it.
+    crate = tomllib.loads((ROOT / '.nsh/rust/android/Cargo.toml').read_text())
+    package, lib = crate['package']['name'], crate['lib']['name']
     for abi, triple in abis.items():
         target = triple.replace('-', '_')
         compiler = native_tools / f'{triple}28-clang'
@@ -65,9 +68,9 @@ def main():
         build_env.update({f'CC_{target}': str(compiler), f'AR_{target}': str(native_tools / 'llvm-ar'),
             f'CARGO_TARGET_{target.upper()}_LINKER': str(compiler), 'CARGO_TARGET_DIR': str(ROOT / 'target')})
         run('cargo', 'rustc', '--locked', '--manifest-path', ROOT / '.nsh/rust/Cargo.toml',
-            '-p', 'nsh-app-omasend-rust-android', '--target', triple, '--release', '--',
+            '-p', package, '--target', triple, '--release', '--',
             '-C', 'link-arg=-Wl,-z,max-page-size=16384', env=build_env)
-        library = ROOT / f'target/{triple}/release/libnsh_app_omasend_rust_android.so'
+        library = ROOT / f'target/{triple}/release/lib{lib}.so'
         headers = run(native_tools / 'llvm-readelf', '-l', library, capture_output=True, text=True).stdout
         if any(int(line.split()[-1], 16) < 16384 for line in headers.splitlines() if line.strip().startswith('LOAD ')):
             raise SystemExit(f'{abi}: native library is not aligned for 16 KB pages')

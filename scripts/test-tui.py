@@ -37,7 +37,7 @@ def check(binary):
             if select.select([master], [], [], 0.1)[0]:
                 output.extend(os.read(master, 65536))
             text = output.decode("utf-8", errors="replace")
-            if "Nothing added yet" in screen(text):
+            if "Drop something here" in screen(text):
                 break
         os.write(master, b"\x03")
         process.wait(timeout=10)
@@ -45,8 +45,8 @@ def check(binary):
             output.extend(os.read(master, 65536))
         text = output.decode("utf-8", errors="replace")
         assert process.returncode == 0, f"TUI exit code: {process.returncode}"
-        assert "Omasend" in screen(text), "Missing the title bar"
-        assert "Nothing added yet" in screen(text), "Missing the Outbox"
+        assert any("\u2800" <= c <= "\u28ff" for c in text), "Missing the logo"
+        assert "Drop something here" in screen(text), "Missing the Outbox"
         assert "Omasend session started" not in text, "Logs corrupted the screen"
         assert termios.tcgetattr(slave) == before, "Terminal modes were not restored"
         assert "\x1b[?1049l" in text, "Alternate screen was not restored"
