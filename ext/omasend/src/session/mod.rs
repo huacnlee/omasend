@@ -64,7 +64,7 @@ impl Session {
     }
 
     pub fn task<T: 'static>(&self, future: impl Future<Output = T> + 'static) -> Spawned<T> {
-        self.owner.run(|| spawn(future))
+        self.owner.run(|| spawn(crate::api::entering(future)))
     }
 
     pub fn persistent() -> Self {

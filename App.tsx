@@ -1,6 +1,6 @@
 // Omasend's window. The LocalSend client and its state are Rust in ext/omasend
 // (an nshm of the app's own, its `Omasend` module); the interface is TSX.
-import { Text, View, effect, platform } from "nsh";
+import { Text, View, effect, mount, platform } from "nsh";
 import { IconButton, TitleBar, Toaster } from "./src/ui";
 import { Active, History, Incoming, announceFinished, historyOpen } from "./src/Activity";
 import { Composer } from "./src/Composer";
@@ -8,7 +8,7 @@ import { Nearby } from "./src/Nearby";
 import { AppMenu, Surfaces, UpdateStatus, applySavedTheme } from "./src/Settings";
 import { state, t } from "./src/state";
 
-export default function App() {
+function App() {
   applySavedTheme();
   // Phones stack the device list above the Outbox; wider screens put them side by side.
   const phone = platform.idiom === "phone";
@@ -39,3 +39,4 @@ export default function App() {
     </View>
   );
 }
+mount(App);
