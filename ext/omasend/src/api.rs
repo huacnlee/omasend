@@ -22,6 +22,7 @@ fn session() -> Session {
         cell.get_or_init(|| {
             let session = Session::persistent();
             session.start();
+            session.start_services();
             session
         })
         .clone()
@@ -127,6 +128,18 @@ pub struct Snapshot {
     pub can_send: bool,
     /// The interface language code ("en", "zh-CN").
     pub language: String,
+    /// The update status line, empty when there is nothing to say.
+    pub update: String,
+    /// Whether `activateUpdate` has something to do (install or restart).
+    pub update_actionable: bool,
+    /// Whether an update check or install is under way.
+    pub update_busy: bool,
+    /// Whether a network diagnosis runs.
+    pub diagnosing: bool,
+    /// The diagnosis step running now (a text key), empty otherwise.
+    pub diagnosis_step: String,
+    /// The last diagnosis report as Markdown, empty before the first run.
+    pub diagnosis: String,
 }
 
 fn device(device: &Device) -> DeviceInfo {
@@ -226,6 +239,7 @@ pub(crate) fn snapshot_of(
         error: state.error.clone().unwrap_or_default(),
         can_send,
         language: language.into(),
+        ..Default::default()
     }
 }
 
@@ -242,15 +256,41 @@ impl Omasend {
         let running = session.handle.get_untracked().is_some();
         let can_send = !session.cannot_send();
         let language = session.language.get_untracked().code();
+        let update = session.update.get_untracked();
+        let update_busy = matches!(
+            update,
+            omasend::updates::UpdateState::Checking
+                | omasend::updates::UpdateState::Installing { .. }
+        );
+        let update_actionable = session.update_action_available();
+        let update = if update_actionable || session.update_visible.get_untracked() {
+            session.update_label()
+        } else {
+            String::new()
+        };
+        let diagnostics = session.diagnostics;
+        let diagnosis = diagnostics
+            .report
+            .get_untracked()
+            .map(|report| report.to_markdown(session.language.get_untracked()))
+            .unwrap_or_default();
         let state = session.state.borrow();
-        snapshot_of(
-            &state,
-            identity.as_ref(),
-            running,
-            can_send,
-            language,
-            |id| session.item_transfer(id),
-        )
+        Snapshot {
+            update,
+            update_actionable,
+            update_busy,
+            diagnosing: diagnostics.running.get_untracked(),
+            diagnosis_step: diagnostics.step.get_untracked().unwrap_or_default().into(),
+            diagnosis,
+            ..snapshot_of(
+                &state,
+                identity.as_ref(),
+                running,
+                can_send,
+                language,
+                |id| session.item_transfer(id),
+            )
+        }
     }
 
     /// Calls `listener` after each change to the snapshot.
@@ -261,8 +301,16 @@ impl Omasend {
         let handle = session.handle;
         let language = session.language;
         let busy = session.busy;
+        let update = session.update;
+        let update_visible = session.update_visible;
+        let diagnostics = session.diagnostics;
         session.owner.run(|| {
             effect(move || {
+                update.get();
+                update_visible.get();
+                diagnostics.running.get();
+                diagnostics.step.get();
+                diagnostics.report.get();
                 revision.get();
                 identity.get();
                 handle.get();
@@ -341,6 +389,59 @@ impl Omasend {
     /// The text for `key` in the current language.
     pub fn text(key: String) -> String {
         session().language.get_untracked().text(&key).to_string()
+    }
+
+    /// Checks for a new release now and shows the result.
+    pub fn check_updates() {
+        session().check_updates();
+    }
+
+    /// Installs the available update, or restarts into the installed one.
+    pub fn activate_update() {
+        session().activate_update();
+    }
+
+    /// Runs the network diagnosis, optionally probing `peer` ("host" or
+    /// "host:port"). Returns false, without running, when `peer` is invalid.
+    pub fn diagnose(peer: String) -> bool {
+        let session = session();
+        session.diagnostics.peer.set(peer);
+        session.run_diagnostics();
+        !session.diagnostics.invalid_peer.get_untracked()
+    }
+
+    /// The recent log lines.
+    pub fn logs() -> String {
+        omasend::diagnostics::snapshot()
+    }
+
+    /// Clears the recent log lines.
+    pub fn clear_logs() {
+        omasend::diagnostics::clear();
+    }
+
+    /// Puts `text` on the clipboard.
+    pub fn copy_text(text: String) {
+        // Nothing waits for the clipboard's answer.
+        #[allow(clippy::let_underscore_future)]
+        let _ = set_clipboard(text);
+    }
+
+    /// Opens `url` in the browser.
+    pub fn open_url(url: String) {
+        session().open_url(url);
+    }
+
+    /// The app version and the LocalSend protocol line for About.
+    pub fn about() -> Vec<String> {
+        let language = session().language.get_untracked();
+        vec![
+            concat!("Omasend · v", env!("CARGO_PKG_VERSION")).into(),
+            language.named(
+                "about.protocol",
+                localsend::model::discovery::PROTOCOL_VERSION_V2,
+            ),
+        ]
     }
 
     /// Stops LocalSend and quits.
