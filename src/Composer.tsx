@@ -1,7 +1,7 @@
 // The Outbox: what to send to the selected device, the drop area, the actions
 // under it and the transfers in progress, as Omasend has always drawn them.
 import { Image, Scroll, Text, View, platform, signal } from "nsh";
-import { Button, Dialog, Textarea } from "./ui";
+import { Button, Dialog, TERMINAL, Textarea } from "./ui";
 import { Active, TransferRecord, historyOpen } from "./Activity";
 import { surfaceOpen } from "./Settings";
 import { Omasend, sizeLabel, state, t } from "./state";
@@ -10,7 +10,8 @@ import { preview } from "./preview";
 
 // iOS and Android pick from the photo library; their file pickers take no folders.
 const MOBILE = platform.os === "ios" || platform.os === "android";
-const DESKTOP = platform.idiom === "desktop";
+// The terminal has a keyboard and a pointer, as a desktop does.
+const DESKTOP = platform.idiom === "desktop" || platform.idiom === "terminal";
 
 
 function Keycap(props: { label: string }) {
@@ -46,9 +47,19 @@ function latestReceived() {
 }
 
 function Empty() {
+  // The terminal centers it in the area itself: a scroll's `min-h-full`
+  // does not hold there.
+  if (TERMINAL) return <View class="flex-1 items-center justify-center">{EmptyContent()}</View>;
   return (
     <Scroll class="flex-1">
-    <View class="min-h-full items-center justify-center gap-3 p-4">
+      <View class="min-h-full items-center justify-center">{EmptyContent()}</View>
+    </Scroll>
+  );
+}
+
+function EmptyContent() {
+  return (
+    <View class="items-center gap-3 p-4">
       <Emblem size={64} animated paused={() => historyOpen() || !!preview() || !!state().incoming || surfaceOpen()} />
       <Text class="text-foreground">{t(DESKTOP ? "composer.drop_hint" : "composer.mobile_hint")}</Text>
       <Text class="text-muted-foreground text-center" style={{ numberOfLines: 2 }}>
@@ -64,7 +75,6 @@ function Empty() {
         </View>
       ) : null}
     </View>
-    </Scroll>
   );
 }
 
@@ -189,9 +199,7 @@ function Actions() {
       <Button label={t("action.add_files_ellipsis")} onPress={() => Omasend.pick(false)} />
       {MOBILE ? (
         <Button label={t("action.photo_library")} variant="ghost" onPress={() => Omasend.pickPhotos()} />
-      ) : (
-        <Button label={t("action.add_folder_ellipsis")} variant="ghost" onPress={() => Omasend.pick(true)} />
-      )}
+      ) : null}
       <Button label={t("action.paste")} variant="ghost" onPress={() => Omasend.paste()} />
       <View class="flex-1" />
       {DESKTOP ? <Button label={t("history.title")} variant="ghost" onPress={() => historyOpen.set(true)} /> : null}

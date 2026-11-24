@@ -1,6 +1,6 @@
 // Omasend's own components. Screens use these, not nsh-omarchy directly, so
 // the app keeps one small vocabulary of controls.
-import { Text, View, reduceMotion } from "nsh";
+import { Text, View, platform, reduceMotion } from "nsh";
 import {
   Button as OmarchyButton,
   Caption,
@@ -85,5 +85,25 @@ export function Button(props: Parameters<typeof OmarchyButton>[0]) {
       style={{ transitionProperty: "scale", transitionDuration: reduceMotion() ? 0 : 90, transitionTimingFunction: "linear" }}
       activeStyle={{ scale: reduceMotion() ? 1 : 0.98 }}
     />
+  );
+}
+
+/** The terminal: no icons, a grid of character cells. */
+export const TERMINAL = platform.idiom === "terminal";
+
+/**
+ * A small action in a bar: an icon button, or its label as a text button in
+ * the terminal, where icons cannot draw (as the Rust version did).
+ */
+export function ToolButton(props: {
+  icon: Parameters<typeof IconButton>[0]["icon"];
+  label: string;
+  onPress?: () => void;
+  testID?: string;
+}) {
+  return TERMINAL ? (
+    <OmarchyButton testID={props.testID} label={props.label} size="small" variant="ghost" onPress={props.onPress} />
+  ) : (
+    <IconButton testID={props.testID} icon={props.icon} label={props.label} size="small" onPress={props.onPress} />
   );
 }
