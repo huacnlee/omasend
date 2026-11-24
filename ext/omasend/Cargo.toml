@@ -33,7 +33,7 @@ futures-util = "0.3"
 nsh-core = { version = "0.6", optional = true }
 nsh-engine = { version = "0.6", default-features = false, features = ["js-core"], optional = true }
 nsh-base = { version = "0.6", default-features = false, optional = true }
-nsh-omarchy = { version = "0.1", default-features = false, optional = true }
+nsh-omarchy = { version = "0.1.1", default-features = false, optional = true }
 image = { version = "0.25", default-features = false, features = ["png"], optional = true }
 
 localsend = { path = "vendor/localsend", features = ["discovery"] }
@@ -113,7 +113,5 @@ nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857
 nsh-platform-ios = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
 nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
 nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
-# Until huacnlee/nsh-omarchy#4 is released: nsh-omarchy without nsh-base's default features.
-nsh-omarchy = { git = "https://github.com/huacnlee/nsh-omarchy", rev = "500abb058ab51bf0abca0dd0c1d516b711c8a9b7" }
 nsh-platform-tui = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
 nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }

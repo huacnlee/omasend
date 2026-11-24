@@ -3,10 +3,10 @@
   "packages": [
     {
       "name": "nsh-omarchy",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "source": "crates.io",
-      "checksum": "sha256-00d9bc1f59db9d1d62e7f2dcda1ea5b236c288809519cfc13e36fff206061aef",
-      "dir": "nsh-omarchy/0.1.0",
+      "checksum": "sha256-68b2e5076291a1de294c53e3649a03032a495c6aaf85984a6b91d5a03bc1a9df",
+      "dir": "nsh-omarchy/0.1.1",
       "module": "nsh-omarchy"
     },
     {

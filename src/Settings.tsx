@@ -64,7 +64,7 @@ export function AppMenu() {
         <>
           <MenuLabel label={t("action.theme")} />
           {THEMES.map((mode) => (
-            <MenuItem label={t(`theme.${mode}`)} shortcut={theme() === mode ? "✓" : null} onSelect={() => setTheme(mode)} closeOnSelect={false} />
+            <MenuItem label={t(`theme.${mode}`)} checked={theme() === mode} onSelect={() => setTheme(mode)} closeOnSelect={false} />
           ))}
           <MenuSeparator />
         </>
@@ -79,8 +79,8 @@ export function AppMenu() {
           </View>
         }
       >
-        <MenuItem label="English" shortcut={state().language === "en" ? "✓" : null} onSelect={() => Omasend.setLanguage("en")} />
-        <MenuItem label="简体中文" shortcut={state().language === "zh-CN" ? "✓" : null} onSelect={() => Omasend.setLanguage("zh-CN")} />
+        <MenuItem label="English" checked={state().language === "en"} onSelect={() => Omasend.setLanguage("en")} />
+        <MenuItem label="简体中文" checked={state().language === "zh-CN"} onSelect={() => Omasend.setLanguage("zh-CN")} />
       </Submenu>
       <MenuSeparator />
       <MenuItem
