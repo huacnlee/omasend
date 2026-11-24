@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep the Rust migration on NSH's native backends without a JS runtime."""
+"""Keep Omasend on NSH's native backends (no GPUI); the TSX UI needs the JS runtime."""
 import json
 import subprocess
 import sys
@@ -19,8 +19,6 @@ names = {package["name"] for package in metadata["packages"]}
 forbidden = sorted(
     name for name in names
     if "gpui" in name.lower()
-    or name == "nsh-js"
-    or "quickjs" in name.lower()
 )
 if forbidden:
     sys.exit("Forbidden runtime dependencies: " + ", ".join(forbidden))
@@ -34,4 +32,4 @@ required = {"nsh-platform-macos", "nsh-platform-linux", "nsh-platform-windows", 
 missing = sorted(required - names)
 if missing:
     sys.exit("Missing native backends: " + ", ".join(missing))
-print("NSH Rust runtime: AppKit / GTK / Win32 / UIKit / TUI; no GPUI or JavaScript runtime")
+print("NSH Rust runtime: AppKit / GTK / Win32 / UIKit / TUI; no GPUI")

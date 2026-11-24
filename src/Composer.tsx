@@ -1,7 +1,10 @@
 // The items to send and the Send button.
-import { Text, View } from "nsh";
+import { Text, View, platform } from "nsh";
 import { Button, EmptyState, IconButton, Row, Section } from "./ui";
 import { Omasend, sizeLabel, state, t } from "./state";
+
+// iOS and Android pick from the photo library; their file pickers take no folders.
+const MOBILE = platform.os === "ios" || platform.os === "android";
 
 function sendLabel() {
   const device = state().devices.find((d) => d.id === state().selected);
@@ -16,7 +19,11 @@ export function Composer() {
       actions={
         <View testID="outbox-actions" class="flex-row gap-1">
           <Button label={t("action.add_files")} size="small" variant="ghost" icon="plus" onPress={() => Omasend.pick(false)} />
-          <Button label={t("action.add_folder_ellipsis")} size="small" variant="ghost" onPress={() => Omasend.pick(true)} />
+          {MOBILE ? (
+            <Button label={t("action.photo_library")} size="small" variant="ghost" onPress={() => Omasend.pickPhotos()} />
+          ) : (
+            <Button label={t("action.add_folder_ellipsis")} size="small" variant="ghost" onPress={() => Omasend.pick(true)} />
+          )}
           <Button label={t("action.paste")} size="small" variant="ghost" onPress={() => Omasend.paste()} />
         </View>
       }

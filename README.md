@@ -112,9 +112,10 @@ Built with [Native Shell](https://github.com/longbridge/nsh) nightly and the
 The app follows NSH's [`ext/` layout](https://nsh.dev/docs/nshm#an-apps-own-rust-ext):
 
 ```text
-App.tsx              the entry: mounts the Rust App view
-ext/omasend/         the app's Rust, an nshm: LocalSend client, state, views,
-                     the standalone desktop (omasend) and terminal (omasend-tui) binaries
+App.tsx, src/        the interface, in TSX (desktop, mobile and terminal alike)
+ext/omasend/         the app's Rust, an nshm: LocalSend client and state exported to
+                     TSX as `omasend/native`, and the standalone desktop (omasend)
+                     and terminal (omasend-tui) binaries, which embed the TSX bundle
 nsh.json             "dependencies": { "omasend": { "path": "ext/omasend" } }
 ```
 
@@ -126,6 +127,14 @@ which rebuilds on Rust source changes:
 scripts/setup-nightly.sh
 export PATH="$PWD/.nsh/bin:$PATH"
 nsh dev
+```
+
+The standalone binaries embed the bundle `nsh build` writes; build it first and
+name its directory in `OMASEND_BUNDLE`:
+
+```sh
+nsh build --release -o .nsh/interface
+OMASEND_BUNDLE="$PWD/.nsh/interface" cargo build --manifest-path ext/omasend/Cargo.toml --release --bin omasend
 ```
 
 The default target is the native host for your platform (AppKit on macOS, GTK on

@@ -1,7 +1,7 @@
-// The app menu and what it opens: language, updates, logs, the network
+// The app menu and what it opens: theme, language, updates, logs, the network
 // diagnosis and About.
 import { Text, View, signal } from "nsh";
-import { Button, Dialog, IconButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Textarea, toast } from "./ui";
+import { Button, Dialog, IconButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
 import { Omasend, state, t } from "./state";
 
 type Surface = "logs" | "diagnostics" | "about" | null;
@@ -24,6 +24,27 @@ const LINKS: [string, string][] = [
   ["LocalSend…", "https://localsend.org"],
 ];
 
+const THEMES = ["system", "light", "dark"] as const;
+type ThemeMode = (typeof THEMES)[number];
+const theme = signal<ThemeMode>("system");
+
+/** Draws the app in the saved theme mode; Omarchy installations follow Omarchy's theme. */
+export function applySavedTheme() {
+  applyTheme((Omasend.omarchy() ? "system" : Omasend.theme()) as ThemeMode);
+}
+
+function applyTheme(mode: ThemeMode) {
+  theme.set(mode);
+  if (mode === "light") Omarchy.applyTheme("flexoki-light");
+  else if (mode === "dark") Omarchy.applyTheme("tokyo-night");
+  else Omarchy.followSystem();
+}
+
+function setTheme(mode: ThemeMode) {
+  applyTheme(mode);
+  Omasend.setTheme(mode);
+}
+
 /** The title bar's menu. */
 export function AppMenu() {
   return (
@@ -35,6 +56,15 @@ export function AppMenu() {
       <MenuItem label={t("action.paste")} shortcut="mod-v" onSelect={() => Omasend.paste()} />
       <MenuItem label={t("action.add_files_ellipsis")} shortcut="mod-o" onSelect={() => Omasend.pick(false)} />
       <MenuSeparator />
+      {Omasend.omarchy() ? null : (
+        <>
+          <MenuLabel label={t("action.theme")} />
+          {THEMES.map((mode) => (
+            <MenuItem label={t(`theme.${mode}`)} checked={theme() === mode} onSelect={() => setTheme(mode)} />
+          ))}
+          <MenuSeparator />
+        </>
+      )}
       <MenuLabel label={t("action.language")} />
       <MenuItem label="English" checked={state().language === "en"} onSelect={() => Omasend.setLanguage("en")} />
       <MenuItem label="简体中文" checked={state().language === "zh-CN"} onSelect={() => Omasend.setLanguage("zh-CN")} />

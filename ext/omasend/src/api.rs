@@ -2,10 +2,12 @@
 //!
 //! `Omasend.snapshot()` returns plain data; `Omasend.onChange(listener)`
 //! reports each change so the interface reads a fresh snapshot. Every action
-//! goes through the same `Session` the Rust views use, so behaviour stays the
-//! same while the views move to TSX.
-use crate::views::Session;
-use nsh_core::prelude::*;
+//! goes through the app's one [`Session`].
+use crate::session::Session;
+use nsh_core::{
+    element::{Runtime, create_root},
+    prelude::*,
+};
 use omasend::{
     localsend::Device,
     model::{AppState, ComposerItem, SendItem, Transfer, TransferStatus},
@@ -16,13 +18,95 @@ thread_local! {
     static SESSION: OnceCell<Session> = const { OnceCell::new() };
 }
 
+/// The reactive runtime of the session's signals. JS calls into this module
+/// run on the engine thread outside any Rust runtime, so every call (and every
+/// session task, [`entering`]) enters this one.
+pub(crate) fn runtime() -> &'static Runtime {
+    thread_local! {
+        static RUNTIME: &'static Runtime = Box::leak(Box::default());
+    }
+    RUNTIME.with(|runtime| *runtime)
+}
+
+type Task = std::pin::Pin<Box<dyn Future<Output = ()>>>;
+
+thread_local! {
+    /// Tasks queued for the driver, and the driver's waker once it waits.
+    static QUEUE: std::cell::RefCell<(Vec<Task>, Option<std::task::Waker>)> =
+        const { std::cell::RefCell::new((Vec::new(), None)) };
+    static DRIVING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs `future` under `owner` with [`runtime`] entered, polled by the
+/// driver [`drive`] starts. JS calls into this module have no core executor
+/// (NSH's `spawn` panics there); the core runs the driver as one task.
+pub(crate) fn queue(owner: Owner, future: impl Future<Output = ()> + 'static) {
+    let mut future = Box::pin(future);
+    let task: Task = Box::pin(std::future::poll_fn(move |cx| {
+        let _entered = runtime().enter();
+        owner.run(|| future.as_mut().poll(cx))
+    }));
+    let waker = QUEUE.with(|queue| {
+        let mut queue = queue.borrow_mut();
+        queue.0.push(task);
+        queue.1.take()
+    });
+    if let Some(waker) = waker {
+        waker.wake();
+    }
+}
+
+/// Starts the driver of [`queue`]d tasks as a core task, once.
+fn drive(cx: CallCx<'_>) {
+    if DRIVING.with(|driving| driving.replace(true)) {
+        return;
+    }
+    use futures_util::{StreamExt, stream::FuturesUnordered};
+    let mut tasks = FuturesUnordered::<Task>::new();
+    cx.start(std::future::poll_fn(move |cx| {
+        loop {
+            let queued = QUEUE.with(|queue| std::mem::take(&mut queue.borrow_mut().0));
+            let added = !queued.is_empty();
+            tasks.extend(queued);
+            match tasks.poll_next_unpin(cx) {
+                std::task::Poll::Ready(Some(())) => continue,
+                _ if added => continue,
+                _ => {}
+            }
+            // Register before the final check, so a task queued meanwhile wakes us.
+            let empty = QUEUE.with(|queue| {
+                let mut queue = queue.borrow_mut();
+                queue.1 = Some(cx.waker().clone());
+                queue.0.is_empty()
+            });
+            if empty {
+                return std::task::Poll::<()>::Pending;
+            }
+        }
+    }));
+}
+
+/// Waits `duration` on a thread of its own: the core's timers are out of
+/// reach from module calls.
+pub(crate) async fn sleep(duration: std::time::Duration) {
+    let (tx, rx) = async_channel::bounded::<()>(1);
+    std::thread::spawn(move || {
+        std::thread::sleep(duration);
+        let _ = tx.try_send(());
+    });
+    let _ = rx.recv().await;
+}
+
 /// The app's one session, started on first use.
 fn session() -> Session {
     SESSION.with(|cell| {
         cell.get_or_init(|| {
-            let session = Session::persistent();
-            session.start();
-            session.start_services();
+            let (_, session) = create_root(|| {
+                let session = Session::persistent();
+                session.start();
+                session.start_services();
+                session
+            });
             session
         })
         .clone()
@@ -106,6 +190,8 @@ pub struct IncomingInfo {
 /// Everything the interface shows.
 #[derive(Debug, Clone, Default, PartialEq, JsObject)]
 pub struct Snapshot {
+    /// Whether the app should quit now (after stopping LocalSend).
+    pub quit: bool,
     /// This device, once LocalSend runs.
     pub identity: Option<DeviceInfo>,
     /// Whether LocalSend runs.
@@ -250,7 +336,9 @@ pub struct Omasend;
 #[module]
 impl Omasend {
     /// Everything the interface shows now. Starts LocalSend on first use.
-    pub fn snapshot() -> Snapshot {
+    pub fn snapshot(cx: CallCx) -> Snapshot {
+        drive(cx);
+        let _entered = runtime().enter();
         let session = session();
         let identity = session.identity.get_untracked();
         let running = session.handle.get_untracked().is_some();
@@ -276,6 +364,7 @@ impl Omasend {
             .unwrap_or_default();
         let state = session.state.borrow();
         Snapshot {
+            quit: session.quit.get_untracked(),
             update,
             update_actionable,
             update_busy,
@@ -294,13 +383,16 @@ impl Omasend {
     }
 
     /// Calls `listener` after each change to the snapshot.
-    pub fn on_change(listener: Callback) {
+    pub fn on_change(listener: Callback, cx: CallCx) {
+        drive(cx);
+        let _entered = runtime().enter();
         let session = session();
         let revision = session.revision;
         let identity = session.identity;
         let handle = session.handle;
         let language = session.language;
         let busy = session.busy;
+        let quit = session.quit;
         let update = session.update;
         let update_visible = session.update_visible;
         let diagnostics = session.diagnostics;
@@ -316,6 +408,7 @@ impl Omasend {
                 handle.get();
                 language.get();
                 busy.get();
+                quit.get();
                 listener.post(());
             });
         });
@@ -323,87 +416,130 @@ impl Omasend {
 
     /// Selects the device with id `id`.
     pub fn select(id: String) {
+        let _entered = runtime().enter();
         session().select(id);
     }
 
     /// Moves the selection by `delta` devices.
     pub fn navigate(delta: i32) {
+        let _entered = runtime().enter();
         session().navigate(delta as isize);
     }
 
     /// Sends the items to the selected device.
     pub fn send() {
+        let _entered = runtime().enter();
         session().send();
     }
 
     /// Accepts or declines the incoming request `id`.
     pub fn decide(id: String, accept: bool) {
+        let _entered = runtime().enter();
         session().decide(&id, accept);
     }
 
     /// Cancels the transfer `id`.
     pub fn cancel(id: String) {
+        let _entered = runtime().enter();
         session().cancel(&id);
     }
 
     /// Removes the item `id` from the items to send.
     pub fn remove(id: String) {
+        let _entered = runtime().enter();
         session().remove(&id);
     }
 
     /// Lets the user pick files, or folders, to send.
     pub fn pick(folders: bool) {
+        let _entered = runtime().enter();
         session().pick(folders);
+    }
+
+    /// The theme mode: "system", "light" or "dark".
+    pub fn theme() -> String {
+        let _entered = runtime().enter();
+        crate::session::theme::load().to_owned()
+    }
+
+    /// Saves the theme mode; the interface applies it.
+    pub fn set_theme(mode: String) {
+        let _entered = runtime().enter();
+        if let Err(error) = crate::session::theme::save(&mode) {
+            session().fail(error);
+        }
+    }
+
+    /// Whether this is an Omarchy installation: the theme follows Omarchy's.
+    pub fn omarchy() -> bool {
+        let _entered = runtime().enter();
+        crate::session::theme::omarchy()
+    }
+
+    /// Adds photos from the library (iOS and Android).
+    pub fn pick_photos() {
+        let _entered = runtime().enter();
+        session().pick_photos();
     }
 
     /// Adds the clipboard's text, image or files to the items to send.
     pub fn paste() {
+        let _entered = runtime().enter();
         session().paste();
     }
 
     /// Adds dropped files (`file://` URIs) to the items to send.
     pub fn drop_files(uris: Vec<String>) {
+        let _entered = runtime().enter();
         session().drop_files(uris);
     }
 
     /// Clears the finished transfers.
     pub fn clear_history() {
+        let _entered = runtime().enter();
         session().clear_history();
     }
 
     /// Opens a received file, or shows it in its folder when `reveal`.
     pub fn open_path(path: String, reveal: bool) {
+        let _entered = runtime().enter();
         session().open_path(path.into(), reveal);
     }
 
     /// Copies the text received by transfer `id`.
     pub fn copy_received(id: String) {
+        let _entered = runtime().enter();
         session().copy_received(&id);
     }
 
     /// Sets the interface language ("en", "zh-CN").
     pub fn set_language(code: String) {
+        let _entered = runtime().enter();
         session().set_language(omasend::i18n::Language::from_locale(&code));
     }
 
     /// The text for `key` in the current language.
     pub fn text(key: String) -> String {
+        let _entered = runtime().enter();
         session().language.get_untracked().text(&key).to_string()
     }
 
     /// Checks for a new release now and shows the result.
     pub fn check_updates() {
+        let _entered = runtime().enter();
         session().check_updates();
     }
 
     /// Installs the available update, or restarts into the installed one.
     pub fn activate_update() {
+        let _entered = runtime().enter();
         session().activate_update();
     }
 
     /// Runs the network diagnosis, optionally probing `peer` ("host" or
     /// "host:port"). Returns false, without running, when `peer` is invalid.
     pub fn diagnose(peer: String) -> bool {
+        let _entered = runtime().enter();
         let session = session();
         session.diagnostics.peer.set(peer);
         session.run_diagnostics();
@@ -412,16 +548,19 @@ impl Omasend {
 
     /// The recent log lines.
     pub fn logs() -> String {
+        let _entered = runtime().enter();
         omasend::diagnostics::snapshot()
     }
 
     /// Clears the recent log lines.
     pub fn clear_logs() {
+        let _entered = runtime().enter();
         omasend::diagnostics::clear();
     }
 
     /// Puts `text` on the clipboard.
     pub fn copy_text(text: String) {
+        let _entered = runtime().enter();
         // Nothing waits for the clipboard's answer.
         #[allow(clippy::let_underscore_future)]
         let _ = set_clipboard(text);
@@ -429,11 +568,13 @@ impl Omasend {
 
     /// Opens `url` in the browser.
     pub fn open_url(url: String) {
+        let _entered = runtime().enter();
         session().open_url(url);
     }
 
     /// The app version and the LocalSend protocol line for About.
     pub fn about() -> Vec<String> {
+        let _entered = runtime().enter();
         let language = session().language.get_untracked();
         vec![
             concat!("Omasend · v", env!("CARGO_PKG_VERSION")).into(),
@@ -446,6 +587,7 @@ impl Omasend {
 
     /// Stops LocalSend and quits.
     pub fn exit() {
+        let _entered = runtime().enter();
         session().exit();
     }
 }

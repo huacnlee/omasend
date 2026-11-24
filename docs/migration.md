@@ -1,8 +1,8 @@
 # Omasend on Native Shell
 
-The main `omasend` executable now mounts the Rust `App` component directly on
-AppKit, GTK 4 or Win32. The root manifest, lockfile and application source have no
-GPUI, QuickJS or JavaScript-runtime dependencies. `nsh.json` also declares the
+The main `omasend` executable renders the TSX interface in `src/` on AppKit,
+GTK 4 or Win32, with the Rust core in `ext/omasend` exposed as an NSH module.
+The dependency graph has no GPUI dependencies. `nsh.json` also declares the
 Rust root for the NSH toolchain. The separate migration crate has been removed.
 The backend constraint is explicit: AppKit on macOS, GTK on Linux, and Win32 on
 Windows. The GPUI backend is prohibited. `scripts/check-native-runtime.py` checks

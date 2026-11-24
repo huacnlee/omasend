@@ -1,4 +1,5 @@
-//! Standalone Rust terminal application; no development server or JavaScript VM.
+//! Standalone terminal application: the same TSX interface as the desktop
+//! window, on the JS runtime built in; no development server.
 use crossterm::{
     cursor,
     event::{
@@ -42,6 +43,7 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     }
     omasend::diagnostics::init();
+    let interface = omasend::interface()?;
     let executable = std::env::current_exe()?;
     {
         terminal::enable_raw_mode()?;
@@ -63,9 +65,10 @@ fn main() -> anyhow::Result<()> {
         let mut options = AppOptions::default();
         options.limits = nsh_platform_tui::Limits::standalone();
         options.data_dir = dirs::data_local_dir();
+        options.ui_sets = omasend::ui_sets();
         let mut view = AppView::new(options);
         terminal.draw(|frame| view.render(frame, frame.area()))?;
-        view.load(omasend::app_root())?;
+        view.load(interface)?;
         nsh_platform_tui::run_app(&mut terminal, &mut view, poll)?;
     }
     if omasend::updates::RESTART_REQUESTED.swap(false, std::sync::atomic::Ordering::SeqCst) {

@@ -19,10 +19,17 @@ fn main() -> std::process::ExitCode {
         return std::process::ExitCode::SUCCESS;
     }
     omasend::diagnostics::init();
-    platform::set_ui_sets(vec![nsh_base::registry(), omasend::__nsh_native_module()]);
+    let interface = match omasend::interface() {
+        Ok(interface) => interface,
+        Err(error) => {
+            eprintln!("omasend: {error:#}");
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    platform::set_ui_sets(omasend::ui_sets());
     let executable = std::env::current_exe();
     let status = platform::run_app(
-        platform::AppSource::Rust(omasend::app_root()),
+        platform::AppSource::Bundle(interface),
         platform::AppOptions {
             title: "Omasend".into(),
             size: (840, 630),
@@ -48,11 +55,9 @@ fn main() -> std::process::ExitCode {
 #[cfg(target_os = "ios")]
 fn main() -> ! {
     omasend::diagnostics::init();
-    platform::set_ui_sets(vec![nsh_base::registry(), omasend::__nsh_native_module()]);
-    platform::run_app(
-        platform::AppSource::Rust(omasend::app_root()),
-        Default::default(),
-    )
+    platform::set_ui_sets(omasend::ui_sets());
+    let interface = omasend::interface().expect("Omasend's interface is built in");
+    platform::run_app(platform::AppSource::Bundle(interface), Default::default())
 }
 
 // Android launches the NSH library from its Activity.
