@@ -12,15 +12,15 @@ mod mobile;
 mod motion;
 mod panels;
 mod preferences;
-mod preview;
+pub(crate) mod preview;
 mod services;
 mod session;
+pub(crate) use session::Session;
 mod titlebar;
 mod utilities;
 
 use appearance::theme;
 use nsh_core::{keymap::When, prelude::*};
-use session::Session;
 
 pub(crate) fn control(
     title: impl IntoReactive<SharedString>,

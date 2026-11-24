@@ -1,0 +1,442 @@
+//! The state and actions the TSX interface reads from `omasend/native`.
+//!
+//! `Omasend.snapshot()` returns plain data; `Omasend.onChange(listener)`
+//! reports each change so the interface reads a fresh snapshot. Every action
+//! goes through the same `Session` the Rust views use, so behaviour stays the
+//! same while the views move to TSX.
+use crate::views::Session;
+use nsh_core::prelude::*;
+use omasend::{
+    localsend::Device,
+    model::{AppState, ComposerItem, SendItem, Transfer, TransferStatus},
+};
+use std::{cell::OnceCell, time::UNIX_EPOCH};
+
+thread_local! {
+    static SESSION: OnceCell<Session> = const { OnceCell::new() };
+}
+
+/// The app's one session, started on first use.
+fn session() -> Session {
+    SESSION.with(|cell| {
+        cell.get_or_init(|| {
+            let session = Session::persistent();
+            session.start();
+            session
+        })
+        .clone()
+    })
+}
+
+/// A LocalSend device.
+#[derive(Debug, Clone, Default, PartialEq, JsObject)]
+pub struct DeviceInfo {
+    /// The device's fingerprint, its id.
+    pub id: String,
+    /// The name its owner gave it.
+    pub alias: String,
+    /// Its model, empty when unknown.
+    pub model: String,
+    /// Its address.
+    pub host: String,
+}
+
+/// An item waiting to be sent.
+#[derive(Debug, Clone, Default, PartialEq, JsObject)]
+pub struct ComposerInfo {
+    /// The item's id.
+    pub id: String,
+    /// "text", "file", "folder", "image" or "video".
+    pub kind: String,
+    /// The file name, or the text's first line.
+    pub name: String,
+    /// Its size in bytes.
+    pub size: f64,
+    /// Its path, empty for text.
+    pub path: String,
+    /// The id of the transfer sending it, empty when none.
+    pub transfer: String,
+}
+
+/// A transfer, live or from the history.
+#[derive(Debug, Clone, Default, PartialEq, JsObject)]
+pub struct TransferInfo {
+    /// The transfer's id.
+    pub id: String,
+    /// The other device's name.
+    pub peer: String,
+    /// Whether this device sends.
+    pub sending: bool,
+    /// Whether it waits for the receiver to accept.
+    pub awaiting_acceptance: bool,
+    /// "active", "completed", "cancelled" or "failed".
+    pub status: String,
+    /// Why it failed, empty otherwise.
+    pub error: String,
+    /// The file names.
+    pub files: Vec<String>,
+    /// The bytes moved so far.
+    pub transferred: f64,
+    /// The bytes in total.
+    pub total: f64,
+    /// The current rate in bytes per second.
+    pub bytes_per_second: f64,
+    /// Where received files were saved.
+    pub paths: Vec<String>,
+    /// The received text, empty when none.
+    pub text: String,
+    /// When it started, in milliseconds since the Unix epoch.
+    pub when: f64,
+}
+
+/// A request to receive files, waiting for an answer.
+#[derive(Debug, Clone, Default, PartialEq, JsObject)]
+pub struct IncomingInfo {
+    /// The request's id, for `decide`.
+    pub id: String,
+    /// The sender.
+    pub peer: DeviceInfo,
+    /// The offered file names.
+    pub files: Vec<String>,
+    /// Their size in bytes.
+    pub total: f64,
+}
+
+/// Everything the interface shows.
+#[derive(Debug, Clone, Default, PartialEq, JsObject)]
+pub struct Snapshot {
+    /// This device, once LocalSend runs.
+    pub identity: Option<DeviceInfo>,
+    /// Whether LocalSend runs.
+    pub running: bool,
+    /// Whether discovery is scanning.
+    pub discovering: bool,
+    /// The devices found.
+    pub devices: Vec<DeviceInfo>,
+    /// The selected device's id, empty when none.
+    pub selected: String,
+    /// The items to send.
+    pub composer: Vec<ComposerInfo>,
+    /// The transfers, oldest first.
+    pub transfers: Vec<TransferInfo>,
+    /// The request waiting for an answer.
+    pub incoming: Option<IncomingInfo>,
+    /// The last error, empty when none.
+    pub error: String,
+    /// Whether sending is possible now.
+    pub can_send: bool,
+    /// The interface language code ("en", "zh-CN").
+    pub language: String,
+}
+
+fn device(device: &Device) -> DeviceInfo {
+    DeviceInfo {
+        id: device.fingerprint.clone(),
+        alias: device.alias.clone(),
+        model: device.model.clone(),
+        host: device.host.clone(),
+    }
+}
+
+fn composer(item: &ComposerItem, transfer: Option<String>) -> ComposerInfo {
+    let kind = match &item.item {
+        SendItem::Text(_) => "text",
+        _ if item.is_image() => "image",
+        _ if item.is_video() => "video",
+        _ if item.item.path().is_some_and(|path| path.is_dir()) => "folder",
+        _ => "file",
+    };
+    ComposerInfo {
+        id: item.id.clone(),
+        kind: kind.into(),
+        name: item.name(),
+        size: item.size() as f64,
+        path: item
+            .item
+            .path()
+            .map(|path| path.display().to_string())
+            .unwrap_or_default(),
+        transfer: transfer.unwrap_or_default(),
+    }
+}
+
+fn transfer(transfer: &Transfer) -> TransferInfo {
+    let (status, error) = match &transfer.status {
+        TransferStatus::Active => ("active", String::new()),
+        TransferStatus::Completed => ("completed", String::new()),
+        TransferStatus::Cancelled => ("cancelled", String::new()),
+        TransferStatus::Failed(error) => ("failed", error.clone()),
+    };
+    TransferInfo {
+        id: transfer.id.clone(),
+        peer: transfer.peer.clone(),
+        sending: transfer.sending,
+        awaiting_acceptance: transfer.awaiting_acceptance,
+        status: status.into(),
+        error,
+        files: transfer
+            .files
+            .iter()
+            .map(|file| file.name.clone())
+            .collect(),
+        transferred: transfer.transferred as f64,
+        total: transfer.total as f64,
+        bytes_per_second: transfer.bytes_per_second() as f64,
+        paths: transfer
+            .paths
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect(),
+        text: transfer.received_text.clone().unwrap_or_default(),
+        when: transfer
+            .when
+            .duration_since(UNIX_EPOCH)
+            .map_or(0., |when| when.as_millis() as f64),
+    }
+}
+
+/// The snapshot of `state`; `transfer_of` names the transfer sending a
+/// composer item.
+pub(crate) fn snapshot_of(
+    state: &AppState,
+    identity: Option<&Device>,
+    running: bool,
+    can_send: bool,
+    language: &str,
+    transfer_of: impl Fn(&str) -> Option<String>,
+) -> Snapshot {
+    Snapshot {
+        identity: identity.map(device),
+        running,
+        discovering: state.discovering,
+        devices: state.devices.iter().map(device).collect(),
+        selected: state.selected.clone().unwrap_or_default(),
+        composer: state
+            .composer
+            .iter()
+            .map(|item| composer(item, transfer_of(&item.id)))
+            .collect(),
+        transfers: state.transfers.iter().map(transfer).collect(),
+        incoming: state.incoming.as_ref().map(|request| IncomingInfo {
+            id: request.id.clone(),
+            peer: device(&request.peer),
+            files: request.files.iter().map(|file| file.name.clone()).collect(),
+            total: request.files.iter().map(|file| file.size as f64).sum(),
+        }),
+        error: state.error.clone().unwrap_or_default(),
+        can_send,
+        language: language.into(),
+    }
+}
+
+/// Omasend's LocalSend client: its state and what the interface can do.
+#[module]
+pub struct Omasend;
+
+#[module]
+impl Omasend {
+    /// Everything the interface shows now. Starts LocalSend on first use.
+    pub fn snapshot() -> Snapshot {
+        let session = session();
+        let identity = session.identity.get_untracked();
+        let running = session.handle.get_untracked().is_some();
+        let can_send = !session.cannot_send();
+        let language = session.language.get_untracked().code();
+        let state = session.state.borrow();
+        snapshot_of(
+            &state,
+            identity.as_ref(),
+            running,
+            can_send,
+            language,
+            |id| session.item_transfer(id),
+        )
+    }
+
+    /// Calls `listener` after each change to the snapshot.
+    pub fn on_change(listener: Callback) {
+        let session = session();
+        let revision = session.revision;
+        let identity = session.identity;
+        let handle = session.handle;
+        let language = session.language;
+        let busy = session.busy;
+        session.owner.run(|| {
+            effect(move || {
+                revision.get();
+                identity.get();
+                handle.get();
+                language.get();
+                busy.get();
+                listener.post(());
+            });
+        });
+    }
+
+    /// Selects the device with id `id`.
+    pub fn select(id: String) {
+        session().select(id);
+    }
+
+    /// Moves the selection by `delta` devices.
+    pub fn navigate(delta: i32) {
+        session().navigate(delta as isize);
+    }
+
+    /// Sends the items to the selected device.
+    pub fn send() {
+        session().send();
+    }
+
+    /// Accepts or declines the incoming request `id`.
+    pub fn decide(id: String, accept: bool) {
+        session().decide(&id, accept);
+    }
+
+    /// Cancels the transfer `id`.
+    pub fn cancel(id: String) {
+        session().cancel(&id);
+    }
+
+    /// Removes the item `id` from the items to send.
+    pub fn remove(id: String) {
+        session().remove(&id);
+    }
+
+    /// Lets the user pick files, or folders, to send.
+    pub fn pick(folders: bool) {
+        session().pick(folders);
+    }
+
+    /// Adds the clipboard's text, image or files to the items to send.
+    pub fn paste() {
+        session().paste();
+    }
+
+    /// Adds dropped files (`file://` URIs) to the items to send.
+    pub fn drop_files(uris: Vec<String>) {
+        session().drop_files(uris);
+    }
+
+    /// Clears the finished transfers.
+    pub fn clear_history() {
+        session().clear_history();
+    }
+
+    /// Opens a received file, or shows it in its folder when `reveal`.
+    pub fn open_path(path: String, reveal: bool) {
+        session().open_path(path.into(), reveal);
+    }
+
+    /// Copies the text received by transfer `id`.
+    pub fn copy_received(id: String) {
+        session().copy_received(&id);
+    }
+
+    /// Sets the interface language ("en", "zh-CN").
+    pub fn set_language(code: String) {
+        session().set_language(omasend::i18n::Language::from_locale(&code));
+    }
+
+    /// The text for `key` in the current language.
+    pub fn text(key: String) -> String {
+        session().language.get_untracked().text(&key).to_string()
+    }
+
+    /// Stops LocalSend and quits.
+    pub fn exit() {
+        session().exit();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use omasend::localsend::OfferedFile;
+    use omasend::model::IncomingRequest;
+    use std::time::{Duration, SystemTime};
+
+    fn peer() -> Device {
+        Device {
+            fingerprint: "fp".into(),
+            alias: "Laptop".into(),
+            model: "Linux".into(),
+            host: "192.168.1.2".into(),
+            port: 53317,
+        }
+    }
+
+    fn file(name: &str, size: u64) -> OfferedFile {
+        OfferedFile {
+            name: name.into(),
+            size,
+            mime: "text/plain".into(),
+        }
+    }
+
+    #[test]
+    fn empty_state() {
+        let snapshot = snapshot_of(&AppState::default(), None, false, false, "en", |_| None);
+        assert_eq!(snapshot.identity, None);
+        assert!(snapshot.devices.is_empty());
+        assert_eq!(snapshot.selected, "");
+        assert_eq!(snapshot.language, "en");
+        assert!(!snapshot.running);
+    }
+
+    #[test]
+    fn devices_selection_and_incoming() {
+        let mut state = AppState::default();
+        state.devices.push(peer());
+        state.selected = Some("fp".into());
+        state.error = Some("boom".into());
+        state.incoming = Some(IncomingRequest {
+            id: "req".into(),
+            peer: peer(),
+            files: vec![file("a.txt", 3), file("b.txt", 4)],
+        });
+        let snapshot = snapshot_of(&state, Some(&peer()), true, true, "zh-CN", |_| None);
+        assert_eq!(snapshot.identity.unwrap().alias, "Laptop");
+        assert_eq!(snapshot.devices[0].id, "fp");
+        assert_eq!(snapshot.selected, "fp");
+        assert_eq!(snapshot.error, "boom");
+        let incoming = snapshot.incoming.unwrap();
+        assert_eq!(incoming.id, "req");
+        assert_eq!(incoming.files, ["a.txt", "b.txt"]);
+        assert_eq!(incoming.total, 7.);
+    }
+
+    #[test]
+    fn composer_items_and_transfers() {
+        let mut state = AppState::default();
+        let item = ComposerItem::new(SendItem::Text("hello\nworld".into())).unwrap();
+        let id = item.id.clone();
+        state.composer.push(item);
+        let when = SystemTime::UNIX_EPOCH + Duration::from_millis(1_500);
+        state.transfers.push(Transfer::restored(
+            "t1".into(),
+            "Laptop".into(),
+            false,
+            vec![file("a.txt", 3)],
+            3,
+            vec!["/tmp/a.txt".into()],
+            TransferStatus::Failed("lost".into()),
+            when,
+        ));
+        let snapshot = snapshot_of(&state, None, true, true, "en", |item| {
+            (item == id).then(|| "t1".to_owned())
+        });
+        let item = &snapshot.composer[0];
+        assert_eq!(item.kind, "text");
+        assert_eq!(item.name, "hello");
+        assert_eq!(item.transfer, "t1");
+        assert_eq!(item.path, "");
+        let transfer = &snapshot.transfers[0];
+        assert_eq!(transfer.status, "failed");
+        assert_eq!(transfer.error, "lost");
+        assert_eq!(transfer.files, ["a.txt"]);
+        assert_eq!(transfer.paths, ["/tmp/a.txt"]);
+        assert_eq!(transfer.total, 3.);
+        assert_eq!(transfer.when, 1_500.);
+    }
+}
