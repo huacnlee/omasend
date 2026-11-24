@@ -2,9 +2,8 @@
 //!
 //! `Omasend.snapshot()` returns plain data; `Omasend.onChange(listener)`
 //! reports each change so the interface reads a fresh snapshot. Every action
-//! goes through the same `Session` the Rust views use, so behaviour stays the
-//! same while the views move to TSX.
-use crate::views::Session;
+//! goes through the app's one [`Session`].
+use crate::session::Session;
 use nsh_core::prelude::*;
 use omasend::{
     localsend::Device,
@@ -354,6 +353,28 @@ impl Omasend {
     /// Lets the user pick files, or folders, to send.
     pub fn pick(folders: bool) {
         session().pick(folders);
+    }
+
+    /// The theme mode: "system", "light" or "dark".
+    pub fn theme() -> String {
+        crate::session::theme::load().to_owned()
+    }
+
+    /// Saves the theme mode; the interface applies it.
+    pub fn set_theme(mode: String) {
+        if let Err(error) = crate::session::theme::save(&mode) {
+            session().fail(error);
+        }
+    }
+
+    /// Whether this is an Omarchy installation: the theme follows Omarchy's.
+    pub fn omarchy() -> bool {
+        crate::session::theme::omarchy()
+    }
+
+    /// Adds photos from the library (iOS and Android).
+    pub fn pick_photos() {
+        session().pick_photos();
     }
 
     /// Adds the clipboard's text, image or files to the items to send.

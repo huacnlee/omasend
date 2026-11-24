@@ -444,21 +444,33 @@ mod tests {
 
     /// The interface sources, so a lookup can only reach a key that exists.
     const INTERFACE: &[&str] = &[
-        include_str!("views/mod.rs"),
-        include_str!("views/panels.rs"),
-        include_str!("views/session.rs"),
-        include_str!("views/preferences.rs"),
-        include_str!("views/preview.rs"),
-        include_str!("views/utilities.rs"),
-        include_str!("views/services.rs"),
+        include_str!("../../../App.tsx"),
+        include_str!("../../../src/Activity.tsx"),
+        include_str!("../../../src/Composer.tsx"),
+        include_str!("../../../src/Nearby.tsx"),
+        include_str!("../../../src/Settings.tsx"),
+        include_str!("../../../src/ui/index.tsx"),
+        RUST_INTERFACE[0],
+        RUST_INTERFACE[1],
+        RUST_INTERFACE[2],
+        RUST_INTERFACE[3],
+    ];
+
+    /// The Rust half of [`INTERFACE`]; TSX writes `{name}` for JSX children.
+    const RUST_INTERFACE: [&str; 4] = [
+        include_str!("session/mod.rs"),
+        include_str!("session/services.rs"),
+        include_str!("session/diagnostics.rs"),
+        include_str!("api.rs"),
     ];
 
     /// Every key the interface asks for by name, whichever lookup it uses.
     fn keys_in(source: &str) -> Vec<&str> {
         let mut keys = Vec::new();
-        for opening in ["t!(\"", ".text(\"", ".named(\"", ".translated(\""] {
+        for opening in ["t!(\"", "t(\"", ".text(\"", ".named(\"", ".translated(\""] {
             for (at, matched) in source.match_indices(opening) {
-                // `format!("…")` ends in the same three characters as `t!("`.
+                // `format!("…")` ends in the same three characters as `t!("`,
+                // `set("…")` in those of the TSX `t("`.
                 if opening.starts_with('t')
                     && source[..at]
                         .chars()
@@ -477,7 +489,7 @@ mod tests {
     fn no_interface_string_still_carries_a_catalog_placeholder() {
         // A key left behind by the move to rust-i18n reaches the interface as
         // itself, so `{name}` renders literally instead of the device alias.
-        for source in INTERFACE {
+        for source in RUST_INTERFACE {
             for placeholder in ["{name}", "{count}"] {
                 assert!(
                     !source.contains(placeholder),

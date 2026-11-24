@@ -119,6 +119,14 @@ jobs:
       - name: Require native NSH backends
         run: python scripts/check-native-runtime.py
 
+      - name: Bundle the TSX interface
+        # Both binaries embed it through OMASEND_BUNDLE.
+        shell: bash
+        run: |
+          scripts/setup-nightly.sh
+          .nsh/bin/nsh build --release -o .nsh/interface
+          echo "OMASEND_BUNDLE=$PWD/.nsh/interface" >> "$GITHUB_ENV"
+
       - name: Build release
         run: cargo build --manifest-path ext/omasend/Cargo.toml --locked --release --bin omasend --target ${{ matrix.target }}
 

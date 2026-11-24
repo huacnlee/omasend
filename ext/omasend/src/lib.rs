@@ -17,19 +17,41 @@ extern crate self as omasend;
 #[cfg(feature = "ui")]
 pub mod api;
 #[cfg(feature = "ui")]
-pub mod views;
-#[cfg(feature = "ui")]
-pub use views::App;
+pub(crate) mod session;
 
 #[cfg(feature = "ui")]
 #[nsh_core::element::native_module("omasend/native")]
 fn native(registry: &mut nsh_core::element::Registry) {
-    registry.register::<App>().module::<api::Omasend>();
+    registry.module::<api::Omasend>();
 }
 
+/// The TSX interface (`App.tsx`), as `nsh build --release` bundled it: built
+/// in when `OMASEND_BUNDLE` named its output directory at compile time, read
+/// from the `bundle.js` in the directory `OMASEND_BUNDLE` names otherwise.
 #[cfg(feature = "ui")]
-pub fn app_root() -> nsh_core::element::Root {
-    views::appearance::root()
+pub fn interface() -> anyhow::Result<nsh_engine::Bundle> {
+    #[cfg(omasend_bundle)]
+    let code = include_str!(env!("OMASEND_BUNDLE_JS")).to_owned();
+    #[cfg(not(omasend_bundle))]
+    let code = {
+        use anyhow::Context;
+        let dir = std::env::var_os("OMASEND_BUNDLE").context(
+            "This build has no interface: set OMASEND_BUNDLE to the output of `nsh build --release`",
+        )?;
+        let file = std::path::Path::new(&dir).join("bundle.js");
+        std::fs::read_to_string(&file).with_context(|| format!("Cannot read {}", file.display()))?
+    };
+    Ok(nsh_engine::Bundle::source(code).with_app_id(Some("com.huacnlee.omasend")))
+}
+
+/// The native modules the interface imports: NSH's, nsh-omarchy's and ours.
+#[cfg(feature = "ui")]
+pub fn ui_sets() -> Vec<nsh_core::element::Registry> {
+    vec![
+        nsh_base::registry(),
+        nsh_omarchy::__nsh_native_module(),
+        __nsh_native_module(),
+    ]
 }
 
 /// Both frontends may be compiled together; update and logging policy follow

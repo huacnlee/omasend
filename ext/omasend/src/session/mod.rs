@@ -1,4 +1,5 @@
-//! UI-thread state and commands shared by pointer and keyboard entry points.
+//! UI-thread LocalSend state and the commands the TSX interface runs through
+//! `omasend/native` (see `crate::api`).
 use anyhow::{Context, Result};
 use nsh_core::prelude::*;
 use omasend::{
@@ -6,6 +7,19 @@ use omasend::{
     model::{AppState, ComposerItem, SendItem},
 };
 use std::{cell::RefCell, rc::Rc};
+
+mod diagnostics;
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+mod inputs;
+#[cfg(target_os = "ios")]
+#[path = "ios.rs"]
+mod mobile;
+#[cfg(target_os = "android")]
+#[path = "android.rs"]
+mod mobile;
+pub(crate) mod preferences;
+mod services;
+pub(crate) mod theme;
 
 #[derive(Clone)]
 pub(crate) struct Session {
@@ -15,15 +29,11 @@ pub(crate) struct Session {
     pub identity: Signal<Option<Device>>,
     pub busy: Signal<bool>,
     pub language: Signal<omasend::i18n::Language>,
-    pub history_visible: Signal<bool>,
     persist: bool,
-    pub preview: Signal<Option<super::preview::Preview>>,
-    pub surface: Signal<Option<super::utilities::Surface>>,
     pub update: Signal<omasend::updates::UpdateState>,
     pub update_visible: Signal<bool>,
-    pub installer: super::services::Installer,
-    pub logs: Signal<String>,
-    pub diagnostics: super::diagnostics::Diagnostics,
+    pub installer: self::services::Installer,
+    pub diagnostics: self::diagnostics::Diagnostics,
     pub notice: Signal<Option<&'static str>>,
     pub notice_revision: Signal<u64>,
     pub owner: Owner,
@@ -39,17 +49,13 @@ impl Session {
             identity: signal_with(None, SignalEquals::Never),
             busy: signal(false),
             language: signal(omasend::i18n::Language::En),
-            history_visible: signal(false),
             persist: false,
-            preview: signal_with(None, SignalEquals::Never),
-            surface: signal(None),
             update_visible: signal(false),
             installer: std::sync::Arc::new(|version, progress| {
                 omasend::updates::install::install(&version, progress)
             }),
             update: signal(omasend::updates::UpdateState::Idle),
-            logs: signal(String::new()),
-            diagnostics: super::diagnostics::Diagnostics::new(),
+            diagnostics: self::diagnostics::Diagnostics::new(),
             notice: signal(None),
             notice_revision: signal(0),
             owner: Owner::current(),
@@ -64,61 +70,18 @@ impl Session {
     pub fn persistent() -> Self {
         let mut session = Self::new();
         session.persist = true;
-        session.language.set(super::preferences::load_language());
+        session.language.set(self::preferences::load_language());
         session.state.borrow_mut().transfers = omasend::model::history::load();
         session
-    }
-
-    pub fn translated(&self, key: &'static str) -> impl Fn() -> SharedString + use<> {
-        let language = self.language;
-        move || language.get().text(key).into()
     }
 
     pub fn set_language(&self, language: omasend::i18n::Language) {
         self.language.set(language);
         if self.persist
-            && let Err(error) = super::preferences::save_language(language)
+            && let Err(error) = self::preferences::save_language(language)
         {
             self.fail(error);
         }
-    }
-
-    pub fn visible_transfer_ids(&self) -> Vec<String> {
-        self.revision.get();
-        let history = self.history_visible.get();
-        let state = self.state.borrow();
-        let latest = state.transfers.last().map(|t| &t.id);
-        state
-            .transfers
-            .iter()
-            .rev()
-            .filter(|t| {
-                history
-                    || t.status == omasend::model::TransferStatus::Active
-                    || Some(&t.id) == latest
-            })
-            .map(|t| t.id.clone())
-            .collect()
-    }
-
-    pub fn preview_item(&self, id: &str) {
-        if self.input_blocked() {
-            return;
-        }
-        let preview = self
-            .state
-            .borrow()
-            .composer
-            .iter()
-            .find(|item| item.id == id)
-            .and_then(|item| match &item.item {
-                SendItem::Text(text) => Some(super::preview::Preview::Text(text.clone())),
-                item_value if item.is_image() => {
-                    Some(super::preview::Preview::Image(item_value.clone()))
-                }
-                _ => None,
-            });
-        self.preview.set(preview);
     }
 
     pub fn clear_history(&self) {
@@ -140,7 +103,7 @@ impl Session {
         let this = self.clone();
         self.task(async move {
             #[cfg(any(target_os = "ios", target_os = "android"))]
-            let result = super::mobile::share(&path).await;
+            let result = self::mobile::share(&path).await;
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
             let result = blocking(move || -> Result<()> {
                 let path = path
@@ -230,11 +193,6 @@ impl Session {
                                 | TransferEvent::Cancelled { .. }
                                 | TransferEvent::Failed { .. }
                         );
-                        if matches!(event, TransferEvent::IncomingRequest { .. }) {
-                            this.preview.set(None);
-                            this.surface.set(None);
-                            this.history_visible.set(false);
-                        }
                         this.state.borrow_mut().apply(event);
                         if finished {
                             this.save_history();
@@ -251,20 +209,13 @@ impl Session {
 
     pub fn input_blocked(&self) -> bool {
         self.revision.get();
-        self.busy.get()
-            || self.preview.get().is_some()
-            || self.surface.get().is_some()
-            || self.history_visible.get()
-            || self.state.borrow().incoming.is_some()
+        self.busy.get() || self.state.borrow().incoming.is_some()
     }
 
     pub fn cannot_send(&self) -> bool {
         self.revision.get();
         let state = self.state.borrow();
         self.busy.get()
-            || self.preview.get().is_some()
-            || self.surface.get().is_some()
-            || self.history_visible.get()
             || self.handle.get().is_none()
             || state.incoming.is_some()
             || state.sending()
@@ -429,14 +380,14 @@ impl Session {
 
     pub fn pick(&self, folders: bool) {
         #[cfg(any(target_os = "ios", target_os = "android"))]
-        self.input(super::mobile::pick(folders));
+        self.input(self::mobile::pick(folders));
         #[cfg(not(any(target_os = "ios", target_os = "android")))]
         self.pick_desktop(folders);
     }
 
     pub fn pick_photos(&self) {
         #[cfg(any(target_os = "ios", target_os = "android"))]
-        self.input(super::mobile::photos());
+        self.input(self::mobile::photos());
         #[cfg(not(any(target_os = "ios", target_os = "android")))]
         self.fail("The photo library is available on iOS");
     }
@@ -461,14 +412,14 @@ impl Session {
 
     pub fn paste(&self) {
         #[cfg(any(target_os = "ios", target_os = "android"))]
-        self.input(super::mobile::paste());
+        self.input(self::mobile::paste());
         #[cfg(not(any(target_os = "ios", target_os = "android")))]
         self.input(async {
             #[cfg(target_os = "linux")]
             if std::env::var_os("WAYLAND_DISPLAY").is_some() {
                 return omasend::clipboard::wayland::paste().await;
             }
-            blocking(super::inputs::paste)
+            blocking(self::inputs::paste)
                 .await
                 .context("Clipboard read stopped")?
         });

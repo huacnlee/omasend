@@ -1,5 +1,5 @@
 //! Root-owned asynchronous services survive closing their menu or modal.
-use super::{session::Session, utilities::Surface};
+use super::Session;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use anyhow::Context;
 use nsh_core::prelude::*;
@@ -25,31 +25,6 @@ impl Session {
             }
             exit_application();
         });
-    }
-
-    pub fn open_surface(&self, surface: Surface) {
-        if self.state.borrow().incoming.is_some() {
-            return;
-        }
-        self.preview.set(None);
-        self.history_visible.set(false);
-        if surface == Surface::Logs {
-            self.refresh_logs();
-        }
-        self.surface.set(Some(surface));
-    }
-
-    pub fn open_history(&self) {
-        if self.state.borrow().incoming.is_some() {
-            return;
-        }
-        self.preview.set(None);
-        self.surface.set(None);
-        self.history_visible.set(true);
-    }
-
-    pub fn refresh_logs(&self) {
-        self.logs.set(omasend::diagnostics::snapshot());
     }
 
     pub fn notify(&self, key: &'static str) {
@@ -148,8 +123,8 @@ impl Session {
     }
 }
 
-pub(super) type InstallProgress = Box<dyn Fn(u64, Option<u64>) + Send + Sync>;
-pub(super) type Installer =
+pub(crate) type InstallProgress = Box<dyn Fn(u64, Option<u64>) + Send + Sync>;
+pub(crate) type Installer =
     std::sync::Arc<dyn Fn(String, InstallProgress) -> anyhow::Result<()> + Send + Sync>;
 
 impl Session {
@@ -229,36 +204,6 @@ impl Session {
             });
         });
     }
-}
-
-pub(super) fn update_control(session: Session) -> impl IntoElement {
-    let actionable = session.clone();
-    let status = session.clone();
-    let label = session.clone();
-    let activate = session.clone();
-    view()
-        .flex_row()
-        .child(when(
-            move || actionable.update_action_available(),
-            move || {
-                let label = label.clone();
-                let activate = activate.clone();
-                super::plain_control(
-                    move || label.update_label(),
-                    false,
-                    move || activate.activate_update(),
-                )
-                .py(px(0.0))
-                .text_color(nsh_omarchy::tokens::accent)
-            },
-        ))
-        .child(when(
-            move || status.update_visible.get() && !status.update_action_available(),
-            move || {
-                let session = session.clone();
-                text(move || session.update_label())
-            },
-        ))
 }
 
 fn restart_blocked_state(busy: bool, state: &omasend::model::AppState) -> bool {
