@@ -1,7 +1,7 @@
 // Receiving and the transfers: the request to accept, the live transfers and
 // the history sheet. Finished transfers also raise a toast.
-import { Image, Text, View, platform, signal } from "nsh";
-import { Button, Dialog, Sheet, EmptyState, Textarea, toast } from "./ui";
+import { Image, Scroll, Text, View, platform, signal, windowSize } from "nsh";
+import { Button, Dialog, IconButton, Textarea, toast } from "./ui";
 import { Omasend, sizeLabel, state, t } from "./state";
 import { preview } from "./preview";
 
@@ -177,33 +177,39 @@ export const historyOpen = signal(false);
 /** Every transfer of this and earlier sessions, newest first. */
 export function History() {
   const items = () => state().transfers.slice().reverse();
+  // As the Rust version: 55% of the window, and never over the title bar.
+  const height = () => Math.min(windowSize().height * 0.55, windowSize().height - 48);
   return (
-    <Sheet
-      testID="history-sheet"
-      placement="bottom"
-      title={t("history.title")}
-      open={historyOpen()}
-      closeLabel={t("action.close")}
-      onOpenChange={(event) => historyOpen.set(event.open)}
-      footer={
-        <Button
-          label={t("action.clear_history")}
-          variant="ghost"
-          disabled={items().length === 0}
-          onPress={() => Omasend.clearHistory()}
-        />
-      }
-    >
-      {items().length === 0 ? (
-        <EmptyState title={t("history.empty")} icon="inbox" />
-      ) : (
-        <View>
-          <Each of={items()} key={(item: Transfer) => item.id}>
-            {(item: () => Transfer) => <TransferRecord item={item} />}
-          </Each>
+    <If when={historyOpen()}>
+      <View class="absolute inset-0 justify-end">
+        <View class="absolute inset-0 bg-black/45" onPress={() => historyOpen.set(false)} />
+        <View testID="history-sheet" class="bg-card border-t border-border" style={{ height: height() }}>
+          <View class="flex-row items-center gap-2 px-4 py-2 border-b border-border">
+            <Text class="flex-1 font-semibold text-foreground">{t("history.title")}</Text>
+            <Button
+              label={t("action.clear")}
+              accessibilityLabel={t("action.clear_history")}
+              size="small"
+              variant="ghost"
+              disabled={!items().some((item) => item.status !== "active")}
+              onPress={() => Omasend.clearHistory()}
+            />
+            <IconButton icon="x" label={t("action.close")} size="small" onPress={() => historyOpen.set(false)} />
+          </View>
+          <Scroll class="flex-1">
+            <View class="px-4">
+              {items().length === 0 ? (
+                <Text class="py-3 text-muted-foreground">{t("history.empty")}</Text>
+              ) : (
+                <Each of={items()} key={(item: Transfer) => item.id}>
+                  {(item: () => Transfer) => <TransferRecord item={item} />}
+                </Each>
+              )}
+            </View>
+          </Scroll>
         </View>
-      )}
-    </Sheet>
+      </View>
+    </If>
   );
 }
 

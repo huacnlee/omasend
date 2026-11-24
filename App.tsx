@@ -2,7 +2,8 @@
 // (an nshm of the app's own, its `Omasend` module); the interface is TSX.
 // The layout is Omasend's own: nearby devices across the top, the Outbox below
 // and a status bar at the bottom.
-import { Text, View, cleanup, effect, keymap, mount } from "nsh";
+import { Text, View, cleanup, effect, keymap, mount, platform } from "nsh";
+import { currentWindow } from "nsh/desktop";
 import { IconButton, TitleBar, Toaster } from "./src/ui";
 import { History, Incoming, announceFinished, historyOpen } from "./src/Activity";
 import { Composer, Preview } from "./src/Composer";
@@ -71,6 +72,9 @@ function App() {
   applySavedTheme();
   effect(announceFinished);
   bindKeys();
+  // Linux draws its close button over the window's top right corner, under
+  // the app's own controls; Exit is in the menu.
+  if (platform.os === "linux") currentWindow().set({ closable: false });
   return (
     <View class="flex-1 bg-background">
       <TitleBar testID="app-header">
