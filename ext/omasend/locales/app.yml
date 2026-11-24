@@ -504,8 +504,8 @@ action.refresh:
   en: "Refresh"
   zh-CN: "刷新"
 about.native_shell:
-  en: "Native interface built with Native Shell in Rust mode."
-  zh-CN: "使用 Native Shell Rust 模式构建的原生界面。"
+  en: "Interface built with Native Shell in TSX, on a Rust core."
+  zh-CN: "界面使用 Native Shell 的 TSX 构建，核心为 Rust。"
 about.source:
   en: "Source code"
   zh-CN: "源代码"
