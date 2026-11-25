@@ -1,6 +1,7 @@
 // The devices LocalSend finds on this network: a strip of cards across the
 // window, one row until expanded, as Omasend has always drawn it.
 import { Text, View, signal } from "nsh";
+import { Check } from "nsh-icon-lucide";
 import { Button, Icon } from "./ui";
 import { Omasend, state, t } from "./state";
 
@@ -50,7 +51,7 @@ function DeviceCard(props: { device: () => ReturnType<typeof state>["devices"][n
         <Text class="text-foreground truncate">{device().alias}</Text>
         <Text class="text-[11px] text-muted-foreground truncate">{device().model || "LocalSend"}</Text>
       </View>
-      <View class="size-3 shrink-0">{selected() ? <Icon name="check" size={12} class="text-primary" /> : null}</View>
+      <View class="size-3 shrink-0">{selected() ? <Icon icon={Check} size={12} class="text-primary" /> : null}</View>
     </View>
   );
 }

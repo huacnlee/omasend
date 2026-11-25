@@ -6,7 +6,6 @@ import {
   Caption,
   Dialog,
   EmptyState,
-  Icon,
   IconButton,
   Input,
   ListItem,
@@ -22,6 +21,7 @@ import {
   Toaster,
   toast,
 } from "nsh-omarchy";
+import { Icon } from "nsh-icon";
 
 export {
   Icon,

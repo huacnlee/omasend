@@ -12,14 +12,14 @@ exclude = ["vendor/localsend"]
 
 [features]
 default = ["desktop"]
-ui = ["dep:nsh-core", "dep:nsh-engine", "dep:nsh-base", "dep:nsh-omarchy", "dep:rfd", "dep:arboard", "dep:image", "dep:open", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:toml"]
+ui = ["dep:nsh-core", "dep:nsh-engine", "dep:nsh-base", "dep:nsh-omarchy", "dep:nsh-icon", "dep:nsh-icon-lucide", "dep:rfd", "dep:arboard", "dep:image", "dep:open", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:toml"]
 desktop = ["ui", "dep:nsh-platform-macos", "dep:nsh-platform-ios", "dep:jni", "dep:nsh-platform-linux", "dep:nsh-platform-windows"]
 tui = ["ui", "dep:nsh-platform-tui", "dep:ratatui-core", "dep:ratatui-crossterm", "dep:crossterm"]
 mobile = ["desktop"]
 ui-tests = ["desktop"]
 
 [dependencies]
-nsh-platform-tui = { version = "0.6", default-features = false, features = ["run-app", "js"], optional = true }
+nsh-platform-tui = { version = "0.7", default-features = false, features = ["run-app", "js"], optional = true }
 ratatui-core = { version = "0.1.2", optional = true }
 ratatui-crossterm = { version = "0.1.2", optional = true }
 crossterm = { version = "0.29", optional = true }
@@ -30,10 +30,12 @@ chrono = "0.4"
 cap-std = "3"
 dirs = "6"
 futures-util = "0.3"
-nsh-core = { version = "0.6", optional = true }
-nsh-engine = { version = "0.6", default-features = false, features = ["js-core"], optional = true }
-nsh-base = { version = "0.6", default-features = false, optional = true }
-nsh-omarchy = { version = "0.1.1", default-features = false, optional = true }
+nsh-core = { version = "0.7", features = ["svg"], optional = true }
+nsh-engine = { version = "0.7", default-features = false, features = ["js-core"], optional = true }
+nsh-base = { version = "0.7", default-features = false, optional = true }
+nsh-omarchy = { version = "0.2", default-features = false, optional = true }
+nsh-icon = { version = "0.2.2", optional = true }
+nsh-icon-lucide = { version = "0.2.1", optional = true }
 image = { version = "0.25", default-features = false, features = ["png"], optional = true }
 
 localsend = { path = "vendor/localsend", features = ["discovery"] }
@@ -65,13 +67,13 @@ open = { version = "5", optional = true }
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSPasteboard"], optional = true }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSData", "NSString"], optional = true }
-nsh-platform-macos = { version = "0.6", default-features = false, features = ["js"], optional = true }
+nsh-platform-macos = { version = "0.7", default-features = false, features = ["js"], optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nsh-platform-linux = { version = "0.6", default-features = false, features = ["js"], optional = true }
+nsh-platform-linux = { version = "0.7", default-features = false, features = ["js"], optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-nsh-platform-windows = { version = "0.6", default-features = false, features = ["js"], optional = true }
+nsh-platform-windows = { version = "0.7", default-features = false, features = ["js"], optional = true }
 
 [dev-dependencies]
 crossbeam-channel = "0.5"
@@ -98,7 +100,7 @@ codegen-units = 1
 cc = "1"
 
 [target.'cfg(target_os = "ios")'.dependencies]
-nsh-platform-ios = { version = "0.6", default-features = false, features = ["js"], optional = true }
+nsh-platform-ios = { version = "0.7", default-features = false, features = ["js"], optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "0.21", optional = true }
@@ -107,11 +109,11 @@ rustix = { version = "1", features = ["fs"] }
 # Cargo builds (tests, the standalone desktop and terminal binaries) use the
 # NSH nightly; `nsh` builds the app with its own NSH checkout instead.
 [patch.crates-io]
-nsh-base = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
-nsh-core = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
-nsh-engine = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
-nsh-platform-ios = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
-nsh-platform-linux = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
-nsh-platform-macos = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
-nsh-platform-tui = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
-nsh-platform-windows = { git = "https://github.com/longbridge/nsh", rev = "f577c51901a2857956f8ba0580da4db9ce3a3311" }
+nsh-base = { git = "https://github.com/longbridge/nsh", tag = "nightly" }
+nsh-core = { git = "https://github.com/longbridge/nsh", tag = "nightly" }
+nsh-engine = { git = "https://github.com/longbridge/nsh", tag = "nightly" }
+nsh-platform-ios = { git = "https://github.com/longbridge/nsh", tag = "nightly" }
+nsh-platform-linux = { git = "https://github.com/longbridge/nsh", tag = "nightly" }
+nsh-platform-macos = { git = "https://github.com/longbridge/nsh", tag = "nightly" }
+nsh-platform-tui = { git = "https://github.com/longbridge/nsh", tag = "nightly" }
+nsh-platform-windows = { git = "https://github.com/longbridge/nsh", tag = "nightly" }

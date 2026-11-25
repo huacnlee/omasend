@@ -2,6 +2,7 @@
 // diagnosis and About.
 import { Scroll, Text, View, signal } from "nsh";
 import { Submenu } from "nsh/base";
+import { ChevronRight } from "nsh-icon-lucide";
 import { Button, Dialog, Icon, ToolButton, Input, Menu, MenuItem, MenuLabel, MenuSeparator, Omarchy, Textarea, toast } from "./ui";
 import { Omasend, state, t } from "./state";
 
@@ -75,7 +76,7 @@ export function AppMenu() {
         trigger={
           <View class="flex-row items-center gap-2 h-6 px-2 hover:bg-foreground/10 focus:bg-foreground/10">
             <Text class="flex-1 text-foreground" style={{ fontSize: 12 }}>{t("action.language")}</Text>
-            <Icon name="chevron-right" size={12} class="text-muted-foreground" />
+            <Icon icon={ChevronRight} size={12} class="text-muted-foreground" />
           </View>
         }
       >
