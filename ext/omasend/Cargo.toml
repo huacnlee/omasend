@@ -30,7 +30,7 @@ chrono = "0.4"
 cap-std = "3"
 dirs = "6"
 futures-util = "0.3"
-nsh-core = { version = "0.7", optional = true }
+nsh-core = { version = "0.7", features = ["svg"], optional = true }
 nsh-engine = { version = "0.7", default-features = false, features = ["js-core"], optional = true }
 nsh-base = { version = "0.7", default-features = false, optional = true }
 nsh-omarchy = { version = "0.2", default-features = false, optional = true }
