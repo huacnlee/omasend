@@ -66,7 +66,9 @@ def main():
         compiler = native_tools / f'{triple}28-clang'
         build_env = os.environ.copy()
         build_env.update({f'CC_{target}': str(compiler), f'AR_{target}': str(native_tools / 'llvm-ar'),
-            f'CARGO_TARGET_{target.upper()}_LINKER': str(compiler), 'CARGO_TARGET_DIR': str(ROOT / 'target')})
+            f'CARGO_TARGET_{target.upper()}_LINKER': str(compiler), 'CARGO_TARGET_DIR': str(ROOT / 'target'),
+            # bindgen (quickjs-jit-sys) must read the NDK's headers, not the host's.
+            f'BINDGEN_EXTRA_CLANG_ARGS_{target}': f'--sysroot={native_tools.parent / "sysroot"} --target={triple}28'})
         run('cargo', 'rustc', '--locked', '--manifest-path', ROOT / '.nsh/rust/Cargo.toml',
             '-p', package, '--target', triple, '--release', '--',
             '-C', 'link-arg=-Wl,-z,max-page-size=16384', env=build_env)
