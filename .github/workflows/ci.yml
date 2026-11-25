@@ -38,7 +38,7 @@ jobs:
         with:
           workspaces: |
             ext/omasend -> target
-            .nsh/toolchain/f577c51901a2857956f8ba0580da4db9ce3a3311 -> target
+            .nsh/toolchain/7d701ea67e3d523094f681d453b73b5f7d87a5c8 -> target
           key: nsh-${{ matrix.os }}
       - run: cargo fmt --manifest-path ext/omasend/Cargo.toml --check
       - run: cargo clippy --manifest-path ext/omasend/Cargo.toml --locked --all-targets -- -D warnings

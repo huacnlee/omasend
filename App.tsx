@@ -3,7 +3,8 @@
 // The layout is Omasend's own: nearby devices across the top, the Outbox below
 // and a status bar at the bottom.
 import { Text, View, cleanup, effect, keymap, mount } from "nsh";
-import { TERMINAL, ToolButton, TitleBar, Toaster } from "./src/ui";
+import { CircleAlert } from "nsh-icon-lucide";
+import { Icon, TERMINAL, ToolButton, TitleBar, Toaster } from "./src/ui";
 import { History, Incoming, announceFinished, historyOpen } from "./src/Activity";
 import { Composer, Preview } from "./src/Composer";
 import { preview } from "./src/preview";
@@ -18,9 +19,13 @@ function ErrorNotice() {
   return (
     <If when={raw()}>
     <View testID="error-notice" role="alert" class="mx-4 mt-3 p-3 flex-row items-center gap-3 border border-border bg-foreground/5">
-      <View class="size-5 items-center justify-center border border-destructive/40">
-        <Text class="text-destructive">!</Text>
-      </View>
+      {TERMINAL ? (
+        <View class="size-5 items-center justify-center border border-destructive/40">
+          <Text class="text-destructive">!</Text>
+        </View>
+      ) : (
+        <Icon icon={CircleAlert} size={20} class="text-destructive" />
+      )}
       <View class="flex-1 gap-1">
         <Text class="font-bold text-foreground">{t(port() ? "error.notice_unavailable" : "error.notice_title")}</Text>
         <Text class="text-[11px] text-muted-foreground">{port() ? t("error.notice_port") : raw()}</Text>

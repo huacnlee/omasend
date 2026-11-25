@@ -3064,8 +3064,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-base"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "chrono",
  "html5ever",
@@ -3088,8 +3088,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-core"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "cap-std 4.0.3",
  "chrono",
@@ -3120,8 +3120,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-engine"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "crossbeam-channel",
  "env_filter",
@@ -3141,13 +3141,32 @@ dependencies = [
 
 [[package]]
 name = "nsh-i18n"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
+
+[[package]]
+name = "nsh-icon"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23415dda67494164ae3d1a299ef9c527e68f8d48b19d5f72969b65b1b6fe8468"
+dependencies = [
+ "nsh-core",
+]
+
+[[package]]
+name = "nsh-icon-lucide"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa2647c3cd43f805a5290ea165148044690fa0450bd956af96da9f26faecd8f5"
+dependencies = [
+ "nsh-core",
+ "nsh-icon",
+]
 
 [[package]]
 name = "nsh-js"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "futures-util",
  "getrandom 0.4.3",
@@ -3171,8 +3190,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-macros"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "imagesize",
  "proc-macro2",
@@ -3184,9 +3203,9 @@ dependencies = [
 
 [[package]]
 name = "nsh-omarchy"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68b2e5076291a1de294c53e3649a03032a495c6aaf85984a6b91d5a03bc1a9df"
+checksum = "37d1743c20d5a3bed636655848610482be9928d47838de4ea511dfd938e3c799"
 dependencies = [
  "chrono",
  "log",
@@ -3197,13 +3216,12 @@ dependencies = [
 
 [[package]]
 name = "nsh-package"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek 2.2.0",
  "getrandom 0.3.4",
- "nsh-core",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -3212,8 +3230,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-platform-apple"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "block2",
  "cc",
@@ -3236,8 +3254,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-platform-ios"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "block2",
  "dispatch2",
@@ -3264,8 +3282,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-platform-linux"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "crossbeam-channel",
  "gtk4",
@@ -3283,8 +3301,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-platform-macos"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "block2",
  "crossbeam-channel",
@@ -3312,8 +3330,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-platform-tui"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "base64 0.22.1",
  "crossbeam-channel",
@@ -3330,8 +3348,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-platform-windows"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "crossbeam-channel",
  "image",
@@ -3350,8 +3368,8 @@ dependencies = [
 
 [[package]]
 name = "nsh-updater"
-version = "0.6.0"
-source = "git+https://github.com/longbridge/nsh?rev=f577c51901a2857956f8ba0580da4db9ce3a3311#f577c51901a2857956f8ba0580da4db9ce3a3311"
+version = "0.7.0"
+source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f681d453b73b5f7d87a5c8"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek 2.2.0",
@@ -3627,6 +3645,8 @@ dependencies = [
  "nsh-base",
  "nsh-core",
  "nsh-engine",
+ "nsh-icon",
+ "nsh-icon-lucide",
  "nsh-omarchy",
  "nsh-platform-ios",
  "nsh-platform-linux",
@@ -5611,9 +5631,9 @@ dependencies = [
 
 [[package]]
 name = "taffy"
-version = "0.15.1"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31f7bd2d97198df05186f93a3a3c306845f40e8b3c22bf9279cdd7e5cf5fea7d"
+checksum = "cae92eb1b204bfd239b5c463e1bd2c3ce4913d2d3abfb5c64f5cfee9d65e5c68"
 dependencies = [
  "serde",
  "slotmap",

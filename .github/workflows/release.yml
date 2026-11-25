@@ -235,7 +235,7 @@ jobs:
         with:
           workspaces: |
             ext/omasend -> target
-            .nsh/toolchain/f577c51901a2857956f8ba0580da4db9ce3a3311 -> target
+            .nsh/toolchain/7d701ea67e3d523094f681d453b73b5f7d87a5c8 -> target
           key: mobile-${{ matrix.platform }}
       - name: Build NSH nightly CLI
         run: |

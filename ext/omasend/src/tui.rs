@@ -90,6 +90,8 @@ fn modifiers(keys: event::KeyModifiers) -> Modifiers {
         alt: keys.contains(event::KeyModifiers::ALT),
         shift: keys.contains(event::KeyModifiers::SHIFT),
         cmd: keys.contains(event::KeyModifiers::SUPER),
+        // Crossterm does not report which keyboard level typed a key.
+        alt_graph: false,
     }
 }
 fn button(button: event::MouseButton) -> MouseButton {

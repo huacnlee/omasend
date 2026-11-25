@@ -44,12 +44,15 @@ pub fn interface() -> anyhow::Result<nsh_engine::Bundle> {
     Ok(nsh_engine::Bundle::source(code).with_app_id(Some("com.huacnlee.omasend")))
 }
 
-/// The native modules the interface imports: NSH's, nsh-omarchy's and ours.
+/// The native modules the interface imports: NSH's, nsh-omarchy's,
+/// nsh-icon's and ours.
 #[cfg(feature = "ui")]
 pub fn ui_sets() -> Vec<nsh_core::element::Registry> {
     vec![
         nsh_base::registry(),
         nsh_omarchy::__nsh_native_module(),
+        nsh_icon::__nsh_native_module(),
+        nsh_icon_lucide::__nsh_native_module(),
         __nsh_native_module(),
     ]
 }
