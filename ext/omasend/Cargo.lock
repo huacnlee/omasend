@@ -3255,9 +3255,9 @@ source = "git+https://github.com/longbridge/nsh?tag=nightly#7d701ea67e3d523094f6
 
 [[package]]
 name = "nsh-icon"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23415dda67494164ae3d1a299ef9c527e68f8d48b19d5f72969b65b1b6fe8468"
+checksum = "638773b01e553407287797cc85f42a697ae9f86e5189746a784d18c5eaab37ac"
 dependencies = [
  "nsh-core",
 ]

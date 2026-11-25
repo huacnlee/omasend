@@ -34,7 +34,7 @@ nsh-core = { version = "0.7", features = ["svg"], optional = true }
 nsh-engine = { version = "0.7", default-features = false, features = ["js-core"], optional = true }
 nsh-base = { version = "0.7", default-features = false, optional = true }
 nsh-omarchy = { version = "0.2", default-features = false, optional = true }
-nsh-icon = { version = "0.2.1", optional = true }
+nsh-icon = { version = "0.2.2", optional = true }
 nsh-icon-lucide = { version = "0.2.1", optional = true }
 image = { version = "0.25", default-features = false, features = ["png"], optional = true }
 
