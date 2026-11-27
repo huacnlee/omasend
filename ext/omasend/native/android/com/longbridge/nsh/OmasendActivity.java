@@ -11,7 +11,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.util.concurrent.Executors;
 
-/** Native Android services alongside NSH's Rust UI. */
+/** Native Android services alongside NSH. */
 public final class OmasendActivity extends Activity {
     private static volatile OmasendActivity current;
     private NshView view;
@@ -28,7 +28,8 @@ public final class OmasendActivity extends Activity {
         view = new NshView(this);
         view.useStandaloneLimits();
         setContentView(view);
-        view.runRustApp("nsh");
+        // The UI is TSX: run the bundled app (or a newer signed package it downloaded).
+        view.loadAssetBundle("nsh", true);
     }
     public static void request(long id, int kind, String value) {
         OmasendActivity activity = current;
