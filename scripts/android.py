@@ -81,7 +81,7 @@ def main():
             if symbol not in symbols:
                 raise SystemExit(f'{abi}: missing native entry point {symbol}')
         libraries[f'lib/{abi}/libnsh.so'] = library
-    metadata = json.loads(run('cargo', 'metadata', '--format-version', '1',
+    metadata = json.loads(run('cargo', 'metadata', '--format-version', '1', '--manifest-path', ROOT / '.nsh/rust/Cargo.toml',
         capture_output=True, text=True).stdout)
     base = next(Path(package['manifest_path']).parent for package in metadata['packages'] if package['name'] == 'nsh-base')
     java = base.parent / 'nsh-platform-android/java'
