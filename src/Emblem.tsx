@@ -20,7 +20,6 @@ const PIECES: Rect[][] = [
 const ORDER = [0, 4, 1, 5, 3, 6, 2, 7];
 
 export function Emblem(props: { size: number; animated?: boolean; paused?: () => boolean }) {
-  const unit = props.size / 32;
   const levels = PIECES.map(() => signal(1));
   if (props.animated) {
     effect(() => {
@@ -45,6 +44,8 @@ export function Emblem(props: { size: number; animated?: boolean; paused?: () =>
       });
     });
   }
+  // Each canvas fills the box the layout gives the mark, not `size`: a short
+  // terminal shrinks it, and a fixed canvas would draw over the text below.
   return (
     <View testID="emblem" class="relative" style={{ width: props.size, height: props.size }}>
       {PIECES.map((rects, index) => (
@@ -53,10 +54,14 @@ export function Emblem(props: { size: number; animated?: boolean; paused?: () =>
         // canvas, not views, so the terminal draws the mark in braille.
         <View class="absolute inset-0" style={{ opacity: levels[index](), transitionProperty: "opacity", transitionDuration: 90, transitionTimingFunction: "linear" }}>
           <Canvas
-            style={{ width: props.size, height: props.size }}
-            draw={(cx) => {
+            class="w-full h-full"
+            draw={(cx, { width, height }) => {
+              const side = Math.min(width, height);
+              const unit = side / 32;
+              const left = (width - side) / 2;
+              const top = (height - side) / 2;
               cx.fillStyle = token("primary" as never) as string;
-              for (const [x, y, w, h] of rects) cx.fillRect(x * unit, y * unit, w * unit, h * unit);
+              for (const [x, y, w, h] of rects) cx.fillRect(left + x * unit, top + y * unit, w * unit, h * unit);
             }}
           />
         </View>
