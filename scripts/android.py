@@ -77,11 +77,11 @@ def main():
         if any(int(line.split()[-1], 16) < 16384 for line in headers.splitlines() if line.strip().startswith('LOAD ')):
             raise SystemExit(f'{abi}: native library is not aligned for 16 KB pages')
         symbols = run(native_tools / 'llvm-nm', '-D', '--defined-only', library, capture_output=True, text=True).stdout
-        for symbol in ('Java_com_longbridge_nsh_OmasendActivity_initialize', 'Java_com_longbridge_nsh_OmasendActivity_complete', 'Java_com_longbridge_nsh_Native_runRust'):
+        for symbol in ('Java_com_longbridge_nsh_OmasendActivity_initialize', 'Java_com_longbridge_nsh_OmasendActivity_complete'):
             if symbol not in symbols:
                 raise SystemExit(f'{abi}: missing native entry point {symbol}')
         libraries[f'lib/{abi}/libnsh.so'] = library
-    metadata = json.loads(run('cargo', 'metadata', '--format-version', '1',
+    metadata = json.loads(run('cargo', 'metadata', '--format-version', '1', '--manifest-path', ROOT / '.nsh/rust/Cargo.toml',
         capture_output=True, text=True).stdout)
     base = next(Path(package['manifest_path']).parent for package in metadata['packages'] if package['name'] == 'nsh-base')
     java = base.parent / 'nsh-platform-android/java'
@@ -101,7 +101,6 @@ def main():
     <application android:label="Omasend" android:icon="@mipmap/ic_launcher" android:usesCleartextTraffic="true"
         android:extractNativeLibs="false" android:enableOnBackInvokedCallback="true" android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false">
-        <meta-data android:name="com.longbridge.nsh.RUST" android:value="true" />
         <provider android:name="com.longbridge.nsh.OmasendFiles" android:authorities="com.huacnlee.omasend.files"
             android:exported="false" android:grantUriPermissions="true" />
         <activity android:name="com.longbridge.nsh.OmasendActivity" android:exported="true"
